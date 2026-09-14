@@ -1,0 +1,39 @@
+# Groovd Workspace .gitignore
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# Firebase configuration & credentials
+**/google-services.json
+**/GoogleService-Info.plist
+**/*firebase_options*.dart
+
+# Keystores & signing
+*.keystore
+*.jks
+**/key.properties
+
+# Flutter / Dart
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/build/
+**/coverage/
+
+# IDE & Editor
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
