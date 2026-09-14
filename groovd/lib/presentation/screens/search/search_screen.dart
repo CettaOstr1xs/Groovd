@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
@@ -140,7 +141,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final item = items[index];
-              return _SearchItemTile(item: item);
+              return _SearchItemTile(item: item)
+                  .animate()
+                  .fadeIn(
+                    duration: 250.ms,
+                    delay: (index * 35).ms,
+                    curve: Curves.easeOutCubic,
+                  )
+                  .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic);
             },
           );
         },
@@ -194,7 +202,12 @@ class _SearchItemTile extends ConsumerWidget {
     return InkWell(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item)),
+          MaterialPageRoute(
+            builder: (_) => MusicDetailScreen(
+              item: item,
+              heroTag: 'search_${item.id}',
+            ),
+          ),
         );
       },
       child: Container(
@@ -211,6 +224,7 @@ class _SearchItemTile extends ConsumerWidget {
               imageUrl: item.coverUrl,
               size: 64,
               showShadow: false,
+              heroTag: 'search_${item.id}',
             ),
             const SizedBox(width: 14),
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 
@@ -41,17 +42,21 @@ class _BrutalistButtonState extends State<BrutalistButton> {
     final fontSize = widget.isSmall ? 11.0 : 13.0;
 
     return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapDown: (_) {
+        HapticFeedback.selectionClick();
+        setState(() => _isPressed = true);
+      },
       onTapUp: (_) {
         setState(() => _isPressed = false);
         widget.onPressed?.call();
       },
       onTapCancel: () => setState(() => _isPressed = false),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 75),
+        duration: const Duration(milliseconds: 90),
+        curve: Curves.easeOutBack,
         transform: Matrix4.translationValues(
-          _isPressed ? 2.0 : 0.0,
-          _isPressed ? 2.0 : 0.0,
+          _isPressed ? 3.0 : 0.0,
+          _isPressed ? 3.0 : 0.0,
           0.0,
         ),
         width: widget.isFullWidth ? double.infinity : widget.width,
@@ -69,7 +74,7 @@ class _BrutalistButtonState extends State<BrutalistButton> {
               : [
                   BoxShadow(
                     color: widget.borderColor,
-                    offset: const Offset(3.0, 3.0),
+                    offset: const Offset(3.5, 3.5),
                     blurRadius: 0,
                   ),
                 ],

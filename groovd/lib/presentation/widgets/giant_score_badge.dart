@@ -147,6 +147,32 @@ class GiantScoreBadge extends StatelessWidget {
               ),
             ],
           ),
+
+          // Animated Brutalist score meter bar
+          const SizedBox(height: 14),
+          Container(
+            height: 6,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceCard,
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(1),
+            ),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0.0, end: (score / 10.0).clamp(0.0, 1.0)),
+              duration: const Duration(milliseconds: 750),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) {
+                return FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: value,
+                  child: Container(
+                    color: _accentColor,
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );

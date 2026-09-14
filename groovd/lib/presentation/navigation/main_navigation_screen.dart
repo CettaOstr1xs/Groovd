@@ -25,9 +25,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 240),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.0, 0.015),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey<int>(_currentIndex),
+          child: _screens[_currentIndex],
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -39,25 +56,52 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         child: SafeArea(
           child: SizedBox(
             height: 62,
-            child: Row(
+            child: Stack(
               children: [
-                _buildNavItem(
-                  index: 0,
-                  icon: Icons.dashboard_outlined,
-                  activeIcon: Icons.dashboard,
-                  label: 'DISPATCH',
+                // Sliding acid-lime indicator bar atop the selected tab
+                AnimatedAlign(
+                  alignment: Alignment(-1.0 + (_currentIndex * 1.0), -1.0),
+                  duration: const Duration(milliseconds: 240),
+                  curve: Curves.easeOutCubic,
+                  child: FractionallySizedBox(
+                    widthFactor: 1 / 3,
+                    child: Container(
+                      height: 3.0,
+                      decoration: const BoxDecoration(
+                        color: AppColors.acidLime,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.acidLime,
+                            blurRadius: 6,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                _buildNavItem(
-                  index: 1,
-                  icon: Icons.search,
-                  activeIcon: Icons.search,
-                  label: 'SEARCH',
-                ),
-                _buildNavItem(
-                  index: 2,
-                  icon: Icons.person_outline,
-                  activeIcon: Icons.person,
-                  label: 'DOSSIER',
+
+                Row(
+                  children: [
+                    _buildNavItem(
+                      index: 0,
+                      icon: Icons.dashboard_outlined,
+                      activeIcon: Icons.dashboard,
+                      label: 'DISPATCH',
+                    ),
+                    _buildNavItem(
+                      index: 1,
+                      icon: Icons.search,
+                      activeIcon: Icons.search,
+                      label: 'SEARCH',
+                    ),
+                    _buildNavItem(
+                      index: 2,
+                      icon: Icons.person_outline,
+                      activeIcon: Icons.person,
+                      label: 'DOSSIER',
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -77,31 +121,35 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _currentIndex = index),
-        child: Container(
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.surfaceElevated : Colors.transparent,
-            border: isSelected
-                ? const Border(
-                    top: BorderSide(color: AppColors.acidLime, width: 3.0),
-                  )
-                : null,
-          ),
+        onTap: () {
+          if (_currentIndex != index) {
+            setState(() => _currentIndex = index);
+          }
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          color: isSelected ? AppColors.surfaceElevated.withValues(alpha: 0.6) : Colors.transparent,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                isSelected ? activeIcon : icon,
-                color: isSelected ? AppColors.acidLime : AppColors.textMuted,
-                size: 20,
+              AnimatedScale(
+                scale: isSelected ? 1.15 : 1.0,
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutBack,
+                child: Icon(
+                  isSelected ? activeIcon : icon,
+                  color: isSelected ? AppColors.acidLime : AppColors.textMuted,
+                  size: 20,
+                ),
               ),
               const SizedBox(height: 3),
-              Text(
-                label,
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
                 style: AppTypography.monoBadge(
                   color: isSelected ? AppColors.white : AppColors.textMuted,
                   fontSize: 10,
                 ),
+                child: Text(label),
               ),
             ],
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:groovd/core/theme/app_colors.dart';
@@ -14,8 +15,9 @@ import 'package:groovd/presentation/screens/review/write_review_modal.dart';
 
 class MusicDetailScreen extends ConsumerWidget {
   final MusicItem item;
+  final String? heroTag;
 
-  const MusicDetailScreen({super.key, required this.item});
+  const MusicDetailScreen({super.key, required this.item, this.heroTag});
 
   Future<void> _launchSpotify(String url) async {
     if (url.isEmpty) return;
@@ -163,6 +165,7 @@ class MusicDetailScreen extends ConsumerWidget {
                     child: AlbumArtCard(
                       imageUrl: activeItem.coverUrl,
                       size: 240,
+                      heroTag: heroTag ?? 'cover_${item.id}',
                     ),
                   ),
 
@@ -197,7 +200,14 @@ class MusicDetailScreen extends ConsumerWidget {
               child: avgScoreAsync.when(
                 data: (score) {
                   final count = reviewCountAsync.value ?? 0;
-                  return GiantScoreBadge(score: score, reviewCount: count);
+                  return GiantScoreBadge(score: score, reviewCount: count)
+                      .animate()
+                      .fadeIn(duration: 400.ms, delay: 100.ms, curve: Curves.easeOutCubic)
+                      .scale(
+                        begin: const Offset(0.97, 0.97),
+                        end: const Offset(1.0, 1.0),
+                        curve: Curves.easeOutBack,
+                      );
                 },
                 loading: () => const Center(
                   child: CircularProgressIndicator(color: AppColors.acidLime),
@@ -282,7 +292,14 @@ class MusicDetailScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-                  );
+                  )
+                      .animate()
+                      .fadeIn(
+                        duration: 250.ms,
+                        delay: (index * 30).ms,
+                        curve: Curves.easeOutCubic,
+                      )
+                      .slideX(begin: 0.05, end: 0, curve: Curves.easeOutCubic);
                 },
               ),
             ] else if (item.isAlbum && detailAsync.isLoading) ...[
@@ -374,7 +391,14 @@ class MusicDetailScreen extends ConsumerWidget {
                       onLike: () {
                         ref.read(reviewControllerProvider).likeReview(review.id);
                       },
-                    );
+                    )
+                        .animate()
+                        .fadeIn(
+                          duration: 300.ms,
+                          delay: (index * 45).ms,
+                          curve: Curves.easeOutCubic,
+                        )
+                        .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic);
                   },
                 );
               },

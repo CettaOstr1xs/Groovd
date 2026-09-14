@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
@@ -31,6 +32,7 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
   final TextEditingController _bodyController = TextEditingController();
   final List<String> _selectedTags = [];
   bool _isSubmitting = false;
+  bool _isDragging = false;
 
   final List<String> _availableTags = [
     '#AOTY',
@@ -107,19 +109,30 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
       likesCount: 0,
     );
 
-    await ref.read(reviewControllerProvider).submitReview(newReview);
-
-    if (mounted) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'REVIEW PUBLISHED TO COMMUNITY',
-            style: AppTypography.monoBadge(color: AppColors.pureBlack),
+    try {
+      await ref.read(reviewControllerProvider).submitReview(newReview);
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'REVIEW DISPATCHED TO ARCHIVE',
+              style: AppTypography.monoBadge(color: AppColors.pureBlack),
+            ),
+            backgroundColor: AppColors.acidLime,
           ),
-          backgroundColor: AppColors.acidLime,
-        ),
-      );
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error submitting: $e'),
+            backgroundColor: AppColors.vermillion,
+          ),
+        );
+      }
     }
   }
 
@@ -128,61 +141,89 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      margin: EdgeInsets.only(
+        left: 8,
+        right: 8,
+        bottom: bottomInset > 0 ? bottomInset : 16,
       ),
-      margin: EdgeInsets.only(bottom: bottomInset),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        border: const Border(
-          top: BorderSide(color: AppColors.borderBold, width: 2.5),
-        ),
+        borderRadius: BorderRadius.circular(2),
+        border: Border.all(color: AppColors.borderBold, width: 2.0),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.pureBlack,
+            offset: Offset(6, 6),
+            blurRadius: 0,
+          ),
+        ],
       ),
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Top Drag Handle & Title
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'LOG YOUR REVIEW',
-                        style: AppTypography.displaySmall(),
-                      ),
-                      Text(
-                        '${widget.musicItem.name} — ${widget.musicItem.artist}'.toUpperCase(),
-                        style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 10),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.textSecondary),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag handle indicator
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.borderBold,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-              const Divider(height: 24),
+            ),
 
-              // Giant Score Live Display
-              Center(
-                child: Column(
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
+                    Text(
+                      'LOG YOUR REVIEW',
+                      style: AppTypography.displaySmall(),
+                    ),
+                    Text(
+                      '${widget.musicItem.name} — ${widget.musicItem.artist}'.toUpperCase(),
+                      style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 10),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.textSecondary),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+
+            // Giant Score Live Display with bounce
+            Center(
+              child: Column(
+                children: [
+                  AnimatedScale(
+                    scale: _isDragging ? 1.08 : 1.0,
+                    duration: const Duration(milliseconds: 160),
+                    curve: Curves.easeOutBack,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                       decoration: BoxDecoration(
                         color: _scoreColor,
                         borderRadius: BorderRadius.circular(2),
                         border: Border.all(color: AppColors.pureBlack, width: 2.5),
-                        boxShadow: const [
+                        boxShadow: [
                           BoxShadow(
+                            color: _scoreColor.withValues(alpha: _isDragging ? 0.6 : 0.0),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                          const BoxShadow(
                             color: AppColors.pureBlack,
                             offset: Offset(4, 4),
                             blurRadius: 0,
@@ -209,53 +250,62 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceElevated,
-                        border: Border.all(color: AppColors.border),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      child: Text(
-                        _descriptor,
-                        style: AppTypography.monoBadge(color: _scoreColor, fontSize: 10),
-                      ),
+                  ),
+                  const SizedBox(height: 8),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceElevated,
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                  ],
-                ),
+                    child: Text(
+                      _descriptor,
+                      style: AppTypography.monoBadge(color: _scoreColor, fontSize: 10),
+                    ),
+                  ),
+                ],
               ),
+            ),
 
-              const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-              // Rating Slider
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: _scoreColor,
-                  inactiveTrackColor: AppColors.surfaceElevated,
-                  thumbColor: _scoreColor,
-                  overlayColor: _scoreColor.withValues(alpha: 0.2),
-                  trackHeight: 6,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
-                ),
-                child: Slider(
-                  value: _rating,
-                  min: 0.0,
-                  max: 10.0,
-                  divisions: 20, // 0.5 increments
-                  onChanged: (val) {
-                    setState(() => _rating = val);
-                  },
-                ),
+            // Rating Slider with tactile interaction
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: _scoreColor,
+                inactiveTrackColor: AppColors.surfaceElevated,
+                thumbColor: _scoreColor,
+                overlayColor: _scoreColor.withValues(alpha: 0.2),
+                trackHeight: 6,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
               ),
-
-              const SizedBox(height: 12),
-
-              // Headline Input
-              Text(
-                'HEADLINE // ONE-LINER',
-                style: AppTypography.monoLabel(fontSize: 10),
+              child: Slider(
+                value: _rating,
+                min: 0.0,
+                max: 10.0,
+                divisions: 100,
+                onChangeStart: (_) {
+                  setState(() => _isDragging = true);
+                },
+                onChangeEnd: (_) {
+                  setState(() => _isDragging = false);
+                },
+                onChanged: (val) {
+                  setState(() {
+                    _rating = double.parse(val.toStringAsFixed(1));
+                  });
+                },
               ),
+            ),
+            const SizedBox(height: 16),
+
+            // Headline Input
+            Text(
+              'HEADLINE // ONE-LINER',
+              style: AppTypography.monoLabel(fontSize: 10),
+            ),
               const SizedBox(height: 6),
               TextField(
                 controller: _headlineController,
@@ -313,6 +363,7 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
                     showCheckmark: false,
                     onSelected: (selected) {
+                      HapticFeedback.selectionClick();
                       setState(() {
                         if (selected) {
                           _selectedTags.add(tag);
@@ -339,7 +390,6 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
             ],
           ),
         ),
-      ),
-    );
+      );
+    }
   }
-}

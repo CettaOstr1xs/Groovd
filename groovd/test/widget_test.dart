@@ -10,8 +10,9 @@ void main() {
       ),
     );
 
-    // Initial pump
+    // Initial pump and advance animation timers
     await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     // Verify main brand name and tabs render
     expect(find.text('GROOVD'), findsOneWidget);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/review.dart';
@@ -108,29 +109,34 @@ class ReviewCard extends StatelessWidget {
               ],
             ),
 
-            // Optional Music Item reference (for feed screens)
-            if (showItemHeader) ...[
+            // Optional Music Item Context (if in global feed)
+            if (showItemHeader && review.musicItemName.isNotEmpty) ...[
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceElevated,
-                  border: const Border(
-                    left: BorderSide(color: AppColors.acidLime, width: 3.0),
-                  ),
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(2),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      'REVIEW ON: ',
-                      style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 9),
+                    Icon(
+                      review.itemType == 'album' ? Icons.album : Icons.music_note,
+                      size: 12,
+                      color: AppColors.acidLime,
                     ),
-                    Expanded(
+                    const SizedBox(width: 6),
+                    Flexible(
                       child: Text(
                         '${review.musicItemName} — ${review.artistName}'.toUpperCase(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTypography.monoBadge(color: AppColors.textPrimary, fontSize: 10),
+                        style: AppTypography.monoBadge(
+                          color: AppColors.textSecondary,
+                          fontSize: 9,
+                        ),
                       ),
                     ),
                   ],
@@ -138,14 +144,14 @@ class ReviewCard extends StatelessWidget {
               ),
             ],
 
-            const SizedBox(height: 12),
-
             // Headline
-            if (review.headline.isNotEmpty)
+            if (review.headline.isNotEmpty) ...[
+              const SizedBox(height: 12),
               Text(
-                '“${review.headline}”',
-                style: AppTypography.headline(color: AppColors.textPrimary),
+                review.headline.toUpperCase(),
+                style: AppTypography.headline(),
               ),
+            ],
 
             // Body
             if (review.body.isNotEmpty) ...[
@@ -153,14 +159,14 @@ class ReviewCard extends StatelessWidget {
               Text(
                 review.body,
                 style: AppTypography.bodyMedium(color: AppColors.textSecondary),
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
 
-            // Tags and Like Bar
             const SizedBox(height: 14),
+
+            // Tags & Like button Row
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 // Tags
                 Expanded(
@@ -187,33 +193,108 @@ class ReviewCard extends StatelessWidget {
                   ),
                 ),
 
-                // Like button
-                InkWell(
-                  onTap: onLike,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceElevated,
-                      border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.favorite_border, size: 13, color: AppColors.electricPink),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${review.likesCount}',
-                          style: AppTypography.monoBadge(
-                            color: AppColors.textPrimary,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                // Animated Like button
+                _AnimatedLikeButton(
+                  likesCount: review.likesCount,
+                  onLike: onLike,
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedLikeButton extends StatefulWidget {
+  final int likesCount;
+  final VoidCallback? onLike;
+
+  const _AnimatedLikeButton({required this.likesCount, this.onLike});
+
+  @override
+  State<_AnimatedLikeButton> createState() => _AnimatedLikeButtonState();
+}
+
+class _AnimatedLikeButtonState extends State<_AnimatedLikeButton> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+  bool _isLiked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.72), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 0.72, end: 1.42), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.42, end: 1.0), weight: 30),
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    HapticFeedback.lightImpact();
+    setState(() => _isLiked = !_isLiked);
+    _controller.forward(from: 0.0);
+    widget.onLike?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _handleTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: _isLiked ? AppColors.electricPink.withValues(alpha: 0.15) : AppColors.surfaceElevated,
+          border: Border.all(
+            color: _isLiked ? AppColors.electricPink : AppColors.border,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ScaleTransition(
+              scale: _scaleAnimation,
+              child: Icon(
+                _isLiked ? Icons.favorite : Icons.favorite_border,
+                size: 14,
+                color: AppColors.electricPink,
+              ),
+            ),
+            const SizedBox(width: 5),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              transitionBuilder: (child, animation) {
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.0, -0.35),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: FadeTransition(opacity: animation, child: child),
+                );
+              },
+              child: Text(
+                '${widget.likesCount + (_isLiked ? 1 : 0)}',
+                key: ValueKey<int>(widget.likesCount + (_isLiked ? 1 : 0)),
+                style: AppTypography.monoBadge(
+                  color: _isLiked ? AppColors.electricPink : AppColors.textPrimary,
+                  fontSize: 10,
+                ),
+              ),
             ),
           ],
         ),

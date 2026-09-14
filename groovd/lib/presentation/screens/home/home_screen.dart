@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
@@ -80,7 +81,10 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                ),
+                )
+                    .animate()
+                    .fadeIn(duration: 400.ms)
+                    .slideY(begin: -0.06, end: 0, curve: Curves.easeOutCubic),
 
                 // Marquee Banner
                 const MarqueeBanner(
@@ -94,7 +98,14 @@ class HomeScreen extends ConsumerWidget {
                   data: (albums) {
                     if (albums.isEmpty) return const SizedBox.shrink();
                     final featured = albums.first;
-                    return _FeaturedHeroBanner(item: featured);
+                    return _FeaturedHeroBanner(item: featured)
+                        .animate()
+                        .fadeIn(duration: 450.ms, delay: 100.ms, curve: Curves.easeOutCubic)
+                        .scale(
+                          begin: const Offset(0.97, 0.97),
+                          end: const Offset(1.0, 1.0),
+                          curve: Curves.easeOutBack,
+                        );
                   },
                   loading: () => const Padding(
                     padding: EdgeInsets.all(32),
@@ -148,7 +159,14 @@ class HomeScreen extends ConsumerWidget {
                         separatorBuilder: (context, index) => const SizedBox(width: 14),
                         itemBuilder: (context, index) {
                           final album = albums[index];
-                          return _AlbumPosterCard(item: album);
+                          return _AlbumPosterCard(item: album)
+                              .animate()
+                              .fadeIn(
+                                duration: 350.ms,
+                                delay: (index * 60).ms,
+                                curve: Curves.easeOutCubic,
+                              )
+                              .slideX(begin: 0.15, end: 0, curve: Curves.easeOutCubic);
                         },
                       );
                     },
@@ -181,7 +199,14 @@ class HomeScreen extends ConsumerWidget {
                       separatorBuilder: (context, index) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final track = tracks[index];
-                        return _HotTrackTile(track: track, rank: index + 1);
+                        return _HotTrackTile(track: track, rank: index + 1)
+                            .animate()
+                            .fadeIn(
+                              duration: 300.ms,
+                              delay: (index * 45).ms,
+                              curve: Curves.easeOutCubic,
+                            )
+                            .slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic);
                       },
                     );
                   },
@@ -249,7 +274,14 @@ class HomeScreen extends ConsumerWidget {
                               );
                             }
                           },
-                        );
+                        )
+                            .animate()
+                            .fadeIn(
+                              duration: 350.ms,
+                              delay: (index * 50).ms,
+                              curve: Curves.easeOutCubic,
+                            )
+                            .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic);
                       },
                     );
                   },
@@ -280,92 +312,105 @@ class _FeaturedHeroBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scoreAsync = ref.watch(itemAverageScoreProvider(item.id));
+    final tag = 'featured_${item.id}';
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(2),
-        border: Border.all(color: AppColors.borderBold, width: 2.0),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.pureBlack,
-            offset: Offset(4, 4),
-            blurRadius: 0,
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => MusicDetailScreen(item: item, heroTag: tag),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.acidLime,
-                  borderRadius: BorderRadius.circular(2),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(color: AppColors.borderBold, width: 2.0),
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.pureBlack,
+              offset: Offset(4, 4),
+              blurRadius: 0,
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.acidLime,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Text(
+                    'FEATURED OF THE WEEK',
+                    style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
+                  ),
                 ),
-                child: Text(
-                  'FEATURED OF THE WEEK',
-                  style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
+                scoreAsync.when(
+                  data: (s) => s > 0 ? GiantScoreBadge(score: s, compact: true) : const SizedBox.shrink(),
+                  loading: () => const SizedBox.shrink(),
+                  error: (err, stack) => const SizedBox.shrink(),
                 ),
-              ),
-              scoreAsync.when(
-                data: (s) => s > 0 ? GiantScoreBadge(score: s, compact: true) : const SizedBox.shrink(),
-                loading: () => const SizedBox.shrink(),
-                error: (err, stack) => const SizedBox.shrink(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              AlbumArtCard(
-                imageUrl: item.coverUrl,
-                size: 110,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.name.toUpperCase(),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.displayHero(),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'BY ${item.artist.toUpperCase()}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.monoLabel(
-                        color: AppColors.textSecondary,
-                        fontSize: 10,
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                AlbumArtCard(
+                  imageUrl: item.coverUrl,
+                  size: 110,
+                  heroTag: tag,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name.toUpperCase(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.displayHero(),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    BrutalistButton(
-                      label: 'REVIEW // VIEW',
-                      isSmall: true,
-                      backgroundColor: AppColors.acidLime,
-                      textColor: AppColors.pureBlack,
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item)),
-                        );
-                      },
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'BY ${item.artist.toUpperCase()}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.monoLabel(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      BrutalistButton(
+                        label: 'REVIEW // VIEW',
+                        isSmall: true,
+                        backgroundColor: AppColors.acidLime,
+                        textColor: AppColors.pureBlack,
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => MusicDetailScreen(item: item, heroTag: tag),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -379,11 +424,12 @@ class _AlbumPosterCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scoreAsync = ref.watch(itemAverageScoreProvider(item.id));
+    final tag = 'poster_${item.id}';
 
     return InkWell(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item)),
+          MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item, heroTag: tag)),
         );
       },
       child: Container(
@@ -402,6 +448,7 @@ class _AlbumPosterCard extends ConsumerWidget {
               width: 125,
               height: 125,
               showShadow: false,
+              heroTag: tag,
             ),
             const SizedBox(height: 8),
             Text(
@@ -447,11 +494,12 @@ class _HotTrackTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scoreAsync = ref.watch(itemAverageScoreProvider(track.id));
+    final tag = 'track_${track.id}';
 
     return InkWell(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => MusicDetailScreen(item: track)),
+          MaterialPageRoute(builder: (_) => MusicDetailScreen(item: track, heroTag: tag)),
         );
       },
       child: Container(
@@ -472,6 +520,7 @@ class _HotTrackTile extends ConsumerWidget {
               imageUrl: track.coverUrl,
               size: 48,
               showShadow: false,
+              heroTag: tag,
             ),
             const SizedBox(width: 12),
             Expanded(
