@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
@@ -27,14 +28,18 @@ class WriteReviewModal extends ConsumerStatefulWidget {
 }
 
 class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
+  static const String _customTagsKey = 'groovd_custom_tags_v1';
+
   double _rating = 8.5;
   final TextEditingController _headlineController = TextEditingController();
   final TextEditingController _bodyController = TextEditingController();
+  final TextEditingController _customTagController = TextEditingController();
   final List<String> _selectedTags = [];
+  final List<String> _customTags = [];
   bool _isSubmitting = false;
   bool _isDragging = false;
 
-  final List<String> _availableTags = [
+  final List<String> _defaultTags = [
     '#AOTY',
     '#MASTERPIECE',
     '#TIMELESS',
@@ -46,6 +51,66 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
     '#SKIP',
     '#GROWER',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCustomTags();
+    _headlineController.addListener(() => setState(() {}));
+    _bodyController.addListener(() => setState(() {}));
+  }
+
+  Future<void> _loadCustomTags() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getStringList(_customTagsKey) ?? [];
+      if (saved.isNotEmpty && mounted) {
+        setState(() {
+          _customTags.addAll(saved);
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _addCustomTag(String raw) async {
+    final clean = raw.trim();
+    if (clean.isEmpty) return;
+
+    // Format tag: prepend # if missing, replace spaces with underscores, uppercase
+    String tag = clean.toUpperCase().replaceAll(' ', '_');
+    if (!tag.startsWith('#')) {
+      tag = '#$tag';
+    }
+
+    if (!_customTags.contains(tag) && !_defaultTags.contains(tag)) {
+      _customTags.add(tag);
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList(_customTagsKey, _customTags);
+      } catch (_) {}
+    }
+
+    if (!_selectedTags.contains(tag)) {
+      _selectedTags.add(tag);
+    }
+
+    _customTagController.clear();
+    HapticFeedback.selectionClick();
+    setState(() {});
+  }
+
+  Future<void> _removeCustomTag(String tag) async {
+    _customTags.remove(tag);
+    _selectedTags.remove(tag);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_customTagsKey, _customTags);
+    } catch (_) {}
+    setState(() {});
+  }
+
+  bool get _hasWrittenText =>
+      _headlineController.text.trim().isNotEmpty || _bodyController.text.trim().isNotEmpty;
 
   Color get _scoreColor {
     if (_rating >= 9.0) return AppColors.acidLime;
@@ -68,23 +133,11 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
   void dispose() {
     _headlineController.dispose();
     _bodyController.dispose();
+    _customTagController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    if (_headlineController.text.trim().isEmpty && _bodyController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'PLEASE WRITE A HEADLINE OR REVIEW',
-            style: AppTypography.monoBadge(color: AppColors.white),
-          ),
-          backgroundColor: AppColors.vermillion,
-        ),
-      );
-      return;
-    }
-
     setState(() => _isSubmitting = true);
 
     final userId = ref.read(currentUserIdProvider);
@@ -110,13 +163,19 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
     );
 
     try {
-      await ref.read(reviewControllerProvider).submitReview(newReview);
+      await ref
+          .read(reviewControllerProvider)
+          .submitReview(newReview)
+          .timeout(const Duration(seconds: 3));
+
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'REVIEW DISPATCHED TO ARCHIVE',
+              newReview.hasWrittenReview
+                  ? 'CRITIQUE DISPATCHED TO ARCHIVE'
+                  : 'RATING LOGGED TO DOSSIER',
               style: AppTypography.monoBadge(color: AppColors.pureBlack),
             ),
             backgroundColor: AppColors.acidLime,
@@ -125,13 +184,20 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isSubmitting = false);
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error submitting: $e'),
-            backgroundColor: AppColors.vermillion,
+            content: Text(
+              'SAVED TO LOCAL LOG',
+              style: AppTypography.monoBadge(color: AppColors.pureBlack),
+            ),
+            backgroundColor: AppColors.cyberCyan,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
       }
     }
   }
@@ -336,51 +402,119 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
 
               const SizedBox(height: 16),
 
-              // Tags
-              Text(
-                'VIBES & TAGS',
-                style: AppTypography.monoLabel(fontSize: 10),
+              // Vibes & Custom Tags Section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'VIBES & TAGS',
+                    style: AppTypography.monoLabel(fontSize: 10),
+                  ),
+                  Text(
+                    'CREATE OR SELECT',
+                    style: AppTypography.monoBadge(color: AppColors.textMuted, fontSize: 9),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
+
+              // Custom Tag Input Bar
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _customTagController,
+                      style: AppTypography.monoBadge(color: AppColors.textPrimary, fontSize: 11),
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: InputDecoration(
+                        hintText: 'CREATE TAG (e.g. SHOEGAZE_GRAIL)...',
+                        hintStyle: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 9),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        isDense: true,
+                        prefixIcon: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Icon(Icons.tag, size: 16, color: AppColors.acidLime),
+                        ),
+                        prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      ),
+                      onSubmitted: (val) => _addCustomTag(val),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  BrutalistButton(
+                    label: '+ ADD',
+                    backgroundColor: AppColors.surfaceElevated,
+                    textColor: AppColors.acidLime,
+                    borderColor: AppColors.acidLime,
+                    onPressed: () => _addCustomTag(_customTagController.text),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Tags Wrap
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _availableTags.map((tag) {
-                  final isSelected = _selectedTags.contains(tag);
-                  return FilterChip(
-                    label: Text(tag),
-                    labelStyle: AppTypography.monoBadge(
-                      color: isSelected ? AppColors.pureBlack : AppColors.textSecondary,
-                      fontSize: 10,
-                    ),
-                    selected: isSelected,
-                    selectedColor: AppColors.acidLime,
-                    backgroundColor: AppColors.surfaceElevated,
-                    side: BorderSide(
-                      color: isSelected ? AppColors.acidLime : AppColors.border,
-                      width: 1.5,
-                    ),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
-                    showCheckmark: false,
-                    onSelected: (selected) {
-                      HapticFeedback.selectionClick();
-                      setState(() {
-                        if (selected) {
-                          _selectedTags.add(tag);
-                        } else {
-                          _selectedTags.remove(tag);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
+                children: [
+                  ...{..._defaultTags, ..._customTags}.map((tag) {
+                    final isSelected = _selectedTags.contains(tag);
+                    final isCustom = _customTags.contains(tag);
+                    return FilterChip(
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(tag),
+                          if (isCustom) ...[
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () => _removeCustomTag(tag),
+                              child: Icon(
+                                Icons.close,
+                                size: 12,
+                                color: isSelected ? AppColors.pureBlack : AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      labelStyle: AppTypography.monoBadge(
+                        color: isSelected ? AppColors.pureBlack : AppColors.textSecondary,
+                        fontSize: 10,
+                      ),
+                      selected: isSelected,
+                      selectedColor: AppColors.acidLime,
+                      backgroundColor: AppColors.surfaceElevated,
+                      side: BorderSide(
+                        color: isSelected ? AppColors.acidLime : AppColors.border,
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
+                      showCheckmark: false,
+                      onSelected: (selected) {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          if (selected) {
+                            _selectedTags.add(tag);
+                          } else {
+                            _selectedTags.remove(tag);
+                          }
+                        });
+                      },
+                    );
+                  }),
+                ],
               ),
 
               const SizedBox(height: 24),
 
-              // Submit Button
+              // Submit Button (Dynamic for written review vs quick rating)
               BrutalistButton(
-                label: _isSubmitting ? 'PUBLISHING...' : 'PUBLISH REVIEW',
+                label: _isSubmitting
+                    ? 'PUBLISHING...'
+                    : _hasWrittenText
+                        ? 'PUBLISH CRITIQUE'
+                        : 'LOG SCORE [${_rating.toStringAsFixed(1)}] // QUICK RATE',
                 icon: Icons.check,
                 isFullWidth: true,
                 backgroundColor: AppColors.acidLime,

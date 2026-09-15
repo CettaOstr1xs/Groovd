@@ -59,6 +59,12 @@ class Review {
     }
   }
 
+  /// Whether this entry has written commentary (headline or body text).
+  bool get hasWrittenReview => headline.trim().isNotEmpty || body.trim().isNotEmpty;
+
+  /// Whether this entry is a score-only rating without written commentary.
+  bool get isQuickRating => !hasWrittenReview;
+
   Review copyWith({
     String? id,
     String? musicItemId,

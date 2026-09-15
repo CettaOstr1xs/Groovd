@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:groovd/data/models/review.dart';
+import 'local_review_repository.dart';
 import 'review_repository.dart';
 
-/// Cloud Firestore implementation of [ReviewRepository].
+/// Cloud Firestore implementation of [ReviewRepository] with local SharedPreferences fallback.
 class FirestoreReviewRepository implements ReviewRepository {
   final FirebaseFirestore _firestore;
+  final LocalReviewRepository _local = LocalReviewRepository();
   static const String collectionPath = 'reviews';
 
   FirestoreReviewRepository({FirebaseFirestore? firestore})
@@ -12,51 +14,106 @@ class FirestoreReviewRepository implements ReviewRepository {
 
   @override
   Future<List<Review>> getReviewsForItem(String musicItemId) async {
-    final snapshot = await _firestore
-        .collection(collectionPath)
-        .where('musicItemId', isEqualTo: musicItemId)
-        .get();
-    final list = snapshot.docs.map((d) => Review.fromMap(d.data())).toList();
-    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return list;
+    try {
+      final snapshot = await _firestore
+          .collection(collectionPath)
+          .where('musicItemId', isEqualTo: musicItemId)
+          .get()
+          .timeout(const Duration(milliseconds: 2500));
+      final list = snapshot.docs.map((d) => Review.fromMap(d.data())).toList();
+      final localList = await _local.getReviewsForItem(musicItemId);
+      final map = <String, Review>{};
+      for (final r in localList) {
+        map[r.id] = r;
+      }
+      for (final r in list) {
+        map[r.id] = r;
+      }
+      final merged = map.values.toList();
+      merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return merged;
+    } catch (_) {
+      return _local.getReviewsForItem(musicItemId);
+    }
   }
 
   @override
   Future<List<Review>> getRecentReviews({int limit = 20}) async {
-    final snapshot = await _firestore
-        .collection(collectionPath)
-        .limit(limit)
-        .get();
-    final list = snapshot.docs.map((d) => Review.fromMap(d.data())).toList();
-    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return list;
+    try {
+      final snapshot = await _firestore
+          .collection(collectionPath)
+          .limit(limit)
+          .get()
+          .timeout(const Duration(milliseconds: 2500));
+      final list = snapshot.docs.map((d) => Review.fromMap(d.data())).toList();
+      final localList = await _local.getRecentReviews(limit: limit);
+      final map = <String, Review>{};
+      for (final r in localList) {
+        map[r.id] = r;
+      }
+      for (final r in list) {
+        map[r.id] = r;
+      }
+      final merged = map.values.toList();
+      merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return merged.take(limit).toList();
+    } catch (_) {
+      return _local.getRecentReviews(limit: limit);
+    }
   }
 
   @override
   Future<List<Review>> getUserReviews(String userId) async {
-    final snapshot = await _firestore
-        .collection(collectionPath)
-        .where('userId', isEqualTo: userId)
-        .get();
-    final list = snapshot.docs.map((d) => Review.fromMap(d.data())).toList();
-    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return list;
+    try {
+      final snapshot = await _firestore
+          .collection(collectionPath)
+          .where('userId', isEqualTo: userId)
+          .get()
+          .timeout(const Duration(milliseconds: 2500));
+      final list = snapshot.docs.map((d) => Review.fromMap(d.data())).toList();
+      final localList = await _local.getUserReviews(userId);
+      final map = <String, Review>{};
+      for (final r in localList) {
+        map[r.id] = r;
+      }
+      for (final r in list) {
+        map[r.id] = r;
+      }
+      final merged = map.values.toList();
+      merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return merged;
+    } catch (_) {
+      return _local.getUserReviews(userId);
+    }
   }
 
   @override
   Future<void> addReview(Review review) async {
-    await _firestore
-        .collection(collectionPath)
-        .doc(review.id)
-        .set(review.toMap());
+    // 1. Immediately store to local storage (instant and offline resilient)
+    await _local.addReview(review);
+
+    // 2. Sync to Cloud Firestore with fail-safe timeout
+    try {
+      await _firestore
+          .collection(collectionPath)
+          .doc(review.id)
+          .set(review.toMap())
+          .timeout(const Duration(milliseconds: 2500));
+    } catch (_) {
+      // Offline queue or transient latency; local store already has it
+    }
   }
 
   @override
   Future<void> likeReview(String reviewId) async {
-    await _firestore
-        .collection(collectionPath)
-        .doc(reviewId)
-        .update({'likesCount': FieldValue.increment(1)});
+    await _local.likeReview(reviewId);
+    try {
+      await _firestore
+          .collection(collectionPath)
+          .doc(reviewId)
+          .update({'likesCount': FieldValue.increment(1)})
+          .timeout(const Duration(milliseconds: 2500));
+    } catch (_) {}
   }
 
   @override

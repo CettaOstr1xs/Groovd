@@ -194,5 +194,52 @@ void main() {
       expect(item.coverUrl, 'https://i.scdn.co/image/abc1234');
       expect(item.type, MusicType.song);
     });
+
+    test('Differentiates written critique from quick score-only rating', () {
+      final quickRating = Review(
+        id: 'r_quick',
+        musicItemId: 'm_quick',
+        musicItemName: 'Song A',
+        artistName: 'Artist A',
+        coverUrl: '',
+        itemType: 'song',
+        userId: 'u1',
+        userName: 'Me',
+        userHandle: '@me',
+        rating: 8.5,
+        headline: '',
+        body: '',
+        createdAt: DateTime.now(),
+      );
+
+      expect(quickRating.hasWrittenReview, false);
+      expect(quickRating.isQuickRating, true);
+
+      final writtenReview = quickRating.copyWith(headline: 'Incredible track');
+      expect(writtenReview.hasWrittenReview, true);
+      expect(writtenReview.isQuickRating, false);
+
+      final reviews = [quickRating, writtenReview];
+      final writtenOnly = reviews.where((r) => r.hasWrittenReview).toList();
+      expect(writtenOnly.length, 1);
+      expect(writtenOnly.first.id, 'r_quick');
+      expect(writtenOnly.first.headline, 'Incredible track');
+    });
+
+    test('Formats custom tag strings into clean neo-brutalist hashtags', () {
+      String formatTag(String raw) {
+        final clean = raw.trim();
+        if (clean.isEmpty) return '';
+        String tag = clean.toUpperCase().replaceAll(' ', '_');
+        if (!tag.startsWith('#')) {
+          tag = '#$tag';
+        }
+        return tag;
+      }
+
+      expect(formatTag('shoegaze grail'), '#SHOEGAZE_GRAIL');
+      expect(formatTag('#AOTY_CONTENDER'), '#AOTY_CONTENDER');
+      expect(formatTag('night drives  '), '#NIGHT_DRIVES');
+    });
   });
 }

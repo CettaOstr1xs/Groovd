@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
+import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/services/spotify_mock_data.dart';
 import 'package:groovd/state/dossier_top_picks_provider.dart';
 import 'package:groovd/state/music_providers.dart';
@@ -525,10 +526,18 @@ class ProfileScreen extends ConsumerWidget {
               onSelectSlot: (slot) => _showTopPickSelector(context, ref, isAlbum: false, slotIndex: slot),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             const Divider(),
 
-            // Logged Reviews Feed
+            // Section: RECENT ACTIVITY (Chronological Timeline of Scored Releases)
+            _RecentActivitySection(
+              reviews: userReviewsAsync.asData?.value ?? [],
+            ),
+
+            const SizedBox(height: 24),
+            const Divider(),
+
+            // Logged Written Reviews Feed
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
               child: Row(
@@ -539,10 +548,13 @@ class ProfileScreen extends ConsumerWidget {
                     style: AppTypography.displaySmall(),
                   ),
                   userReviewsAsync.when(
-                    data: (r) => Text(
-                      '${r.length} ENTRIES',
-                      style: AppTypography.monoLabel(fontSize: 10),
-                    ),
+                    data: (r) {
+                      final count = r.where((review) => review.hasWrittenReview).length;
+                      return Text(
+                        '$count CRITIQUES',
+                        style: AppTypography.monoLabel(fontSize: 10),
+                      );
+                    },
                     loading: () => const SizedBox.shrink(),
                     error: (err, stack) => const SizedBox.shrink(),
                   ),
@@ -552,7 +564,8 @@ class ProfileScreen extends ConsumerWidget {
 
             userReviewsAsync.when(
               data: (reviews) {
-                if (reviews.isEmpty) {
+                final writtenReviews = reviews.where((r) => r.hasWrittenReview).toList();
+                if (writtenReviews.isEmpty) {
                   return Container(
                     margin: const EdgeInsets.all(20),
                     padding: const EdgeInsets.all(24),
@@ -563,15 +576,15 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     child: Column(
                       children: [
-                        const Icon(Icons.music_note, size: 36, color: AppColors.textMuted),
+                        const Icon(Icons.rate_review_outlined, size: 36, color: AppColors.textMuted),
                         const SizedBox(height: 12),
                         Text(
-                          'YOUR CRITIC LOG IS EMPTY',
+                          'NO WRITTEN REVIEWS LOGGED YET',
                           style: AppTypography.monoBadge(color: AppColors.textPrimary, fontSize: 12),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Search any album or song and drop your first score and review!',
+                          'Drop your in-depth written impressions on any album or track to file it here.',
                           style: AppTypography.bodyMedium(color: AppColors.textSecondary),
                           textAlign: TextAlign.center,
                         ),
@@ -584,10 +597,10 @@ class ProfileScreen extends ConsumerWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: reviews.length,
+                  itemCount: writtenReviews.length,
                   separatorBuilder: (context, index) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    final review = reviews[index];
+                    final review = writtenReviews[index];
                     return ReviewCard(
                       review: review,
                       showItemHeader: true,
@@ -951,6 +964,239 @@ class _StatBox extends StatelessWidget {
             style: AppTypography.monoBadge(color: AppColors.textMuted, fontSize: 9),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RecentActivitySection extends StatelessWidget {
+  final List<Review> reviews;
+
+  const _RecentActivitySection({required this.reviews});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 14,
+                    color: AppColors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'RECENT ACTIVITY',
+                    style: AppTypography.monoLabel(
+                      color: AppColors.textPrimary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Text(
+                  '${reviews.length} SCORED',
+                  style: AppTypography.monoBadge(color: AppColors.textSecondary, fontSize: 8),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        if (reviews.isEmpty)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceElevated,
+              border: Border.all(color: AppColors.borderSubtle),
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.history, color: AppColors.textMuted, size: 24),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'NO RECENT ACTIVITY RECORDED',
+                        style: AppTypography.monoBadge(color: AppColors.textPrimary, fontSize: 10),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Rate any album or single to start building your chronological timeline.',
+                        style: AppTypography.bodySmall(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          SizedBox(
+            height: 98,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: reviews.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final review = reviews[index];
+                return _RecentActivityCard(review: review);
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _RecentActivityCard extends ConsumerWidget {
+  final Review review;
+
+  const _RecentActivityCard({required this.review});
+
+  Color get _scoreColor {
+    if (review.rating >= 9.0) return AppColors.acidLime;
+    if (review.rating >= 8.0) return AppColors.cyberCyan;
+    if (review.rating >= 6.5) return AppColors.electricPink;
+    if (review.rating >= 5.0) return const Color(0xFFFFB800);
+    return AppColors.vermillion;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isAlbum = review.itemType == 'album';
+
+    return InkWell(
+      onTap: () async {
+        MusicItem? item = await ref.read(spotifyRepositoryProvider).getItemById(
+              review.musicItemId,
+              type: isAlbum ? MusicType.album : MusicType.song,
+            );
+        item ??= MusicItem(
+          id: review.musicItemId,
+          name: review.musicItemName,
+          artist: review.artistName,
+          type: isAlbum ? MusicType.album : MusicType.song,
+          coverUrl: review.coverUrl,
+          releaseDate: '',
+        );
+        if (context.mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item!)),
+          );
+        }
+      },
+      borderRadius: BorderRadius.circular(2),
+      child: Container(
+        width: 255,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          border: Border.all(color: AppColors.border, width: 1.5),
+          borderRadius: BorderRadius.circular(2),
+        ),
+        child: Row(
+          children: [
+            AlbumArtCard(
+              imageUrl: review.coverUrl,
+              size: 74,
+              showShadow: false,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: Text(
+                          isAlbum ? 'LP' : 'SONG',
+                          style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 7.5),
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        review.timeAgo,
+                        style: AppTypography.monoLabel(fontSize: 8, color: AppColors.textMuted),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: _scoreColor,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: Text(
+                          review.scoreFormatted,
+                          style: AppTypography.monoBadge(
+                            color: AppColors.pureBlack,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    review.musicItemName.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.displaySmall(fontSize: 11),
+                  ),
+                  Text(
+                    review.artistName.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.monoLabel(fontSize: 8, color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceElevated,
+                      borderRadius: BorderRadius.circular(1.5),
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
+                    child: Text(
+                      review.hasWrittenReview ? 'CRITIQUE' : 'RATING ONLY',
+                      style: AppTypography.monoBadge(
+                        color: review.hasWrittenReview ? AppColors.electricPink : AppColors.textMuted,
+                        fontSize: 7.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
