@@ -59,8 +59,12 @@ class SpotifyRepository {
     } catch (_) {}
 
     if (isLiveMode) {
-      if (type == MusicType.song) {
-        return await apiService.getTrack(id);
+      if (type == MusicType.song || id.startsWith('track_')) {
+        final track = await apiService.getTrack(id);
+        if (track != null) return track;
+      } else if (type == MusicType.album || id.startsWith('album_')) {
+        final album = await apiService.getAlbum(id);
+        if (album != null) return album;
       } else {
         final album = await apiService.getAlbum(id);
         if (album != null) return album;

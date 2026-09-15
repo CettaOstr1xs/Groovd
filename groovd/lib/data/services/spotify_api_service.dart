@@ -25,10 +25,11 @@ class SpotifyApiService {
   }
 
   /// Request or reuse an OAuth2 Client Credentials access token from Spotify.
-  Future<String?> _getValidToken() async {
+  Future<String?> _getValidToken({bool forceRefresh = false}) async {
     if (!isConfigured) return null;
 
-    if (_accessToken != null &&
+    if (!forceRefresh &&
+        _accessToken != null &&
         _tokenExpiry != null &&
         DateTime.now().isBefore(_tokenExpiry!)) {
       return _accessToken;
@@ -82,6 +83,13 @@ class SpotifyApiService {
         headers: {'Authorization': 'Bearer $token'},
       );
 
+      if (response.statusCode == 401) {
+        final freshToken = await _getValidToken(forceRefresh: true);
+        if (freshToken != null) {
+          response = await http.get(uri, headers: {'Authorization': 'Bearer $freshToken'});
+        }
+      }
+
       // If Spotify returns 400 with 'Invalid limit', retry once with limit=5
       if (response.statusCode == 400 &&
           response.body.contains('Invalid limit') &&
@@ -133,10 +141,17 @@ class SpotifyApiService {
 
     try {
       final uri = Uri.parse('https://api.spotify.com/v1/albums/$albumId');
-      final response = await http.get(
+      var response = await http.get(
         uri,
         headers: {'Authorization': 'Bearer $token'},
       );
+
+      if (response.statusCode == 401) {
+        final freshToken = await _getValidToken(forceRefresh: true);
+        if (freshToken != null) {
+          response = await http.get(uri, headers: {'Authorization': 'Bearer $freshToken'});
+        }
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -157,10 +172,17 @@ class SpotifyApiService {
 
     try {
       final uri = Uri.parse('https://api.spotify.com/v1/tracks/$trackId');
-      final response = await http.get(
+      var response = await http.get(
         uri,
         headers: {'Authorization': 'Bearer $token'},
       );
+
+      if (response.statusCode == 401) {
+        final freshToken = await _getValidToken(forceRefresh: true);
+        if (freshToken != null) {
+          response = await http.get(uri, headers: {'Authorization': 'Bearer $freshToken'});
+        }
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -183,10 +205,17 @@ class SpotifyApiService {
 
     try {
       final uri = Uri.parse('https://api.spotify.com/v1/browse/new-releases?limit=$safeLimit');
-      final response = await http.get(
+      var response = await http.get(
         uri,
         headers: {'Authorization': 'Bearer $token'},
       );
+
+      if (response.statusCode == 401) {
+        final freshToken = await _getValidToken(forceRefresh: true);
+        if (freshToken != null) {
+          response = await http.get(uri, headers: {'Authorization': 'Bearer $freshToken'});
+        }
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;

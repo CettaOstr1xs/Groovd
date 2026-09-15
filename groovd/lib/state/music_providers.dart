@@ -1,16 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/constants/spotify_config.dart';
 import '../data/models/music_item.dart';
 import '../data/services/spotify_api_service.dart';
 import '../data/services/spotify_repository.dart';
+import 'settings_provider.dart';
 
-/// Singleton SpotifyApiService
+/// Singleton SpotifyApiService initialized with default config credentials
 final spotifyApiServiceProvider = Provider<SpotifyApiService>((ref) {
-  return SpotifyApiService();
+  return SpotifyApiService(
+    clientId: SpotifyConfig.clientId.trim().isNotEmpty ? SpotifyConfig.clientId.trim() : null,
+    clientSecret: SpotifyConfig.clientSecret.trim().isNotEmpty ? SpotifyConfig.clientSecret.trim() : null,
+  );
 });
 
 /// Spotify Repository provider
 final spotifyRepositoryProvider = Provider<SpotifyRepository>((ref) {
   final api = ref.watch(spotifyApiServiceProvider);
+  // Reactively track settings changes
+  ref.watch(spotifySettingsProvider);
   return SpotifyRepository(apiService: api);
 });
 
@@ -63,8 +70,27 @@ final searchResultsProvider = FutureProvider<List<MusicItem>>((ref) async {
   return repo.search(query, type: filter);
 });
 
-/// Music Item Detail Provider by ID
-final musicItemDetailProvider = FutureProvider.family<MusicItem?, String>((ref, id) async {
+/// Query parameter for music detail lookup
+class ItemQuery {
+  final String id;
+  final MusicType? type;
+
+  const ItemQuery({required this.id, this.type});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ItemQuery &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          type == other.type;
+
+  @override
+  int get hashCode => id.hashCode ^ (type?.hashCode ?? 0);
+}
+
+/// Music Item Detail Provider by ItemQuery
+final musicItemDetailProvider = FutureProvider.family<MusicItem?, ItemQuery>((ref, query) async {
   final repo = ref.watch(spotifyRepositoryProvider);
-  return repo.getItemById(id);
+  return repo.getItemById(query.id, type: query.type);
 });

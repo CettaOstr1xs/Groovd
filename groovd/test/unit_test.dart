@@ -96,6 +96,33 @@ void main() {
       expect(albumDetail!.tracks.isNotEmpty, true);
       expect(albumDetail.durationMs > 0, true);
     });
+
+    test('Live search for slowdive returns both albums and tracks with artwork', () async {
+      final apiService = SpotifyApiService(
+        clientId: '4cf83c2b597b4b16a332e231a21fb9d3',
+        clientSecret: '1c572e4231e04103b58f61e101304164',
+      );
+      final repo = SpotifyRepository(apiService: apiService);
+
+      final searchResults = await repo.search('slowdive');
+      expect(searchResults.isNotEmpty, true);
+
+      final hasAlbums = searchResults.any((item) => item.isAlbum);
+      final hasTracks = searchResults.any((item) => item.isSong);
+      expect(hasAlbums, true);
+      expect(hasTracks, true);
+
+      // Verify all slowdive results have artwork
+      for (final item in searchResults) {
+        expect(item.coverUrl.isNotEmpty, true, reason: '${item.name} should have cover art');
+      }
+
+      // Verify single track lookup gets artwork
+      final firstTrack = searchResults.firstWhere((item) => item.isSong);
+      final trackDetail = await repo.getItemById(firstTrack.id, type: MusicType.song);
+      expect(trackDetail, isNotNull);
+      expect(trackDetail!.coverUrl.isNotEmpty, true);
+    });
   });
 
   group('LocalReviewRepository Tests', () {
@@ -127,6 +154,45 @@ void main() {
 
       expect(count >= 1, true);
       expect(avg > 0.0, true);
+    });
+  });
+
+  group('Dossier Top Picks & MusicItem Tests', () {
+    test('MusicItem copyWith preserves existing coverUrl', () {
+      const original = MusicItem(
+        id: 't1',
+        name: 'Track One',
+        artist: 'Artist One',
+        type: MusicType.song,
+        coverUrl: 'https://example.com/art.jpg',
+        releaseDate: '2024',
+      );
+
+      final updated = original.copyWith(name: 'Track One Updated');
+      expect(updated.name, 'Track One Updated');
+      expect(updated.coverUrl, 'https://example.com/art.jpg');
+      expect(updated.isSong, true);
+    });
+
+    test('Parses track album images correctly from nested Spotify JSON', () {
+      final spotifyTrackJson = {
+        'id': 'sp_t1',
+        'name': 'Espresso',
+        'artists': [{'name': 'Sabrina Carpenter'}],
+        'album': {
+          'images': [
+            {'url': 'https://i.scdn.co/image/abc1234'}
+          ],
+          'release_date': '2024-04-12',
+        },
+        'duration_ms': 175000,
+      };
+
+      final item = MusicItem.fromSpotifyTrack(spotifyTrackJson);
+      expect(item.id, 'sp_t1');
+      expect(item.name, 'Espresso');
+      expect(item.coverUrl, 'https://i.scdn.co/image/abc1234');
+      expect(item.type, MusicType.song);
     });
   });
 }

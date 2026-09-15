@@ -204,6 +204,38 @@ class MusicItem {
     );
   }
 
+  MusicItem copyWith({
+    String? id,
+    String? name,
+    String? artist,
+    MusicType? type,
+    String? coverUrl,
+    String? releaseDate,
+    List<String>? genres,
+    int? trackCount,
+    int? durationMs,
+    String? previewUrl,
+    String? externalSpotifyUrl,
+    List<TrackInfo>? tracks,
+    int? popularity,
+  }) {
+    return MusicItem(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      artist: artist ?? this.artist,
+      type: type ?? this.type,
+      coverUrl: coverUrl ?? this.coverUrl,
+      releaseDate: releaseDate ?? this.releaseDate,
+      genres: genres ?? this.genres,
+      trackCount: trackCount ?? this.trackCount,
+      durationMs: durationMs ?? this.durationMs,
+      previewUrl: previewUrl ?? this.previewUrl,
+      externalSpotifyUrl: externalSpotifyUrl ?? this.externalSpotifyUrl,
+      tracks: tracks ?? this.tracks,
+      popularity: popularity ?? this.popularity,
+    );
+  }
+
   /// Parses a track from Spotify Web API response.
   factory MusicItem.fromSpotifyTrack(Map<String, dynamic> json) {
     String artistName = 'Unknown Artist';
@@ -216,8 +248,22 @@ class MusicItem {
     final album = json['album'] as Map<String, dynamic>?;
     if (album != null && album['images'] != null) {
       final images = album['images'] as List;
-      if (images.isNotEmpty) {
-        cover = images.first['url'] as String? ?? '';
+      for (final img in images) {
+        final url = (img as Map<String, dynamic>?)?['url'] as String?;
+        if (url != null && url.isNotEmpty) {
+          cover = url;
+          break;
+        }
+      }
+    }
+    if (cover.isEmpty && json['images'] != null) {
+      final images = json['images'] as List;
+      for (final img in images) {
+        final url = (img as Map<String, dynamic>?)?['url'] as String?;
+        if (url != null && url.isNotEmpty) {
+          cover = url;
+          break;
+        }
       }
     }
 

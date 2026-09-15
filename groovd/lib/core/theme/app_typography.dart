@@ -96,36 +96,36 @@ class AppTypography {
       );
 
   // Readable Editorial Body & Reviews
-  static TextStyle headline({Color color = AppColors.textPrimary}) =>
+  static TextStyle headline({Color color = AppColors.textPrimary, double? fontSize}) =>
       GoogleFonts.spaceGrotesk(
-        fontSize: 18,
+        fontSize: fontSize ?? 18,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.5,
         height: 1.25,
         color: color,
       );
 
-  static TextStyle bodyLarge({Color color = AppColors.textPrimary}) =>
+  static TextStyle bodyLarge({Color color = AppColors.textPrimary, double? fontSize}) =>
       GoogleFonts.spaceGrotesk(
-        fontSize: 15,
+        fontSize: fontSize ?? 15,
         fontWeight: FontWeight.w400,
         letterSpacing: -0.2,
         height: 1.45,
         color: color,
       );
 
-  static TextStyle bodyMedium({Color color = AppColors.textSecondary}) =>
+  static TextStyle bodyMedium({Color color = AppColors.textSecondary, double? fontSize}) =>
       GoogleFonts.spaceGrotesk(
-        fontSize: 13,
+        fontSize: fontSize ?? 13,
         fontWeight: FontWeight.w400,
         letterSpacing: -0.1,
         height: 1.4,
         color: color,
       );
 
-  static TextStyle bodySmall({Color color = AppColors.textMuted}) =>
+  static TextStyle bodySmall({Color color = AppColors.textMuted, double? fontSize}) =>
       GoogleFonts.spaceGrotesk(
-        fontSize: 11,
+        fontSize: fontSize ?? 11,
         fontWeight: FontWeight.w400,
         height: 1.35,
         color: color,

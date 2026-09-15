@@ -34,7 +34,11 @@ class SpotifySettingsNotifier extends Notifier<SpotifySettingsState> {
   @override
   SpotifySettingsState build() {
     _loadCredentials();
-    return const SpotifySettingsState();
+    return SpotifySettingsState(
+      clientId: SpotifyConfig.clientId,
+      clientSecret: SpotifyConfig.clientSecret,
+      isLiveMode: SpotifyConfig.isConfigured,
+    );
   }
 
   Future<void> _loadCredentials() async {

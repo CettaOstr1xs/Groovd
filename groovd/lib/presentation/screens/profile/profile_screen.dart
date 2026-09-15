@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
+import 'package:groovd/data/models/music_item.dart';
+import 'package:groovd/data/services/spotify_mock_data.dart';
+import 'package:groovd/state/dossier_top_picks_provider.dart';
 import 'package:groovd/state/music_providers.dart';
 import 'package:groovd/state/review_providers.dart';
 import 'package:groovd/state/settings_provider.dart';
+import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
@@ -100,6 +104,211 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
+  void _showTopPickSelector(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool isAlbum,
+    required int slotIndex,
+  }) {
+    final searchController = TextEditingController();
+    List<MusicItem> searchResults = [];
+    bool isSearching = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final userId = ref.read(currentUserIdProvider);
+            final userReviews = ref.read(userReviewsProvider(userId)).value ?? [];
+
+            // Reviewed items
+            final reviewedCandidates = userReviews
+                .where((r) => isAlbum ? r.itemType == 'album' : r.itemType == 'song')
+                .map((r) => MusicItem(
+                      id: r.musicItemId,
+                      name: r.musicItemName,
+                      artist: r.artistName,
+                      type: isAlbum ? MusicType.album : MusicType.song,
+                      coverUrl: r.coverUrl,
+                      releaseDate: '',
+                    ))
+                .toList();
+
+            // Curated catalogue candidates
+            final curatedCandidates = isAlbum
+                ? SpotifyMockData.trendingAlbums
+                : SpotifyMockData.hotTracks;
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.78,
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                border: Border(top: BorderSide(color: AppColors.borderBold, width: 2.0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'PIN RANK 0${slotIndex + 1} // ${isAlbum ? "ALBUM" : "SONG"}',
+                            style: AppTypography.displaySmall(fontSize: 16),
+                          ),
+                          Text(
+                            'CHOOSE FROM LOGGED REVIEWS OR CATALOG',
+                            style: AppTypography.monoLabel(fontSize: 9, color: AppColors.textMuted),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Search input
+                  TextField(
+                    controller: searchController,
+                    style: AppTypography.headline(fontSize: 14),
+                    cursorColor: AppColors.acidLime,
+                    decoration: InputDecoration(
+                      hintText: 'Search ${isAlbum ? "album" : "song"} to pin...',
+                      prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textSecondary),
+                      suffixIcon: searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 16),
+                              onPressed: () {
+                                searchController.clear();
+                                setModalState(() {
+                                  searchResults = [];
+                                });
+                              },
+                            )
+                          : null,
+                    ),
+                    onSubmitted: (val) async {
+                      if (val.trim().isEmpty) return;
+                      setModalState(() => isSearching = true);
+                      final res = await ref.read(spotifyRepositoryProvider).search(
+                            val,
+                            type: isAlbum ? MusicType.album : MusicType.song,
+                          );
+                      setModalState(() {
+                        isSearching = false;
+                        searchResults = res;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Selection list
+                  Expanded(
+                    child: isSearching
+                        ? const Center(child: CircularProgressIndicator(color: AppColors.acidLime))
+                        : searchResults.isNotEmpty
+                            ? ListView.separated(
+                                itemCount: searchResults.length,
+                                separatorBuilder: (context, index) => const Divider(height: 1),
+                                itemBuilder: (context, idx) {
+                                  final item = searchResults[idx];
+                                  return _CandidateTile(
+                                    item: item,
+                                    onSelect: () async {
+                                      await ref.read(dossierTopPicksProvider.notifier).pinItem(
+                                            isAlbum: isAlbum,
+                                            slotIndex: slotIndex,
+                                            item: item,
+                                          );
+                                      if (context.mounted) Navigator.of(context).pop();
+                                    },
+                                  );
+                                },
+                              )
+                            : ListView(
+                                children: [
+                                  if (reviewedCandidates.isNotEmpty) ...[
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      child: Text(
+                                        'FROM YOUR RECENT CRITIQUES',
+                                        style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 10),
+                                      ),
+                                    ),
+                                    ...reviewedCandidates.map((item) => _CandidateTile(
+                                          item: item,
+                                          onSelect: () async {
+                                            await ref.read(dossierTopPicksProvider.notifier).pinItem(
+                                                  isAlbum: isAlbum,
+                                                  slotIndex: slotIndex,
+                                                  item: item,
+                                                );
+                                            if (context.mounted) Navigator.of(context).pop();
+                                          },
+                                        )),
+                                    const Divider(height: 24),
+                                  ],
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    child: Text(
+                                      'SUGGESTED CANON',
+                                      style: AppTypography.monoBadge(color: AppColors.cyberCyan, fontSize: 10),
+                                    ),
+                                  ),
+                                  ...curatedCandidates.map((item) => _CandidateTile(
+                                        item: item,
+                                        onSelect: () async {
+                                          await ref.read(dossierTopPicksProvider.notifier).pinItem(
+                                                isAlbum: isAlbum,
+                                                slotIndex: slotIndex,
+                                                item: item,
+                                              );
+                                          if (context.mounted) Navigator.of(context).pop();
+                                        },
+                                      )),
+                                ],
+                              ),
+                  ),
+
+                  const SizedBox(height: 8),
+                  BrutalistButton(
+                    label: 'CLEAR / UNPIN SLOT',
+                    icon: Icons.delete_outline,
+                    backgroundColor: AppColors.surfaceElevated,
+                    textColor: AppColors.vermillion,
+                    borderColor: AppColors.border,
+                    isFullWidth: true,
+                    onPressed: () async {
+                      await ref.read(dossierTopPicksProvider.notifier).unpinItem(
+                            isAlbum: isAlbum,
+                            slotIndex: slotIndex,
+                          );
+                      if (context.mounted) Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userId = ref.watch(currentUserIdProvider);
@@ -107,6 +316,7 @@ class ProfileScreen extends ConsumerWidget {
     final userHandle = ref.watch(currentUserHandleProvider);
     final userReviewsAsync = ref.watch(userReviewsProvider(userId));
     final spotifySettings = ref.watch(spotifySettingsProvider);
+    final topPicks = ref.watch(resolvedTopPicksProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -268,6 +478,56 @@ class ProfileScreen extends ConsumerWidget {
 
             const Divider(),
 
+            // Section: CRITIC'S CANON // TOP 3 ALBUMS & SONGS
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'CRITIC\'S CANON',
+                        style: AppTypography.displaySmall(),
+                      ),
+                      Text(
+                        'YOUR HIGHEST RATED & PINNED RELEASES',
+                        style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 9),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // Top 3 Albums Podium
+            _TopPicksPodiumSection(
+              title: 'TOP 3 ALBUMS',
+              badgeLabel: 'LP ARCHIVE',
+              badgeColor: AppColors.acidLime,
+              isAlbum: true,
+              items: topPicks.topAlbums,
+              onSelectSlot: (slot) => _showTopPickSelector(context, ref, isAlbum: true, slotIndex: slot),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Top 3 Songs Podium
+            _TopPicksPodiumSection(
+              title: 'TOP 3 SONGS // SINGLES',
+              badgeLabel: 'HEAVY ROTATION',
+              badgeColor: AppColors.cyberCyan,
+              isAlbum: false,
+              items: topPicks.topSongs,
+              onSelectSlot: (slot) => _showTopPickSelector(context, ref, isAlbum: false, slotIndex: slot),
+            ),
+
+            const SizedBox(height: 20),
+            const Divider(),
+
             // Logged Reviews Feed
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
@@ -335,10 +595,21 @@ class ProfileScreen extends ConsumerWidget {
                         ref.read(reviewControllerProvider).likeReview(review.id);
                       },
                       onTap: () async {
-                        final item = await ref.read(spotifyRepositoryProvider).getItemById(review.musicItemId);
-                        if (item != null && context.mounted) {
+                        MusicItem? item = await ref.read(spotifyRepositoryProvider).getItemById(
+                              review.musicItemId,
+                              type: review.itemType == 'song' ? MusicType.song : MusicType.album,
+                            );
+                        item ??= MusicItem(
+                          id: review.musicItemId,
+                          name: review.musicItemName,
+                          artist: review.artistName,
+                          type: review.itemType == 'song' ? MusicType.song : MusicType.album,
+                          coverUrl: review.coverUrl,
+                          releaseDate: '',
+                        );
+                        if (context.mounted) {
                           Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item)),
+                            MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item!)),
                           );
                         }
                       },
@@ -362,6 +633,288 @@ class ProfileScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _TopPicksPodiumSection extends StatelessWidget {
+  final String title;
+  final String badgeLabel;
+  final Color badgeColor;
+  final bool isAlbum;
+  final List<MusicItem?> items;
+  final ValueChanged<int> onSelectSlot;
+
+  const _TopPicksPodiumSection({
+    required this.title,
+    required this.badgeLabel,
+    required this.badgeColor,
+    required this.isAlbum,
+    required this.items,
+    required this.onSelectSlot,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 14,
+                    color: badgeColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: AppTypography.monoLabel(
+                      color: AppColors.textPrimary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Text(
+                  badgeLabel,
+                  style: AppTypography.monoBadge(color: badgeColor, fontSize: 8),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (int i = 0; i < 3; i++) ...[
+                Expanded(
+                  child: _PodiumSlotCard(
+                    rank: i + 1,
+                    item: i < items.length ? items[i] : null,
+                    isAlbum: isAlbum,
+                    onTap: () {
+                      final item = i < items.length ? items[i] : null;
+                      if (item != null) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item)),
+                        );
+                      } else {
+                        onSelectSlot(i);
+                      }
+                    },
+                    onLongPress: () => onSelectSlot(i),
+                  ),
+                ),
+                if (i < 2) const SizedBox(width: 10),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PodiumSlotCard extends StatelessWidget {
+  final int rank;
+  final MusicItem? item;
+  final bool isAlbum;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  const _PodiumSlotCard({
+    required this.rank,
+    required this.item,
+    required this.isAlbum,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  Color get _rankColor {
+    switch (rank) {
+      case 1:
+        return AppColors.acidLime;
+      case 2:
+        return AppColors.cyberCyan;
+      case 3:
+      default:
+        return AppColors.electricPink;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      borderRadius: BorderRadius.circular(2),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          border: Border.all(
+            color: item != null ? AppColors.border : AppColors.borderSubtle,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(2),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Rank Banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 6),
+              decoration: BoxDecoration(
+                color: _rankColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(1)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '0$rank',
+                    style: AppTypography.monoBadge(
+                      color: AppColors.pureBlack,
+                      fontSize: 10,
+                    ),
+                  ),
+                  Icon(
+                    isAlbum ? Icons.album : Icons.music_note,
+                    size: 11,
+                    color: AppColors.pureBlack,
+                  ),
+                ],
+              ),
+            ),
+
+            if (item != null) ...[
+              // Artwork
+              AspectRatio(
+                aspectRatio: 1.0,
+                child: AlbumArtCard(
+                  imageUrl: item!.coverUrl,
+                  showShadow: false,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item!.name.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.displaySmall(fontSize: 11),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item!.artist.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.monoLabel(fontSize: 8, color: AppColors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              // Empty Slot
+              AspectRatio(
+                aspectRatio: 1.0,
+                child: Container(
+                  color: AppColors.surfaceElevated,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_circle_outline,
+                        color: _rankColor,
+                        size: 24,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '+ PIN ${isAlbum ? "LP" : "SONG"}',
+                        style: AppTypography.monoBadge(
+                          color: AppColors.textSecondary,
+                          fontSize: 8,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text(
+                  'EMPTY // TAP TO PIN',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.monoLabel(fontSize: 8, color: AppColors.textMuted),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CandidateTile extends StatelessWidget {
+  final MusicItem item;
+  final VoidCallback onSelect;
+
+  const _CandidateTile({
+    required this.item,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
+      leading: AlbumArtCard(
+        imageUrl: item.coverUrl,
+        size: 44,
+        showShadow: false,
+      ),
+      title: Text(
+        item.name.toUpperCase(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTypography.headline(fontSize: 13),
+      ),
+      subtitle: Text(
+        item.artist.toUpperCase(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTypography.bodySmall(color: AppColors.textMuted, fontSize: 10),
+      ),
+      trailing: BrutalistButton(
+        label: 'PIN',
+        isSmall: true,
+        backgroundColor: AppColors.acidLime,
+        textColor: AppColors.pureBlack,
+        onPressed: onSelect,
+      ),
+      onTap: onSelect,
     );
   }
 }

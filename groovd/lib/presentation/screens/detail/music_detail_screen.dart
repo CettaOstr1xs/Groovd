@@ -29,8 +29,13 @@ class MusicDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(musicItemDetailProvider(item.id));
-    final activeItem = detailAsync.asData?.value ?? item;
+    final detailAsync = ref.watch(musicItemDetailProvider(ItemQuery(id: item.id, type: item.type)));
+    final fetched = detailAsync.asData?.value;
+    final activeItem = fetched != null
+        ? fetched.copyWith(
+            coverUrl: fetched.coverUrl.isNotEmpty ? fetched.coverUrl : item.coverUrl,
+          )
+        : item;
 
     final reviewsAsync = ref.watch(itemReviewsProvider(item.id));
     final avgScoreAsync = ref.watch(itemAverageScoreProvider(item.id));
@@ -251,46 +256,72 @@ class MusicDetailScreen extends ConsumerWidget {
                 ),
                 itemBuilder: (context, index) {
                   final track = activeItem.tracks[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 28,
-                          child: Text(
-                            track.trackNumber.toString().padLeft(2, '0'),
-                            style: AppTypography.monoBadge(
-                              color: AppColors.textMuted,
-                              fontSize: 11,
+                  return InkWell(
+                    onTap: () {
+                      final trackItem = MusicItem(
+                        id: track.id,
+                        name: track.name,
+                        artist: track.artist.isNotEmpty ? track.artist : activeItem.artist,
+                        type: MusicType.song,
+                        coverUrl: activeItem.coverUrl,
+                        releaseDate: activeItem.releaseDate,
+                        genres: activeItem.genres,
+                        durationMs: track.durationMs,
+                        previewUrl: track.previewUrl,
+                        externalSpotifyUrl: track.id.isNotEmpty ? 'https://open.spotify.com/track/${track.id}' : '',
+                      );
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => MusicDetailScreen(
+                            item: trackItem,
+                            heroTag: 'track_${track.id}',
+                          ),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 28,
+                            child: Text(
+                              track.trackNumber.toString().padLeft(2, '0'),
+                              style: AppTypography.monoBadge(
+                                color: AppColors.textMuted,
+                                fontSize: 11,
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                track.name,
-                                style: AppTypography.bodyLarge(
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              if (track.artist.isNotEmpty && track.artist != activeItem.artist)
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  track.artist,
-                                  style: AppTypography.bodySmall(),
+                                  track.name,
+                                  style: AppTypography.bodyLarge(
+                                    color: AppColors.textPrimary,
+                                  ),
                                 ),
-                            ],
+                                if (track.artist.isNotEmpty && track.artist != activeItem.artist)
+                                  Text(
+                                    track.artist,
+                                    style: AppTypography.bodySmall(),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                        Text(
-                          track.formattedDuration,
-                          style: AppTypography.monoLabel(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
+                          Text(
+                            track.formattedDuration,
+                            style: AppTypography.monoLabel(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
+                        ],
+                      ),
                     ),
                   )
                       .animate()
