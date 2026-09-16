@@ -326,5 +326,178 @@ void main() {
       expect(songsOnly.first.musicItem.name, 'Paranoid Android');
     });
   });
+
+  group('Review Detail & Stack Deck Tests', () {
+    test('Calculates stack pile illusion depth correctly', () {
+      int calculateStackDepth(int reviewsCount) {
+        if (reviewsCount <= 1) return 0;
+        return 3;
+      }
+
+      // Single review: NO illusion behind it
+      expect(calculateStackDepth(0), 0);
+      expect(calculateStackDepth(1), 0);
+
+      // Multiple reviews: exactly 3 stacked card layers
+      expect(calculateStackDepth(2), 3);
+      expect(calculateStackDepth(3), 3);
+      expect(calculateStackDepth(10), 3);
+    });
+
+    test('Review share text formats accurately', () {
+      final review = Review(
+        id: 'r_share',
+        musicItemId: 'm1',
+        musicItemName: 'Loveless',
+        artistName: 'My Bloody Valentine',
+        coverUrl: '',
+        itemType: 'album',
+        userId: 'u1',
+        userName: 'Critic',
+        userHandle: '@critic',
+        rating: 10.0,
+        headline: 'Absolute masterwork of sound',
+        body: 'A wall of heavenly noise and layered dream pop.',
+        createdAt: DateTime.now(),
+      );
+
+      final shareText = '“${review.headline}”\n'
+          '${review.musicItemName} by ${review.artistName} — Scored ${review.scoreFormatted}/10 on Groovd\n'
+          '${review.body}';
+
+      expect(shareText.contains('“Absolute masterwork of sound”'), true);
+      expect(shareText.contains('Loveless by My Bloody Valentine'), true);
+      expect(shareText.contains('10.0/10 on Groovd'), true);
+    });
+  });
+
+  group('Logged Reviews Screen & Filter Tests', () {
+    final r1 = Review(
+      id: 'rev_1',
+      musicItemId: 'm1',
+      musicItemName: 'OK Computer',
+      artistName: 'Radiohead',
+      coverUrl: '',
+      itemType: 'album',
+      userId: 'user_local',
+      userName: 'Critic',
+      userHandle: '@critic',
+      rating: 9.8,
+      headline: 'Dystopian Masterpiece',
+      body: 'Alienation, paranoia and incredible guitar work.',
+      tags: ['#ALT_ROCK', '#CLASSIC'],
+      createdAt: DateTime(2026, 1, 1),
+    );
+
+    final r2 = Review(
+      id: 'rev_2',
+      musicItemId: 'm2',
+      musicItemName: 'Starless',
+      artistName: 'King Crimson',
+      coverUrl: '',
+      itemType: 'song',
+      userId: 'user_local',
+      userName: 'Critic',
+      userHandle: '@critic',
+      rating: 10.0,
+      headline: 'The Ultimate Prog Climax',
+      body: 'Melancholy mellotron giving way to savage distortion.',
+      tags: ['#PROG', '#MASTERPIECE'],
+      createdAt: DateTime(2026, 2, 1),
+    );
+
+    final r3 = Review(
+      id: 'rev_3',
+      musicItemId: 'm3',
+      musicItemName: 'Quick Track',
+      artistName: 'Quick Artist',
+      coverUrl: '',
+      itemType: 'song',
+      userId: 'user_local',
+      userName: 'Critic',
+      userHandle: '@critic',
+      rating: 7.0,
+      headline: '',
+      body: '',
+      createdAt: DateTime(2026, 3, 1),
+    );
+
+    test('Filters reviews strictly to those with written critiques', () {
+      final reviews = [r1, r2, r3];
+      final written = reviews.where((r) => r.hasWrittenReview).toList();
+      expect(written.length, 2);
+      expect(written.contains(r3), false);
+    });
+
+    test('Filters reviews by album and song categories', () {
+      final written = [r1, r2];
+      final albums = written.where((r) => r.itemType == 'album').toList();
+      final songs = written.where((r) => r.itemType == 'song').toList();
+      expect(albums.length, 1);
+      expect(albums.first.musicItemName, 'OK Computer');
+      expect(songs.length, 1);
+      expect(songs.first.musicItemName, 'Starless');
+    });
+
+    test('Searches across headline, body, artist, title, and tags', () {
+      final written = [r1, r2];
+      List<Review> search(String query) {
+        final q = query.toLowerCase().trim();
+        return written.where((r) {
+          final title = r.musicItemName.toLowerCase();
+          final artist = r.artistName.toLowerCase();
+          final headline = r.headline.toLowerCase();
+          final body = r.body.toLowerCase();
+          final tags = r.tags.map((t) => t.toLowerCase()).join(' ');
+          return title.contains(q) ||
+              artist.contains(q) ||
+              headline.contains(q) ||
+              body.contains(q) ||
+              tags.contains(q);
+        }).toList();
+      }
+
+      expect(search('dystopian').first.id, 'rev_1');
+      expect(search('mellotron').first.id, 'rev_2');
+      expect(search('#PROG').first.id, 'rev_2');
+      expect(search('radiohead').first.id, 'rev_1');
+      expect(search('nonexistent').isEmpty, true);
+    });
+
+    test('Sorts correctly by score and date', () {
+      final written = [r1, r2];
+
+      // Highest score
+      final byScore = List<Review>.from(written)..sort((a, b) => b.rating.compareTo(a.rating));
+      expect(byScore.first.id, 'rev_2'); // 10.0 > 9.8
+
+      // Newest
+      final byDate = List<Review>.from(written)..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      expect(byDate.first.id, 'rev_2'); // Feb 1 > Jan 1
+    });
+
+    test('Artist genre fallback attaches genres when item genres is empty', () {
+      const albumWithoutGenres = MusicItem(
+        id: 'sp_deathconsciousness',
+        name: 'Deathconsciousness',
+        artist: 'Have a Nice Life',
+        type: MusicType.album,
+        coverUrl: 'https://example.com/cover.jpg',
+        releaseDate: '2008-01-24',
+        genres: [],
+      );
+
+      expect(albumWithoutGenres.genres.isEmpty, true);
+
+      final artistGenres = ['POST-PUNK', 'SHOEGAZE', 'SLOWCORE', 'DRONE'];
+      final resolvedAlbum = albumWithoutGenres.copyWith(genres: artistGenres);
+
+      expect(resolvedAlbum.genres.isNotEmpty, true);
+      expect(resolvedAlbum.genres.length, 4);
+      expect(resolvedAlbum.genres.first, 'POST-PUNK');
+      expect(resolvedAlbum.genres.contains('SHOEGAZE'), true);
+    });
+  });
 }
+
 

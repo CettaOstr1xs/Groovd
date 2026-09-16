@@ -134,7 +134,46 @@ class SpotifyApiService {
     }
   }
 
-  /// Get detailed album info including full tracklist.
+  final Map<String, List<String>> _artistGenreCache = {};
+
+  /// Fetch primary genres for an artist from Spotify.
+  Future<List<String>> getArtistGenres(String artistId) async {
+    if (_artistGenreCache.containsKey(artistId)) {
+      return _artistGenreCache[artistId]!;
+    }
+    final token = await _getValidToken();
+    if (token == null) return [];
+
+    try {
+      final uri = Uri.parse('https://api.spotify.com/v1/artists/$artistId');
+      var response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 401) {
+        final freshToken = await _getValidToken(forceRefresh: true);
+        if (freshToken != null) {
+          response = await http.get(uri, headers: {'Authorization': 'Bearer $freshToken'});
+        }
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final genresList = (data['genres'] as List?)
+            ?.map((e) => e.toString().toUpperCase())
+            .toList() ?? [];
+        final cleanGenres = genresList.take(4).toList();
+        _artistGenreCache[artistId] = cleanGenres;
+        return cleanGenres;
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Get detailed album info including full tracklist and artist genres fallback.
   Future<MusicItem?> getAlbum(String albumId) async {
     final token = await _getValidToken();
     if (token == null) return null;
@@ -155,7 +194,20 @@ class SpotifyApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return MusicItem.fromSpotifyAlbum(data);
+        var item = MusicItem.fromSpotifyAlbum(data);
+        if (item.genres.isEmpty) {
+          final artists = data['artists'] as List?;
+          if (artists != null && artists.isNotEmpty) {
+            final artistId = artists.first['id'] as String?;
+            if (artistId != null && artistId.isNotEmpty) {
+              final genres = await getArtistGenres(artistId);
+              if (genres.isNotEmpty) {
+                item = item.copyWith(genres: genres);
+              }
+            }
+          }
+        }
+        return item;
       }
       return null;
     } catch (e) {
@@ -165,7 +217,7 @@ class SpotifyApiService {
     }
   }
 
-  /// Get detailed track info.
+  /// Get detailed track info and artist genres fallback.
   Future<MusicItem?> getTrack(String trackId) async {
     final token = await _getValidToken();
     if (token == null) return null;
@@ -186,7 +238,20 @@ class SpotifyApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return MusicItem.fromSpotifyTrack(data);
+        var item = MusicItem.fromSpotifyTrack(data);
+        if (item.genres.isEmpty) {
+          final artists = data['artists'] as List?;
+          if (artists != null && artists.isNotEmpty) {
+            final artistId = artists.first['id'] as String?;
+            if (artistId != null && artistId.isNotEmpty) {
+              final genres = await getArtistGenres(artistId);
+              if (genres.isNotEmpty) {
+                item = item.copyWith(genres: genres);
+              }
+            }
+          }
+        }
+        return item;
       }
       return null;
     } catch (e) {

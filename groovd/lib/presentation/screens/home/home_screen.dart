@@ -12,6 +12,7 @@ import 'package:groovd/presentation/widgets/giant_score_badge.dart';
 import 'package:groovd/presentation/widgets/marquee_banner.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
+import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
 import 'package:groovd/presentation/screens/search/search_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -266,13 +267,12 @@ class HomeScreen extends ConsumerWidget {
                           onLike: () {
                             ref.read(reviewControllerProvider).likeReview(review.id);
                           },
-                          onTap: () async {
-                            final item = await ref.read(spotifyRepositoryProvider).getItemById(review.musicItemId);
-                            if (item != null && context.mounted) {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item)),
-                              );
-                            }
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ReviewDetailScreen(review: review),
+                              ),
+                            );
                           },
                         )
                             .animate()

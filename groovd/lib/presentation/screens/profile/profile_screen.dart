@@ -13,8 +13,12 @@ import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
+import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
+import 'package:groovd/presentation/screens/profile/logged_reviews_screen.dart';
 import 'package:groovd/presentation/screens/wishlist/wishlist_screen.dart';
 import 'package:groovd/state/wishlist_provider.dart';
+import 'dart:async';
+import 'package:flutter/services.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -559,28 +563,53 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             const Divider(),
 
-            // Logged Written Reviews Feed
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'MY LOGGED REVIEWS',
-                    style: AppTypography.displaySmall(),
-                  ),
-                  userReviewsAsync.when(
-                    data: (r) {
-                      final count = r.where((review) => review.hasWrittenReview).length;
-                      return Text(
-                        '$count CRITIQUES',
-                        style: AppTypography.monoLabel(fontSize: 10),
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (err, stack) => const SizedBox.shrink(),
-                  ),
-                ],
+            // Logged Written Reviews Header & Redirect Button
+            InkWell(
+              onTap: () => Navigator.of(context).push(
+                LoggedReviewsScreen.route(),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'MY LOGGED REVIEWS',
+                      style: AppTypography.displaySmall(),
+                    ),
+                    userReviewsAsync.when(
+                      data: (r) {
+                        final count = r.where((review) => review.hasWrittenReview).length;
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '$count CRITIQUES',
+                              style: AppTypography.monoLabel(fontSize: 10, color: AppColors.acidLime),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.chevron_right,
+                              size: 16,
+                              color: AppColors.acidLime,
+                            ),
+                          ],
+                        );
+                      },
+                      loading: () => const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.chevron_right,
+                            size: 16,
+                            color: AppColors.textMuted,
+                          ),
+                        ],
+                      ),
+                      error: (err, stack) => const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -615,42 +644,7 @@ class ProfileScreen extends ConsumerWidget {
                   );
                 }
 
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: writtenReviews.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final review = writtenReviews[index];
-                    return ReviewCard(
-                      review: review,
-                      showItemHeader: true,
-                      onLike: () {
-                        ref.read(reviewControllerProvider).likeReview(review.id);
-                      },
-                      onTap: () async {
-                        MusicItem? item = await ref.read(spotifyRepositoryProvider).getItemById(
-                              review.musicItemId,
-                              type: review.itemType == 'song' ? MusicType.song : MusicType.album,
-                            );
-                        item ??= MusicItem(
-                          id: review.musicItemId,
-                          name: review.musicItemName,
-                          artist: review.artistName,
-                          type: review.itemType == 'song' ? MusicType.song : MusicType.album,
-                          coverUrl: review.coverUrl,
-                          releaseDate: '',
-                        );
-                        if (context.mounted) {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item!)),
-                          );
-                        }
-                      },
-                    );
-                  },
-                );
+                return _ReviewStackDeck(reviews: writtenReviews);
               },
               loading: () => const Padding(
                 padding: EdgeInsets.all(32),
@@ -1303,3 +1297,269 @@ class _WishlistShortcutBanner extends StatelessWidget {
     );
   }
 }
+
+class _ReviewStackDeck extends StatefulWidget {
+  final List<Review> reviews;
+
+  const _ReviewStackDeck({required this.reviews});
+
+  @override
+  State<_ReviewStackDeck> createState() => _ReviewStackDeckState();
+}
+
+class _ReviewStackDeckState extends State<_ReviewStackDeck> {
+  int _currentIndex = 0;
+  Timer? _timer;
+  bool _isHolding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReviewStackDeck oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.reviews.length != oldWidget.reviews.length) {
+      if (_currentIndex >= widget.reviews.length) {
+        _currentIndex = 0;
+      }
+      _startTimer();
+    }
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    if (widget.reviews.length <= 1) return;
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!_isHolding && mounted) {
+        setState(() {
+          _currentIndex = (_currentIndex + 1) % widget.reviews.length;
+        });
+      }
+    });
+  }
+
+  void _pauseTimer() {
+    if (!_isHolding) {
+      setState(() => _isHolding = true);
+    }
+  }
+
+  void _resumeTimer() {
+    if (_isHolding) {
+      setState(() => _isHolding = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _openDetail(Review review) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ReviewDetailScreen(review: review),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.reviews.isEmpty) return const SizedBox.shrink();
+
+    final activeReview = widget.reviews[_currentIndex % widget.reviews.length];
+    final hasMultiple = widget.reviews.length > 1;
+    // Illusion: exactly 3 cards stacked behind front card ONLY if user has more than 1 logged review
+    final stackDepth = hasMultiple ? 3 : 0;
+
+    const double stepX = 4.0;
+    const double stepY = 5.0;
+    final totalExtraX = stackDepth * stepX;
+    final totalExtraY = stackDepth * stepY;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Deck Meta Controls Bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceElevated,
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: Text(
+                      'CARD ${(_currentIndex + 1).toString().padLeft(2, '0')} / ${widget.reviews.length.toString().padLeft(2, '0')}',
+                      style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 9),
+                    ),
+                  ),
+                  if (hasMultiple) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _isHolding ? AppColors.electricPink.withValues(alpha: 0.15) : AppColors.surface,
+                        border: Border.all(color: _isHolding ? AppColors.electricPink : AppColors.borderSubtle),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isHolding ? Icons.pause_circle_outline : Icons.autorenew,
+                            size: 10,
+                            color: _isHolding ? AppColors.electricPink : AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _isHolding ? 'HOLDING // PAUSED' : 'AUTO-CYCLE 5S',
+                            style: AppTypography.monoBadge(
+                              color: _isHolding ? AppColors.electricPink : AppColors.textMuted,
+                              fontSize: 7.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              if (hasMultiple)
+                Row(
+                  children: [
+                    InkWell(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          _currentIndex = (_currentIndex - 1 + widget.reviews.length) % widget.reviews.length;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(2),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceElevated,
+                          border: Border.all(color: AppColors.border),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: const Icon(Icons.chevron_left, size: 14, color: AppColors.textPrimary),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          _currentIndex = (_currentIndex + 1) % widget.reviews.length;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(2),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceElevated,
+                          border: Border.all(color: AppColors.border),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: const Icon(Icons.chevron_right, size: 14, color: AppColors.textPrimary),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // Stacked Card Pile Container with Illusion Behind Front Card
+        Padding(
+          padding: EdgeInsets.fromLTRB(20, 0, 20 + totalExtraX, totalExtraY + 12),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // 3 illusion backdrop card layers stacked underneath
+              if (stackDepth > 0)
+                for (int i = stackDepth; i >= 1; i--)
+                  Positioned.fill(
+                    top: i * stepY,
+                    left: i * stepX,
+                    right: -(i * stepX),
+                    bottom: -(i * stepY),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated,
+                        border: Border.all(
+                          color: AppColors.acidLime.withValues(alpha: (1.0 - (i - 1) * 0.22).clamp(0.45, 1.0)),
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(2),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: AppColors.pureBlack,
+                            offset: Offset(2, 2),
+                            blurRadius: 0,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+              // Front Top Active Review Card
+              GestureDetector(
+                onTapDown: (_) => _pauseTimer(),
+                onTapUp: (_) => _resumeTimer(),
+                onTapCancel: () => _resumeTimer(),
+                onLongPressStart: (_) => _pauseTimer(),
+                onLongPressEnd: (_) => _resumeTimer(),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 380),
+                  transitionBuilder: (child, animation) {
+                    final slideIn = Tween<Offset>(
+                      begin: const Offset(0.04, 0.03),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: slideIn,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey<String>('${activeReview.id}_$_currentIndex'),
+                    child: Consumer(
+                      builder: (context, ref, _) {
+                        return ReviewCard(
+                          review: activeReview,
+                          showItemHeader: true,
+                          onLike: () {
+                            ref.read(reviewControllerProvider).likeReview(activeReview.id);
+                          },
+                          onTap: () => _openDetail(activeReview),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+

@@ -13,6 +13,7 @@ import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
 import 'package:groovd/presentation/widgets/giant_score_badge.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
+import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
 import 'package:groovd/presentation/screens/review/write_review_modal.dart';
 
 class MusicDetailScreen extends ConsumerWidget {
@@ -531,6 +532,13 @@ class MusicDetailScreen extends ConsumerWidget {
                       showItemHeader: false,
                       onLike: () {
                         ref.read(reviewControllerProvider).likeReview(review.id);
+                      },
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ReviewDetailScreen(review: review),
+                          ),
+                        );
                       },
                     )
                         .animate()

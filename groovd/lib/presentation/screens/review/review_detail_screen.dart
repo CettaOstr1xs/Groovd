@@ -1,0 +1,390 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../data/models/music_item.dart';
+import '../../../data/models/review.dart';
+import '../../../state/music_providers.dart';
+import '../../../state/review_providers.dart';
+import '../../widgets/album_art_card.dart';
+import '../../widgets/brutalist_button.dart';
+import '../../widgets/giant_score_badge.dart';
+import '../detail/music_detail_screen.dart';
+
+class ReviewDetailScreen extends ConsumerStatefulWidget {
+  final Review review;
+
+  const ReviewDetailScreen({super.key, required this.review});
+
+  @override
+  ConsumerState<ReviewDetailScreen> createState() => _ReviewDetailScreenState();
+}
+
+class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
+  late Review _review;
+  bool _isLiked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _review = widget.review;
+  }
+
+  void _handleLike() {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _isLiked = !_isLiked;
+      _review = _review.copyWith(
+        likesCount: _review.likesCount + (_isLiked ? 1 : -1),
+      );
+    });
+    ref.read(reviewControllerProvider).likeReview(_review.id);
+  }
+
+  void _shareReview() {
+    final text = '“${_review.headline}”\n'
+        '${_review.musicItemName} by ${_review.artistName} — Scored ${_review.scoreFormatted}/10 on Groovd\n'
+        '${_review.body}';
+    Clipboard.setData(ClipboardData(text: text));
+    HapticFeedback.mediumImpact();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.surfaceElevated,
+        content: Text('CRITIQUE COPIED TO CLIPBOARD', style: AppTypography.monoBadge(color: AppColors.acidLime)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _openMusicDetail() async {
+    final itemType = _review.itemType == 'song' ? MusicType.song : MusicType.album;
+    MusicItem? item = await ref.read(spotifyRepositoryProvider).getItemById(
+          _review.musicItemId,
+          type: itemType,
+        );
+
+    item ??= MusicItem(
+      id: _review.musicItemId,
+      name: _review.musicItemName,
+      artist: _review.artistName,
+      type: itemType,
+      coverUrl: _review.coverUrl,
+      releaseDate: '',
+    );
+
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item!)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final formattedDate = DateFormat('MMMM d, yyyy').format(_review.createdAt);
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: Text('CRITIQUE ARCHIVE', style: AppTypography.displaySmall()),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share_outlined, color: AppColors.textPrimary, size: 20),
+            tooltip: 'Share Critique',
+            onPressed: _shareReview,
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Music Release Card Header (Interactive link to album)
+            InkWell(
+              onTap: _openMusicDetail,
+              borderRadius: BorderRadius.circular(2),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  border: Border.all(color: AppColors.border, width: 1.5),
+                  borderRadius: BorderRadius.circular(2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.pureBlack,
+                      offset: Offset(3, 3),
+                      blurRadius: 0,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 58,
+                      height: 58,
+                      child: AlbumArtCard(
+                        imageUrl: _review.coverUrl,
+                        showShadow: false,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: _review.itemType == 'album' ? AppColors.acidLime : AppColors.cyberCyan,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                                child: Text(
+                                  _review.itemType == 'album' ? 'LP // ALBUM' : 'SINGLE // SONG',
+                                  style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 8),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'VIEW ARCHIVE',
+                                style: AppTypography.monoLabel(fontSize: 8, color: AppColors.textMuted),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            _review.musicItemName.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.displaySmall(fontSize: 14),
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            _review.artistName.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.monoLabel(color: AppColors.textSecondary, fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textSecondary),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Giant Score Badge Section
+            GiantScoreBadge(score: _review.rating),
+
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 16),
+
+            // Critic Persona Profile Block
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.acidLime,
+                    border: Border.all(color: AppColors.pureBlack, width: 2.0),
+                    borderRadius: BorderRadius.circular(2),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: AppColors.pureBlack,
+                        offset: Offset(2, 2),
+                        blurRadius: 0,
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    _review.userName.isNotEmpty ? _review.userName[0].toUpperCase() : 'C',
+                    style: AppTypography.displaySmall(fontSize: 18, color: AppColors.pureBlack),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              _review.userName.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.displaySmall(fontSize: 14),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceElevated,
+                              border: Border.all(color: AppColors.border),
+                              borderRadius: BorderRadius.circular(1.5),
+                            ),
+                            child: Text(
+                              'CRITIC',
+                              style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 8),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${_review.userHandle} • $formattedDate (${_review.timeAgo})',
+                        style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 10),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 22),
+
+            // Headline
+            if (_review.headline.isNotEmpty) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.only(left: 14),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: AppColors.acidLime, width: 3.5),
+                  ),
+                ),
+                child: Text(
+                  _review.headline.toUpperCase(),
+                  style: AppTypography.displayMedium(fontSize: 20),
+                ),
+              ),
+              const SizedBox(height: 18),
+            ],
+
+            // Body
+            if (_review.body.isNotEmpty) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceCard,
+                  border: Border.all(color: AppColors.border, width: 1.5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Text(
+                  _review.body,
+                  style: AppTypography.bodyMedium(
+                    color: AppColors.textPrimary,
+                  ).copyWith(height: 1.65),
+                ),
+              ),
+              const SizedBox(height: 18),
+            ],
+
+            // Vibes & Custom Tags
+            if (_review.tags.isNotEmpty) ...[
+              Text(
+                'VIBES & TAGS',
+                style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _review.tags.map((tag) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceElevated,
+                      border: Border.all(color: AppColors.borderBold),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: Text(
+                      tag.toUpperCase(),
+                      style: AppTypography.monoBadge(
+                        color: AppColors.acidLime,
+                        fontSize: 10,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+            ],
+
+            // Bottom Engagement Actions Row
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated,
+                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Row(
+                children: [
+                  // Like Button
+                  InkWell(
+                    onTap: _handleLike,
+                    borderRadius: BorderRadius.circular(2),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _isLiked ? AppColors.electricPink.withValues(alpha: 0.15) : AppColors.surfaceCard,
+                        border: Border.all(
+                          color: _isLiked ? AppColors.electricPink : AppColors.border,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _isLiked ? Icons.favorite : Icons.favorite_border,
+                            color: AppColors.electricPink,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${_review.likesCount}',
+                            style: AppTypography.monoBadge(
+                              color: _isLiked ? AppColors.electricPink : AppColors.textPrimary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  // Full album link button
+                  BrutalistButton(
+                    label: 'GO TO ARCHIVE',
+                    icon: Icons.album_outlined,
+                    backgroundColor: AppColors.acidLime,
+                    textColor: AppColors.pureBlack,
+                    isSmall: true,
+                    onPressed: _openMusicDetail,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+}
