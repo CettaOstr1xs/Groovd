@@ -4,6 +4,7 @@ import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/services/spotify_api_service.dart';
 import 'package:groovd/data/services/spotify_repository.dart';
 import 'package:groovd/data/repositories/local_review_repository.dart';
+import 'package:groovd/data/models/wishlist_item.dart';
 
 void main() {
   group('Review Model Tests', () {
@@ -242,4 +243,88 @@ void main() {
       expect(formatTag('night drives  '), '#NIGHT_DRIVES');
     });
   });
+
+  group('Wishlist Feature Tests', () {
+    test('WishlistItem serializes to map and back accurately', () {
+      const music = MusicItem(
+        id: 'alb_1',
+        name: 'Loveless',
+        artist: 'My Bloody Valentine',
+        type: MusicType.album,
+        coverUrl: 'https://example.com/loveless.jpg',
+        releaseDate: '1991',
+      );
+
+      final wishItem = WishlistItem(
+        musicItem: music,
+        addedAt: DateTime(2026, 3, 15, 10, 30),
+        note: 'Must listen on vinyl',
+      );
+
+      final map = wishItem.toMap();
+      final revived = WishlistItem.fromMap(map);
+
+      expect(revived.musicItem.id, 'alb_1');
+      expect(revived.musicItem.name, 'Loveless');
+      expect(revived.musicItem.isAlbum, true);
+      expect(revived.note, 'Must listen on vinyl');
+      expect(revived.addedAt, DateTime(2026, 3, 15, 10, 30));
+    });
+
+    test('WishlistItem timeAgo returns relative timestamps correctly', () {
+      const music = MusicItem(
+        id: 's_1',
+        name: 'Alison',
+        artist: 'Slowdive',
+        type: MusicType.song,
+        coverUrl: '',
+        releaseDate: '1993',
+      );
+
+      final justNow = WishlistItem(
+        musicItem: music,
+        addedAt: DateTime.now().subtract(const Duration(seconds: 15)),
+      );
+      expect(justNow.timeAgo, 'just now');
+
+      final twoDaysAgo = WishlistItem(
+        musicItem: music,
+        addedAt: DateTime.now().subtract(const Duration(days: 2)),
+      );
+      expect(twoDaysAgo.timeAgo, '2d ago');
+    });
+
+    test('Wishlist filtering separates albums and songs properly', () {
+      const album = MusicItem(
+        id: 'a1',
+        name: 'OK Computer',
+        artist: 'Radiohead',
+        type: MusicType.album,
+        coverUrl: '',
+        releaseDate: '1997',
+      );
+      const song = MusicItem(
+        id: 's1',
+        name: 'Paranoid Android',
+        artist: 'Radiohead',
+        type: MusicType.song,
+        coverUrl: '',
+        releaseDate: '1997',
+      );
+
+      final list = [
+        WishlistItem(musicItem: album, addedAt: DateTime.now()),
+        WishlistItem(musicItem: song, addedAt: DateTime.now()),
+      ];
+
+      final albumsOnly = list.where((w) => w.musicItem.isAlbum).toList();
+      final songsOnly = list.where((w) => w.musicItem.isSong).toList();
+
+      expect(albumsOnly.length, 1);
+      expect(albumsOnly.first.musicItem.name, 'OK Computer');
+      expect(songsOnly.length, 1);
+      expect(songsOnly.first.musicItem.name, 'Paranoid Android');
+    });
+  });
 }
+

@@ -13,6 +13,8 @@ import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
+import 'package:groovd/presentation/screens/wishlist/wishlist_screen.dart';
+import 'package:groovd/state/wishlist_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -325,6 +327,13 @@ class ProfileScreen extends ConsumerWidget {
         title: Text('CRITIC DOSSIER', style: AppTypography.displaySmall()),
         actions: [
           IconButton(
+            icon: const Icon(Icons.bookmark_outline, color: AppColors.textPrimary),
+            tooltip: 'Wantlist // Wishlist',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const WishlistScreen()),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.settings, color: AppColors.textPrimary),
             tooltip: 'Spotify Settings',
             onPressed: () => _showSpotifySettings(context, ref),
@@ -532,6 +541,19 @@ class ProfileScreen extends ConsumerWidget {
             // Section: RECENT ACTIVITY (Chronological Timeline of Scored Releases)
             _RecentActivitySection(
               reviews: userReviewsAsync.asData?.value ?? [],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Wantlist / Wishlist Shortcut Button (Below Recent Activity)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: _WishlistShortcutBanner(
+                count: ref.watch(wishlistCountProvider),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const WishlistScreen()),
+                ),
+              ),
             ),
 
             const SizedBox(height: 24),
@@ -1195,6 +1217,86 @@ class _RecentActivityCard extends ConsumerWidget {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WishlistShortcutBanner extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+
+  const _WishlistShortcutBanner({
+    required this.count,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(2),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceElevated,
+          border: Border.all(color: AppColors.acidLime, width: 1.5),
+          borderRadius: BorderRadius.circular(2),
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.pureBlack,
+              offset: Offset(3, 3),
+              blurRadius: 0,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.acidLime,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: const Icon(
+                Icons.bookmark_outline,
+                color: AppColors.pureBlack,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'CRITIC WANTLIST // QUEUE',
+                    style: AppTypography.displaySmall(fontSize: 13),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'ALBUMS & TRACKS QUEUED TO SPIN',
+                    style: AppTypography.monoLabel(color: AppColors.textSecondary, fontSize: 9),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCard,
+                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Text(
+                '$count QUEUED',
+                style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 9),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
           ],
         ),
       ),

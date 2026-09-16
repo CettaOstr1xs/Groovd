@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,6 +8,7 @@ import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/state/music_providers.dart';
 import 'package:groovd/state/review_providers.dart';
+import 'package:groovd/state/wishlist_provider.dart';
 import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
 import 'package:groovd/presentation/widgets/giant_score_badge.dart';
@@ -19,11 +21,46 @@ class MusicDetailScreen extends ConsumerWidget {
 
   const MusicDetailScreen({super.key, required this.item, this.heroTag});
 
-  Future<void> _launchSpotify(String url) async {
-    if (url.isEmpty) return;
+  Future<void> _launchSpotify(BuildContext context, String url) async {
+    if (url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.surfaceElevated,
+          content: Text('NO SPOTIFY LINK AVAILABLE', style: AppTypography.monoLabel(color: AppColors.textPrimary)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        final fallback = await launchUrl(uri, mode: LaunchMode.platformDefault);
+        if (!fallback && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.surfaceElevated,
+              content: Text('COULD NOT OPEN SPOTIFY', style: AppTypography.monoLabel(color: AppColors.vermillion)),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (_) {
+      try {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      } catch (err) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.surfaceElevated,
+              content: Text('FAILED TO OPEN SPOTIFY: $err', style: AppTypography.monoLabel(color: AppColors.vermillion)),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -40,6 +77,7 @@ class MusicDetailScreen extends ConsumerWidget {
     final reviewsAsync = ref.watch(itemReviewsProvider(item.id));
     final avgScoreAsync = ref.watch(itemAverageScoreProvider(item.id));
     final reviewCountAsync = ref.watch(itemReviewCountProvider(item.id));
+    final isWishlisted = ref.watch(isInWishlistProvider(activeItem.id));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -55,11 +93,39 @@ class MusicDetailScreen extends ConsumerWidget {
           style: AppTypography.monoLabel(fontSize: 11),
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              isWishlisted ? Icons.bookmark : Icons.bookmark_border,
+              color: isWishlisted ? AppColors.acidLime : AppColors.textSecondary,
+              size: 22,
+            ),
+            tooltip: isWishlisted ? 'Remove from wantlist' : 'Add to wantlist',
+            onPressed: () async {
+              HapticFeedback.lightImpact();
+              final added = await ref.read(wishlistProvider.notifier).toggleItem(activeItem);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: AppColors.surfaceElevated,
+                    content: Text(
+                      added ? 'ADDED TO CRITIC WANTLIST' : 'REMOVED FROM WANTLIST',
+                      style: AppTypography.monoLabel(
+                        color: added ? AppColors.acidLime : AppColors.textPrimary,
+                        fontSize: 11,
+                      ),
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+          ),
           if (item.externalSpotifyUrl.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.open_in_new, color: AppColors.textSecondary, size: 20),
               tooltip: 'Open in Spotify',
-              onPressed: () => _launchSpotify(item.externalSpotifyUrl),
+              onPressed: () => _launchSpotify(context, item.externalSpotifyUrl),
             ),
         ],
       ),
@@ -82,15 +148,59 @@ class MusicDetailScreen extends ConsumerWidget {
                   onPressed: () => WriteReviewModal.show(context, activeItem),
                 ),
               ),
+              const SizedBox(width: 10),
+              // Tactile Wishlist Bookmark Button
+              InkWell(
+                onTap: () async {
+                  HapticFeedback.lightImpact();
+                  final added = await ref.read(wishlistProvider.notifier).toggleItem(activeItem);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: AppColors.surfaceElevated,
+                        content: Text(
+                          added ? 'ADDED TO CRITIC WANTLIST' : 'REMOVED FROM WANTLIST',
+                          style: AppTypography.monoLabel(
+                            color: added ? AppColors.acidLime : AppColors.textPrimary,
+                            fontSize: 11,
+                          ),
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(2),
+                child: Container(
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: isWishlisted ? AppColors.acidLime.withValues(alpha: 0.12) : AppColors.surfaceElevated,
+                    border: Border.all(
+                      color: isWishlisted ? AppColors.acidLime : AppColors.border,
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      isWishlisted ? Icons.bookmark : Icons.bookmark_border,
+                      color: isWishlisted ? AppColors.acidLime : AppColors.textPrimary,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
               if ((activeItem.externalSpotifyUrl.isNotEmpty ? activeItem.externalSpotifyUrl : item.externalSpotifyUrl).isNotEmpty) ...[
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 BrutalistButton(
                   label: 'SPOTIFY',
                   icon: Icons.play_arrow,
                   backgroundColor: AppColors.surfaceElevated,
                   textColor: AppColors.textPrimary,
                   borderColor: AppColors.border,
-                  onPressed: () => _launchSpotify(activeItem.externalSpotifyUrl.isNotEmpty ? activeItem.externalSpotifyUrl : item.externalSpotifyUrl),
+                  onPressed: () => _launchSpotify(context, activeItem.externalSpotifyUrl.isNotEmpty ? activeItem.externalSpotifyUrl : item.externalSpotifyUrl),
                 ),
               ],
             ],
