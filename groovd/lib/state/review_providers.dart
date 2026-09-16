@@ -4,6 +4,7 @@ import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/repositories/review_repository.dart';
 import 'package:groovd/data/repositories/local_review_repository.dart';
 import 'package:groovd/data/repositories/firestore_review_repository.dart';
+import 'wishlist_provider.dart';
 
 /// Active Review Repository Provider (auto-switches to Firestore when Firebase is initialized)
 final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
@@ -92,6 +93,9 @@ class ReviewController {
     final repo = ref.read(reviewRepositoryProvider);
     await repo.addReview(review);
     ref.read(reviewRefreshProvider.notifier).notifyChanged();
+
+    // Automatically remove rated/reviewed release from wantlist/wishlist
+    await ref.read(wishlistProvider.notifier).removeItemByReview(review);
   }
 
   Future<void> likeReview(String reviewId) async {

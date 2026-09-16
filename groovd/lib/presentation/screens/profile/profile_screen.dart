@@ -325,6 +325,14 @@ class ProfileScreen extends ConsumerWidget {
     final spotifySettings = ref.watch(spotifySettingsProvider);
     final topPicks = ref.watch(resolvedTopPicksProvider);
 
+    userReviewsAsync.whenData((reviews) {
+      if (reviews.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(wishlistProvider.notifier).removeReviewedItems(reviews);
+        });
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(

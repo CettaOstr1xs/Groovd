@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/wishlist_item.dart';
 import '../../../state/wishlist_provider.dart';
+import '../../../state/review_providers.dart';
 import '../../widgets/album_art_card.dart';
 import '../../widgets/brutalist_button.dart';
 import '../detail/music_detail_screen.dart';
@@ -112,6 +113,15 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userId = ref.watch(currentUserIdProvider);
+    final userReviewsAsync = ref.watch(userReviewsProvider(userId));
+    final userReviews = userReviewsAsync.asData?.value ?? [];
+    if (userReviews.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(wishlistProvider.notifier).removeReviewedItems(userReviews);
+      });
+    }
+
     final allWishlistItems = ref.watch(wishlistProvider);
     final displayedItems = _applyFiltersAndSort(allWishlistItems);
 

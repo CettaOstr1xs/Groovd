@@ -247,19 +247,25 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'LOG YOUR REVIEW',
-                      style: AppTypography.displaySmall(),
-                    ),
-                    Text(
-                      '${widget.musicItem.name} — ${widget.musicItem.artist}'.toUpperCase(),
-                      style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 10),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'LOG YOUR REVIEW',
+                        style: AppTypography.displaySmall(),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${widget.musicItem.name} — ${widget.musicItem.artist}'.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 10),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.close, color: AppColors.textSecondary),
                   onPressed: () => Navigator.of(context).pop(),
@@ -410,9 +416,13 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
                     'VIBES & TAGS',
                     style: AppTypography.monoLabel(fontSize: 10),
                   ),
-                  Text(
-                    'CREATE OR SELECT',
-                    style: AppTypography.monoBadge(color: AppColors.textMuted, fontSize: 9),
+                  Flexible(
+                    child: Text(
+                      'CREATE OR SELECT',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.monoBadge(color: AppColors.textMuted, fontSize: 9),
+                    ),
                   ),
                 ],
               ),
@@ -443,6 +453,7 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
                   const SizedBox(width: 8),
                   BrutalistButton(
                     label: '+ ADD',
+                    isSmall: true,
                     backgroundColor: AppColors.surfaceElevated,
                     textColor: AppColors.acidLime,
                     borderColor: AppColors.acidLime,

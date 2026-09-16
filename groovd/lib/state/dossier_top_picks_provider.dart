@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/music_item.dart';
-import 'review_providers.dart';
 
 class DossierTopPicks {
   final List<MusicItem?> topAlbums; // length 3
@@ -125,69 +124,10 @@ final dossierTopPicksProvider =
   DossierTopPicksNotifier.new,
 );
 
-/// Provider that resolves the final Top 3 Albums and Top 3 Songs,
-/// merging user manual pins with automatic review-based highest ratings.
+/// Provider that provides the curated Top 3 Albums and Top 3 Songs.
+/// Purely reflects the user's manual pins — empty slots remain unpinned
+/// and are NEVER auto-overwritten by newly rated releases.
 final resolvedTopPicksProvider = Provider<DossierTopPicks>((ref) {
-  final picks = ref.watch(dossierTopPicksProvider);
-  final userId = ref.watch(currentUserIdProvider);
-  final reviewsAsync = ref.watch(userReviewsProvider(userId));
-  final reviews = reviewsAsync.asData?.value ?? [];
-
-  // Ranked album reviews
-  final albumReviews = reviews
-      .where((r) => r.itemType == 'album')
-      .toList()
-    ..sort((a, b) => b.rating.compareTo(a.rating));
-
-  // Ranked song reviews
-  final songReviews = reviews
-      .where((r) => r.itemType == 'song')
-      .toList()
-    ..sort((a, b) => b.rating.compareTo(a.rating));
-
-  final finalAlbums = List<MusicItem?>.from(picks.topAlbums);
-  final usedAlbumIds = finalAlbums.whereType<MusicItem>().map((e) => e.id).toSet();
-
-  for (int i = 0; i < 3; i++) {
-    if (finalAlbums[i] == null) {
-      for (final r in albumReviews) {
-        if (!usedAlbumIds.contains(r.musicItemId)) {
-          finalAlbums[i] = MusicItem(
-            id: r.musicItemId,
-            name: r.musicItemName,
-            artist: r.artistName,
-            type: MusicType.album,
-            coverUrl: r.coverUrl,
-            releaseDate: '',
-          );
-          usedAlbumIds.add(r.musicItemId);
-          break;
-        }
-      }
-    }
-  }
-
-  final finalSongs = List<MusicItem?>.from(picks.topSongs);
-  final usedSongIds = finalSongs.whereType<MusicItem>().map((e) => e.id).toSet();
-
-  for (int i = 0; i < 3; i++) {
-    if (finalSongs[i] == null) {
-      for (final r in songReviews) {
-        if (!usedSongIds.contains(r.musicItemId)) {
-          finalSongs[i] = MusicItem(
-            id: r.musicItemId,
-            name: r.musicItemName,
-            artist: r.artistName,
-            type: MusicType.song,
-            coverUrl: r.coverUrl,
-            releaseDate: '',
-          );
-          usedSongIds.add(r.musicItemId);
-          break;
-        }
-      }
-    }
-  }
-
-  return DossierTopPicks(topAlbums: finalAlbums, topSongs: finalSongs);
+  return ref.watch(dossierTopPicksProvider);
 });
+

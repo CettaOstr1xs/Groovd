@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/music_item.dart';
+import '../data/models/review.dart';
 import '../data/models/wishlist_item.dart';
 
 class WishlistNotifier extends Notifier<List<WishlistItem>> {
@@ -68,6 +69,46 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
     current.removeWhere((w) => w.musicItem.id == musicItemId);
     state = current;
     await _persist();
+  }
+
+  /// Automatically removes an item matching a review (by ID or matching Title + Artist).
+  Future<void> removeItemByReview(Review review) async {
+    final current = List<WishlistItem>.from(state);
+    final targetName = review.musicItemName.trim().toLowerCase();
+    final targetArtist = review.artistName.trim().toLowerCase();
+
+    current.removeWhere((w) {
+      final idMatch = w.musicItem.id == review.musicItemId;
+      final nameArtistMatch = w.musicItem.name.trim().toLowerCase() == targetName &&
+          w.musicItem.artist.trim().toLowerCase() == targetArtist;
+      return idMatch || nameArtistMatch;
+    });
+
+    if (current.length != state.length) {
+      state = current;
+      await _persist();
+    }
+  }
+
+  /// Automatically prunes any wishlist items that have already been rated or reviewed.
+  Future<void> removeReviewedItems(List<Review> reviews) async {
+    if (reviews.isEmpty || state.isEmpty) return;
+    final current = List<WishlistItem>.from(state);
+    final reviewedItemIds = reviews.map((r) => r.musicItemId).toSet();
+    final reviewedNameArtists = reviews
+        .map((r) => '${r.musicItemName.trim().toLowerCase()}:::${r.artistName.trim().toLowerCase()}')
+        .toSet();
+
+    current.removeWhere((w) {
+      if (reviewedItemIds.contains(w.musicItem.id)) return true;
+      final key = '${w.musicItem.name.trim().toLowerCase()}:::${w.musicItem.artist.trim().toLowerCase()}';
+      return reviewedNameArtists.contains(key);
+    });
+
+    if (current.length != state.length) {
+      state = current;
+      await _persist();
+    }
   }
 
   Future<void> clear() async {

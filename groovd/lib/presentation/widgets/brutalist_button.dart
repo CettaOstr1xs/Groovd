@@ -88,11 +88,15 @@ class _BrutalistButtonState extends State<BrutalistButton> {
               Icon(widget.icon, size: widget.isSmall ? 14 : 18, color: widget.textColor),
               const SizedBox(width: 8),
             ],
-            Text(
-              widget.label.toUpperCase(),
-              style: AppTypography.buttonLabel(
-                color: widget.textColor,
-                fontSize: fontSize,
+            Flexible(
+              child: Text(
+                widget.label.toUpperCase(),
+                style: AppTypography.buttonLabel(
+                  color: widget.textColor,
+                  fontSize: fontSize,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

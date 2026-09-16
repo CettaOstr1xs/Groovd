@@ -223,7 +223,10 @@ class MusicDetailScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Meta zine breadcrumb
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -236,25 +239,20 @@ class MusicDetailScreen extends ConsumerWidget {
                           style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Text(
                         'REL. ${activeItem.formattedYear}',
                         style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted),
                       ),
-                      if (activeItem.trackCount > 1) ...[
-                        const SizedBox(width: 8),
+                      if (activeItem.trackCount > 1)
                         Text(
                           '• ${activeItem.trackCount} TRACKS',
                           style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted),
                         ),
-                      ],
-                      if (activeItem.formattedDuration.isNotEmpty) ...[
-                        const SizedBox(width: 8),
+                      if (activeItem.formattedDuration.isNotEmpty)
                         Text(
                           '• ${activeItem.formattedDuration}',
                           style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted),
                         ),
-                      ],
                     ],
                   ),
 

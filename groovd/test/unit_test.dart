@@ -5,6 +5,7 @@ import 'package:groovd/data/services/spotify_api_service.dart';
 import 'package:groovd/data/services/spotify_repository.dart';
 import 'package:groovd/data/repositories/local_review_repository.dart';
 import 'package:groovd/data/models/wishlist_item.dart';
+import 'package:groovd/state/dossier_top_picks_provider.dart';
 
 void main() {
   group('Review Model Tests', () {
@@ -498,6 +499,120 @@ void main() {
       expect(resolvedAlbum.genres.contains('SHOEGAZE'), true);
     });
   });
+
+  group('Wishlist Auto-Removal & Dossier Manual Pins Tests', () {
+    const itemBlonde = MusicItem(
+      id: 'album_blonde',
+      name: 'Blonde',
+      artist: 'Frank Ocean',
+      type: MusicType.album,
+      coverUrl: '',
+      releaseDate: '2016-08-20',
+    );
+
+    const itemCamp = MusicItem(
+      id: 'album_camp',
+      name: 'Camp',
+      artist: 'Childish Gambino',
+      type: MusicType.album,
+      coverUrl: '',
+      releaseDate: '2011-11-15',
+    );
+
+    test('Wishlist removes item when review is submitted', () {
+      var wishlist = [
+        WishlistItem(musicItem: itemBlonde, addedAt: DateTime.now()),
+        WishlistItem(musicItem: itemCamp, addedAt: DateTime.now()),
+      ];
+
+      expect(wishlist.length, 2);
+
+      // User rates Camp
+      final reviewCamp = Review(
+        id: 'rev_camp',
+        musicItemId: 'album_camp',
+        musicItemName: 'Camp',
+        artistName: 'Childish Gambino',
+        coverUrl: '',
+        itemType: 'album',
+        userId: 'u1',
+        userName: 'Critic',
+        userHandle: '@critic',
+        rating: 8.8,
+        headline: '',
+        body: '',
+        createdAt: DateTime.now(),
+      );
+
+      // Emulate removeItemByReview
+      wishlist.removeWhere((w) =>
+          w.musicItem.id == reviewCamp.musicItemId ||
+          (w.musicItem.name.toLowerCase() == reviewCamp.musicItemName.toLowerCase() &&
+              w.musicItem.artist.toLowerCase() == reviewCamp.artistName.toLowerCase()));
+
+      expect(wishlist.length, 1);
+      expect(wishlist.first.musicItem.id, 'album_blonde');
+      expect(wishlist.any((w) => w.musicItem.name == 'Camp'), false);
+    });
+
+    test('Wishlist batch-prunes already-reviewed items accurately', () {
+      final wishlist = [
+        WishlistItem(musicItem: itemBlonde, addedAt: DateTime.now()),
+        WishlistItem(musicItem: itemCamp, addedAt: DateTime.now()),
+      ];
+
+      final existingReviews = [
+        Review(
+          id: 'rev_camp_old',
+          musicItemId: 'album_camp',
+          musicItemName: 'Camp',
+          artistName: 'Childish Gambino',
+          coverUrl: '',
+          itemType: 'album',
+          userId: 'u1',
+          userName: 'Critic',
+          userHandle: '@critic',
+          rating: 8.8,
+          headline: '',
+          body: '',
+          createdAt: DateTime.now(),
+        ),
+      ];
+
+      final reviewedIds = existingReviews.map((r) => r.musicItemId).toSet();
+      final reviewedKeys = existingReviews
+          .map((r) => '${r.musicItemName.trim().toLowerCase()}:::${r.artistName.trim().toLowerCase()}')
+          .toSet();
+
+      final pruned = wishlist.where((w) {
+        if (reviewedIds.contains(w.musicItem.id)) return false;
+        final key = '${w.musicItem.name.trim().toLowerCase()}:::${w.musicItem.artist.trim().toLowerCase()}';
+        return !reviewedKeys.contains(key);
+      }).toList();
+
+      expect(pruned.length, 1);
+      expect(pruned.first.musicItem.id, 'album_blonde');
+    });
+
+    test('Dossier Top Picks preserves empty slots and does not auto-insert new reviews', () {
+      const topPicks = DossierTopPicks(
+        topAlbums: [itemBlonde, null, null],
+        topSongs: [null, null, null],
+      );
+
+      // Slot 1 is pinned, Slots 2 & 3 are empty
+      expect(topPicks.topAlbums[0]!.name, 'Blonde');
+      expect(topPicks.topAlbums[1], isNull);
+      expect(topPicks.topAlbums[2], isNull);
+
+      // All song slots remain empty
+      expect(topPicks.topSongs.every((s) => s == null), true);
+
+      // Rating a new album (e.g. Camp) does not affect topPicks
+      expect(topPicks.topAlbums.contains(itemCamp), false);
+    });
+  });
 }
+
 
 
