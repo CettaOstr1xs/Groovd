@@ -133,6 +133,30 @@ void main() {
     expect(find.byIcon(Icons.queue_music_outlined), findsWidgets);
     expect(find.byIcon(Icons.bookmark_outline), findsWidgets);
     expect(find.byIcon(Icons.settings), findsOneWidget);
+
+    // User bio statement is rendered below the handle
+    expect(find.textContaining('Sonic explorer'), findsOneWidget);
+
+    // Data source badge should NOT be present on the profile screen
+    expect(find.textContaining('DATA SOURCE:'), findsNothing);
+
+    // Tap settings icon in AppBar
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Settings modal appears with Light / Dark Mode buttons, Header Banner and Bio
+    expect(find.text('SETTINGS'), findsOneWidget);
+    expect(find.text('HEADER BANNER PHOTO'), findsOneWidget);
+    expect(find.text('ADD BACKGROUND PHOTO'), findsOneWidget);
+    expect(find.text('CRITIC BIO // SELF-EXPRESSION'), findsOneWidget);
+    expect(find.text('DARK MODE'), findsOneWidget);
+    expect(find.text('LIGHT MODE'), findsOneWidget);
+
+    // Spotify API config should NOT be present
+    expect(find.text('SPOTIFY API CONFIG'), findsNothing);
+    expect(find.text('SPOTIFY CLIENT ID'), findsNothing);
+    expect(find.text('SPOTIFY CLIENT SECRET'), findsNothing);
   });
 
   testWidgets('AdjustAvatarScreen renders crop viewport and interactive controls', (WidgetTester tester) async {

@@ -10,27 +10,36 @@ class UserProfile {
   final String userId;
   final String userName;
   final String userHandle;
+  final String bio;
   final String? avatarPath;
+  final String? backdropPath;
 
   const UserProfile({
     this.userId = 'user_me',
     this.userName = 'CRITIC // YOU',
     this.userHandle = '@groovd_me',
+    this.bio = 'Sonic explorer & vinyl enthusiast. Chronicling deep cuts and 10/10 masterpieces.',
     this.avatarPath,
+    this.backdropPath,
   });
 
   UserProfile copyWith({
     String? userId,
     String? userName,
     String? userHandle,
+    String? bio,
     String? avatarPath,
+    String? backdropPath,
     bool clearAvatar = false,
+    bool clearBackdrop = false,
   }) {
     return UserProfile(
       userId: userId ?? this.userId,
       userName: userName ?? this.userName,
       userHandle: userHandle ?? this.userHandle,
+      bio: bio ?? this.bio,
       avatarPath: clearAvatar ? null : (avatarPath ?? this.avatarPath),
+      backdropPath: clearBackdrop ? null : (backdropPath ?? this.backdropPath),
     );
   }
 
@@ -39,7 +48,9 @@ class UserProfile {
       'userId': userId,
       'userName': userName,
       'userHandle': userHandle,
+      'bio': bio,
       'avatarPath': avatarPath,
+      'backdropPath': backdropPath,
     };
   }
 
@@ -48,15 +59,20 @@ class UserProfile {
       userId: map['userId'] as String? ?? 'user_me',
       userName: map['userName'] as String? ?? 'CRITIC // YOU',
       userHandle: map['userHandle'] as String? ?? '@groovd_me',
+      bio: map['bio'] as String? ??
+          'Sonic explorer & vinyl enthusiast. Chronicling deep cuts and 10/10 masterpieces.',
       avatarPath: map['avatarPath'] as String?,
+      backdropPath: map['backdropPath'] as String?,
     );
   }
 }
 
 class UserProfileNotifier extends Notifier<UserProfile> {
   static const String _avatarKey = 'groovd_user_avatar_path_v1';
+  static const String _backdropKey = 'groovd_user_backdrop_path_v1';
   static const String _nameKey = 'groovd_user_name_v1';
   static const String _handleKey = 'groovd_user_handle_v1';
+  static const String _bioKey = 'groovd_user_bio_v1';
 
   final ImagePicker _picker = ImagePicker();
 
@@ -70,8 +86,10 @@ class UserProfileNotifier extends Notifier<UserProfile> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedAvatar = prefs.getString(_avatarKey);
+      final savedBackdrop = prefs.getString(_backdropKey);
       final savedName = prefs.getString(_nameKey);
       final savedHandle = prefs.getString(_handleKey);
+      final savedBio = prefs.getString(_bioKey);
 
       String? validAvatarPath;
       if (savedAvatar != null && savedAvatar.isNotEmpty) {
@@ -81,10 +99,20 @@ class UserProfileNotifier extends Notifier<UserProfile> {
         }
       }
 
+      String? validBackdropPath;
+      if (savedBackdrop != null && savedBackdrop.isNotEmpty) {
+        final file = File(savedBackdrop);
+        if (await file.exists()) {
+          validBackdropPath = savedBackdrop;
+        }
+      }
+
       state = state.copyWith(
         userName: savedName ?? state.userName,
         userHandle: savedHandle ?? state.userHandle,
+        bio: savedBio ?? state.bio,
         avatarPath: validAvatarPath,
+        backdropPath: validBackdropPath,
       );
     } catch (_) {}
   }
@@ -97,8 +125,16 @@ class UserProfileNotifier extends Notifier<UserProfile> {
       } else {
         await prefs.remove(_avatarKey);
       }
+
+      if (state.backdropPath != null) {
+        await prefs.setString(_backdropKey, state.backdropPath!);
+      } else {
+        await prefs.remove(_backdropKey);
+      }
+
       await prefs.setString(_nameKey, state.userName);
       await prefs.setString(_handleKey, state.userHandle);
+      await prefs.setString(_bioKey, state.bio);
 
       if (Firebase.apps.isNotEmpty) {
         await FirebaseFirestore.instance
@@ -182,10 +218,65 @@ class UserProfileNotifier extends Notifier<UserProfile> {
     await _persist();
   }
 
-  Future<void> updateProfile({String? name, String? handle}) async {
+  /// Picks a new background photo (Patron backdrop) from gallery and saves it to local storage.
+  Future<bool> pickBackdropFromGallery() async {
+    try {
+      final pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 2560,
+        maxHeight: 1440,
+        imageQuality: 95,
+      );
+      if (pickedFile == null) return false;
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final fileName = 'backdrop_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final savedImage = File('${appDir.path}/$fileName');
+
+      if (state.backdropPath != null) {
+        try {
+          final oldFile = File(state.backdropPath!);
+          if (await oldFile.exists() && oldFile.path.contains(appDir.path)) {
+            await oldFile.delete();
+          }
+        } catch (_) {}
+      }
+
+      await File(pickedFile.path).copy(savedImage.path);
+      state = state.copyWith(backdropPath: savedImage.path);
+      await _persist();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Removes the custom background/backdrop photo.
+  Future<void> removeBackdrop() async {
+    if (state.backdropPath != null) {
+      try {
+        final oldFile = File(state.backdropPath!);
+        if (await oldFile.exists()) {
+          await oldFile.delete();
+        }
+      } catch (_) {}
+    }
+
+    state = state.copyWith(clearBackdrop: true);
+    await _persist();
+  }
+
+  /// Updates critic bio / self-expression description.
+  Future<void> updateBio(String newBio) async {
+    state = state.copyWith(bio: newBio);
+    await _persist();
+  }
+
+  Future<void> updateProfile({String? name, String? handle, String? bio}) async {
     state = state.copyWith(
       userName: name ?? state.userName,
       userHandle: handle ?? state.userHandle,
+      bio: bio ?? state.bio,
     );
     await _persist();
   }

@@ -874,7 +874,9 @@ void main() {
       expect(profile.userName, 'CRITIC // YOU');
       expect(profile.userHandle, '@groovd_me');
       expect(profile.userId, 'user_me');
+      expect(profile.bio, isNotEmpty);
       expect(profile.avatarPath, isNull);
+      expect(profile.backdropPath, isNull);
     });
 
     test('Serializes to map and deserializes correctly', () {
@@ -882,7 +884,9 @@ void main() {
         userName: 'MELOMANIAC',
         userHandle: '@melo',
         userId: 'user_123',
+        bio: 'Avid music collector & ambient noise lover.',
         avatarPath: '/data/user/0/com.example.groovd/avatar.jpg',
+        backdropPath: '/data/user/0/com.example.groovd/backdrop.jpg',
       );
 
       final map = original.toMap();
@@ -891,20 +895,32 @@ void main() {
       expect(revived.userName, original.userName);
       expect(revived.userHandle, original.userHandle);
       expect(revived.userId, original.userId);
+      expect(revived.bio, original.bio);
       expect(revived.avatarPath, original.avatarPath);
+      expect(revived.backdropPath, original.backdropPath);
     });
 
-    test('copyWith properly updates or clears avatar', () {
-      const profile = UserProfile(avatarPath: '/path/to/img.png');
+    test('copyWith properly updates or clears avatar and backdrop', () {
+      const profile = UserProfile(
+        avatarPath: '/path/to/img.png',
+        backdropPath: '/path/to/backdrop.png',
+      );
       expect(profile.avatarPath, '/path/to/img.png');
+      expect(profile.backdropPath, '/path/to/backdrop.png');
 
-      final updated = profile.copyWith(userName: 'NEW_NAME');
+      final updated = profile.copyWith(
+        userName: 'NEW_NAME',
+        bio: 'Updated bio statement.',
+      );
       expect(updated.userName, 'NEW_NAME');
+      expect(updated.bio, 'Updated bio statement.');
       expect(updated.avatarPath, '/path/to/img.png');
+      expect(updated.backdropPath, '/path/to/backdrop.png');
 
-      // Clear avatar
-      final cleared = profile.copyWith(clearAvatar: true);
+      // Clear avatar & backdrop
+      final cleared = profile.copyWith(clearAvatar: true, clearBackdrop: true);
       expect(cleared.avatarPath, isNull);
+      expect(cleared.backdropPath, isNull);
     });
   });
 }

@@ -20,7 +20,6 @@ import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/state/dossier_top_picks_provider.dart';
 import 'package:groovd/state/music_providers.dart';
 import 'package:groovd/state/review_providers.dart';
-import 'package:groovd/state/settings_provider.dart';
 import 'package:groovd/state/user_lists_provider.dart';
 import 'package:groovd/state/user_profile_provider.dart';
 import 'package:groovd/state/wishlist_provider.dart';
@@ -163,26 +162,394 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  void _showSpotifySettings(BuildContext context, WidgetRef ref) {
-    final settings = ref.read(spotifySettingsProvider);
-    final idController = TextEditingController(text: settings.clientId);
-    final secretController = TextEditingController(text: settings.clientSecret);
+  void _showSettingsModal(BuildContext context, WidgetRef ref) {
+    bool isDarkMode = true;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final profile = ref.watch(userProfileProvider);
+
+            return Container(
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(context).padding.bottom + 24,
+              ),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.88,
+              ),
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                border: Border(top: BorderSide(color: AppColors.borderBold, width: 2.0)),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('SETTINGS', style: AppTypography.displaySmall()),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'APP PREFERENCES & PROFILE CUSTOMIZATION',
+                      style: AppTypography.monoLabel(
+                        color: AppColors.textSecondary,
+                        fontSize: 10.5,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Header Banner Photo Feature
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCard,
+                        border: Border.all(color: AppColors.border, width: 1.5),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.panorama_outlined,
+                                    size: 18,
+                                    color: AppColors.acidLime,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'HEADER BANNER PHOTO',
+                                    style: AppTypography.monoLabel(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceElevated,
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Text(
+                                  profile.backdropPath != null ? 'ACTIVE' : 'NONE',
+                                  style: AppTypography.monoBadge(
+                                    color: profile.backdropPath != null
+                                        ? AppColors.acidLime
+                                        : AppColors.textSecondary,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Display a cinematic widescreen background photo above your Critic Dossier banner.',
+                            style: AppTypography.bodySmall(
+                              color: AppColors.textSecondary,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          if (profile.backdropPath != null) ...[
+                            Container(
+                              height: 85,
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppColors.borderBold, width: 1.5),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(1),
+                                child: Image.file(
+                                  File(profile.backdropPath!),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (ctx, err, stack) => const SizedBox.shrink(),
+                                ),
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: BrutalistButton(
+                                    label: 'CHANGE PHOTO',
+                                    icon: Icons.photo_library_outlined,
+                                    backgroundColor: AppColors.surfaceElevated,
+                                    textColor: AppColors.textPrimary,
+                                    borderColor: AppColors.borderBold,
+                                    isSmall: true,
+                                    onPressed: () async {
+                                      final ok = await ref
+                                          .read(userProfileProvider.notifier)
+                                          .pickBackdropFromGallery();
+                                      if (context.mounted && ok) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'HEADER BANNER UPDATED',
+                                              style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                            ),
+                                            backgroundColor: AppColors.acidLime,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: BrutalistButton(
+                                    label: 'REMOVE PHOTO',
+                                    icon: Icons.delete_outline,
+                                    backgroundColor: AppColors.surfaceElevated,
+                                    textColor: AppColors.vermillion,
+                                    borderColor: AppColors.vermillion,
+                                    isSmall: true,
+                                    onPressed: () async {
+                                      await ref.read(userProfileProvider.notifier).removeBackdrop();
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'HEADER BANNER REMOVED',
+                                              style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                            ),
+                                            backgroundColor: AppColors.acidLime,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else ...[
+                            BrutalistButton(
+                              label: 'ADD BACKGROUND PHOTO',
+                              icon: Icons.add_photo_alternate_outlined,
+                              backgroundColor: AppColors.acidLime,
+                              textColor: AppColors.pureBlack,
+                              isFullWidth: true,
+                              onPressed: () async {
+                                final ok = await ref
+                                    .read(userProfileProvider.notifier)
+                                    .pickBackdropFromGallery();
+                                if (context.mounted && ok) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'HEADER BANNER PHOTO APPLIED',
+                                        style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                      ),
+                                      backgroundColor: AppColors.acidLime,
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Critic Bio Section
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCard,
+                        border: Border.all(color: AppColors.border, width: 1.5),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.edit_note_outlined,
+                                    size: 18,
+                                    color: AppColors.cyberCyan,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'CRITIC BIO // SELF-EXPRESSION',
+                                    style: AppTypography.monoLabel(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            profile.bio.isNotEmpty ? profile.bio : 'No bio set yet.',
+                            style: AppTypography.bodySmall(
+                              color: AppColors.textSecondary,
+                              fontSize: 11.5,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 14),
+                          BrutalistButton(
+                            label: 'EDIT BIO',
+                            icon: Icons.edit,
+                            backgroundColor: AppColors.surfaceElevated,
+                            textColor: AppColors.textPrimary,
+                            borderColor: AppColors.borderBold,
+                            isSmall: true,
+                            isFullWidth: true,
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _showEditBioDialog(context, ref);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Appearance Theme Card
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCard,
+                        border: Border.all(color: AppColors.border, width: 1.5),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                                    size: 18,
+                                    color: isDarkMode ? AppColors.acidLime : AppColors.cyberCyan,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'THEME MODE',
+                                    style: AppTypography.monoLabel(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceElevated,
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Text(
+                                  isDarkMode ? 'DARK (ACTIVE)' : 'LIGHT MODE',
+                                  style: AppTypography.monoBadge(
+                                    color: isDarkMode ? AppColors.acidLime : AppColors.cyberCyan,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: BrutalistButton(
+                                  label: 'DARK MODE',
+                                  icon: Icons.dark_mode,
+                                  backgroundColor: isDarkMode ? AppColors.acidLime : AppColors.surfaceElevated,
+                                  textColor: isDarkMode ? AppColors.pureBlack : AppColors.textSecondary,
+                                  borderColor: isDarkMode ? AppColors.pureBlack : AppColors.borderBold,
+                                  isSmall: true,
+                                  onPressed: () {
+                                    setModalState(() => isDarkMode = true);
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: BrutalistButton(
+                                  label: 'LIGHT MODE',
+                                  icon: Icons.light_mode,
+                                  backgroundColor: !isDarkMode ? AppColors.cyberCyan : AppColors.surfaceElevated,
+                                  textColor: !isDarkMode ? AppColors.pureBlack : AppColors.textSecondary,
+                                  borderColor: !isDarkMode ? AppColors.pureBlack : AppColors.borderBold,
+                                  isSmall: true,
+                                  onPressed: () {
+                                    setModalState(() => isDarkMode = false);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showEditBioDialog(BuildContext context, WidgetRef ref) {
+    final currentBio = ref.read(userProfileProvider).bio;
+    final controller = TextEditingController(text: currentBio);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
         return Container(
           padding: EdgeInsets.only(
             top: 20,
             left: 20,
             right: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
           ),
           decoration: const BoxDecoration(
             color: AppColors.surface,
-            border: Border(top: BorderSide(color: AppColors.borderBold, width: 2.0)),
+            border: Border(top: BorderSide(color: AppColors.acidLime, width: 2.0)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -191,51 +558,43 @@ class ProfileScreen extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('SPOTIFY API CONFIG', style: AppTypography.displaySmall()),
+                  Text('CRITIC BIO', style: AppTypography.displaySmall()),
                   IconButton(
                     icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => Navigator.of(ctx).pop(),
                   ),
                 ],
               ),
               const SizedBox(height: 6),
               Text(
-                'Enter your Spotify Developer Client ID and Secret to stream live Spotify search and catalog data.',
+                'Express yourself! Set your musical taste, manifesto, or favorite sounds:',
                 style: AppTypography.bodySmall(color: AppColors.textSecondary),
               ),
               const SizedBox(height: 16),
-              Text('SPOTIFY CLIENT ID', style: AppTypography.monoLabel(fontSize: 10)),
-              const SizedBox(height: 6),
               TextField(
-                controller: idController,
+                controller: controller,
+                maxLines: 3,
+                maxLength: 180,
+                autofocus: true,
                 style: AppTypography.bodyLarge(),
-                decoration: const InputDecoration(hintText: 'Enter Client ID...'),
+                decoration: const InputDecoration(
+                  hintText: 'Enter your bio or musical statement...',
+                ),
               ),
-              const SizedBox(height: 14),
-              Text('SPOTIFY CLIENT SECRET', style: AppTypography.monoLabel(fontSize: 10)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: secretController,
-                obscureText: true,
-                style: AppTypography.bodyLarge(),
-                decoration: const InputDecoration(hintText: 'Enter Client Secret...'),
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               BrutalistButton(
-                label: 'SAVE & SYNC SPOTIFY',
-                icon: Icons.save,
+                label: 'SAVE BIO',
+                icon: Icons.check,
                 isFullWidth: true,
                 onPressed: () async {
-                  await ref.read(spotifySettingsProvider.notifier).saveCredentials(
-                        idController.text,
-                        secretController.text,
-                      );
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
+                  final text = controller.text.trim();
+                  await ref.read(userProfileProvider.notifier).updateBio(text);
+                  if (ctx.mounted) {
+                    Navigator.of(ctx).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'SPOTIFY CONFIGURATION SAVED',
+                          'BIO SAVED',
                           style: AppTypography.monoBadge(color: AppColors.pureBlack),
                         ),
                         backgroundColor: AppColors.acidLime,
@@ -248,6 +607,77 @@ class ProfileScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  void _showBackdropOptions(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.acidLime, width: 2.0)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('HEADER BANNER', style: AppTypography.displaySmall()),
+            const SizedBox(height: 6),
+            Text(
+              'Manage your cinematic header background photo.',
+              style: AppTypography.bodySmall(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 20),
+            BrutalistButton(
+              label: 'CHANGE BACKGROUND PHOTO',
+              icon: Icons.photo_library_outlined,
+              isFullWidth: true,
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                final ok = await ref.read(userProfileProvider.notifier).pickBackdropFromGallery();
+                if (context.mounted && ok) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'HEADER BANNER UPDATED',
+                        style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                      ),
+                      backgroundColor: AppColors.acidLime,
+                    ),
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+            BrutalistButton(
+              label: 'REMOVE BACKGROUND PHOTO',
+              icon: Icons.delete_outline,
+              backgroundColor: AppColors.surfaceElevated,
+              textColor: AppColors.vermillion,
+              borderColor: AppColors.vermillion,
+              isFullWidth: true,
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                await ref.read(userProfileProvider.notifier).removeBackdrop();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'HEADER BANNER REMOVED',
+                        style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                      ),
+                      backgroundColor: AppColors.acidLime,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -463,7 +893,6 @@ class ProfileScreen extends ConsumerWidget {
     final userName = profile.userName;
     final userHandle = profile.userHandle;
     final userReviewsAsync = ref.watch(userReviewsProvider(userId));
-    final spotifySettings = ref.watch(spotifySettingsProvider);
     final topPicks = ref.watch(resolvedTopPicksProvider);
 
     userReviewsAsync.whenData((reviews) {
@@ -493,8 +922,8 @@ class ProfileScreen extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.settings, color: AppColors.textPrimary),
-            tooltip: 'Spotify Settings',
-            onPressed: () => _showSpotifySettings(context, ref),
+            tooltip: 'Settings',
+            onPressed: () => _showSettingsModal(context, ref),
           ),
         ],
       ),
@@ -502,6 +931,47 @@ class ProfileScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header Backdrop Banner (Clean & Full Bleed)
+            if (profile.backdropPath != null)
+              GestureDetector(
+                onTap: () => _showBackdropOptions(context, ref),
+                child: Container(
+                  width: double.infinity,
+                  height: 165,
+                  decoration: const BoxDecoration(
+                    color: AppColors.pureBlack,
+                    border: Border(
+                      bottom: BorderSide(color: AppColors.borderBold, width: 2.0),
+                    ),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.file(
+                        File(profile.backdropPath!),
+                        width: double.infinity,
+                        height: 165,
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, stack) => const SizedBox.shrink(),
+                      ),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.1),
+                              Colors.transparent,
+                              AppColors.pureBlack.withValues(alpha: 0.65),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
             // User Persona Banner
             Container(
               padding: const EdgeInsets.all(20),
@@ -515,6 +985,7 @@ class ProfileScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // Interactive Profile Avatar with Camera Badge
                       GestureDetector(
@@ -587,14 +1058,17 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 16),
+                      // Critic name & handle vertically centered on the middle side of avatar
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               userName.toUpperCase(),
                               style: AppTypography.displayMedium(fontSize: 20),
                             ),
+                            const SizedBox(height: 2),
                             Text(
                               userHandle,
                               style: AppTypography.monoLabel(
@@ -608,40 +1082,47 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
 
-                  // Data source status badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceCard,
-                      border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: spotifySettings.isLiveMode ? AppColors.acidLime : AppColors.cyberCyan,
+                  // User Bio / Self-Expression below the avatar and name row
+                  GestureDetector(
+                    onTap: () => _showEditBioDialog(context, ref),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCard.withValues(alpha: 0.7),
+                        border: Border.all(color: AppColors.border, width: 1.0),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              profile.bio.isNotEmpty
+                                  ? profile.bio
+                                  : 'Add your critic bio // express yourself...',
+                              style: AppTypography.bodySmall(
+                                color: profile.bio.isNotEmpty
+                                    ? AppColors.textPrimary
+                                    : AppColors.textMuted,
+                                fontSize: 11.5,
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          spotifySettings.isLiveMode
-                              ? 'DATA SOURCE: LIVE SPOTIFY API'
-                              : 'DATA SOURCE: CURATED CATALOG (DEMO)',
-                          style: AppTypography.monoBadge(
-                            color: AppColors.textSecondary,
-                            fontSize: 9,
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.edit_note,
+                            size: 16,
+                            color: AppColors.acidLime,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
+
+
                 ],
               ),
             ),
