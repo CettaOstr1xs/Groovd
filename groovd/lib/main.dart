@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/widget_previews.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -51,4 +52,13 @@ class GroovdApp extends StatelessWidget {
       home: const MainNavigationScreen(),
     );
   }
+}
+
+@Preview()
+Widget mainScreenPreview() {
+  return const ProviderScope(
+    child: MaterialApp(
+      home: MainNavigationScreen(),
+    ),
+  );
 }

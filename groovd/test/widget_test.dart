@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,6 +6,9 @@ import 'package:groovd/main.dart';
 import 'package:groovd/presentation/screens/profile/logged_reviews_screen.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/presentation/screens/review/write_review_modal.dart';
+import 'package:groovd/presentation/screens/lists/user_lists_screen.dart';
+import 'package:groovd/presentation/screens/profile/adjust_avatar_screen.dart';
+import 'package:groovd/presentation/screens/profile/profile_screen.dart';
 
 void main() {
   testWidgets('Groovd app renders main navigation and home screen', (WidgetTester tester) async {
@@ -85,5 +89,89 @@ void main() {
     expect(find.text('LOG YOUR REVIEW'), findsOneWidget);
     // Ensure no overflow errors occurred
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('UserListsScreen renders header and empty state properly', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: UserListsScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('CURATED LISTS'), findsWidgets);
+    expect(find.text('+ CREATE NEW LIST'), findsOneWidget);
+    expect(find.text('NO CURATED LISTS YET'), findsOneWidget);
+  });
+
+  testWidgets('ProfileScreen renders avatar and both Wantlist and Curated Lists buttons', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: ProfileScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+
+    // Avatar default monogram 'YOU'
+    expect(find.text('YOU'), findsWidgets);
+
+    // Wantlist shortcut button
+    expect(find.text('CRITIC WANTLIST // QUEUE'), findsOneWidget);
+
+    // Curated Lists shortcut button directly below
+    expect(find.text('CURATED LISTS // ARCHIVES'), findsOneWidget);
+
+    // App bar shows curated lists, wantlist and settings icons
+    expect(find.byIcon(Icons.queue_music_outlined), findsWidgets);
+    expect(find.byIcon(Icons.bookmark_outline), findsWidgets);
+    expect(find.byIcon(Icons.settings), findsOneWidget);
+  });
+
+  testWidgets('AdjustAvatarScreen renders crop viewport and interactive controls', (WidgetTester tester) async {
+    final tempDir = Directory.systemTemp.createTempSync();
+    final testFile = File('${tempDir.path}/test_img.png');
+    // 1x1 transparent PNG bytes
+    testFile.writeAsBytesSync([
+      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+      0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+      0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+      0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+      0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdjustAvatarScreen(imageFile: testFile),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('ADJUST AVATAR'), findsOneWidget);
+    expect(find.text('ARRANGE POSITION // 1:1 RATIO'), findsOneWidget);
+    expect(find.text('DRAG TO PAN • PINCH TO ZOOM'), findsOneWidget);
+    expect(find.text('ROTATE 90°'), findsOneWidget);
+    expect(find.text('RE-CENTER'), findsOneWidget);
+    expect(find.text('CONFIRM AVATAR // SET PHOTO'), findsOneWidget);
+
+    // Tap rotate
+    await tester.tap(find.text('ROTATE 90°'));
+    await tester.pump();
+
+    // Tap zoom in
+    await tester.tap(find.byTooltip('Zoom In'));
+    await tester.pump();
+
+    // Clean up
+    tempDir.deleteSync(recursive: true);
   });
 }

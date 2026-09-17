@@ -6,21 +6,172 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
-import 'package:groovd/state/music_providers.dart';
-import 'package:groovd/state/review_providers.dart';
-import 'package:groovd/state/wishlist_provider.dart';
+import 'package:groovd/presentation/screens/lists/create_edit_list_modal.dart';
+import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
+import 'package:groovd/presentation/screens/review/write_review_modal.dart';
 import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
 import 'package:groovd/presentation/widgets/giant_score_badge.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
-import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
-import 'package:groovd/presentation/screens/review/write_review_modal.dart';
+import 'package:groovd/state/music_providers.dart';
+import 'package:groovd/state/review_providers.dart';
+import 'package:groovd/state/user_lists_provider.dart';
+import 'package:groovd/state/wishlist_provider.dart';
 
 class MusicDetailScreen extends ConsumerWidget {
   final MusicItem item;
   final String? heroTag;
 
   const MusicDetailScreen({super.key, required this.item, this.heroTag});
+
+  void _showAddToListModal(BuildContext context, WidgetRef ref, MusicItem musicItem) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Consumer(
+          builder: (context, ref, _) {
+            final lists = ref.watch(userListsProvider);
+
+            return Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                border: Border(top: BorderSide(color: AppColors.cyberCyan, width: 2.0)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('ADD TO CURATED LIST', style: AppTypography.displaySmall()),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Select a list to save "${musicItem.name.toUpperCase()}"',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.monoLabel(color: AppColors.textSecondary, fontSize: 10),
+                  ),
+                  const SizedBox(height: 16),
+                  if (lists.isEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Center(
+                        child: Text(
+                          'YOU HAVE NO CURATED LISTS YET',
+                          style: AppTypography.monoBadge(color: AppColors.textMuted),
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.4,
+                      ),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: lists.length,
+                        separatorBuilder: (ctx, i) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final list = lists[index];
+                          final inList = list.items.any((i) => i.id == musicItem.id);
+
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                              list.title.toUpperCase(),
+                              style: AppTypography.bodyLarge(fontWeight: FontWeight.w700),
+                            ),
+                            subtitle: Text(
+                              list.summaryLabel.toUpperCase(),
+                              style: AppTypography.monoLabel(fontSize: 10, color: AppColors.cyberCyan),
+                            ),
+                            trailing: inList
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surfaceElevated,
+                                      border: Border.all(color: AppColors.border),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                    child: Text(
+                                      'IN LIST',
+                                      style: AppTypography.monoBadge(color: AppColors.textMuted, fontSize: 9),
+                                    ),
+                                  )
+                                : BrutalistButton(
+                                    label: '+ ADD',
+                                    isSmall: true,
+                                    backgroundColor: AppColors.cyberCyan,
+                                    textColor: AppColors.pureBlack,
+                                    borderColor: AppColors.pureBlack,
+                                    onPressed: () async {
+                                      Navigator.of(ctx).pop();
+                                      final added = await ref
+                                          .read(userListsProvider.notifier)
+                                          .addItemToList(list.id, musicItem);
+                                      if (context.mounted && added) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'ADDED TO "${list.title.toUpperCase()}"',
+                                              style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                            ),
+                                            backgroundColor: AppColors.cyberCyan,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  BrutalistButton(
+                    label: '+ CREATE NEW LIST & ADD',
+                    icon: Icons.add,
+                    isFullWidth: true,
+                    backgroundColor: AppColors.surfaceElevated,
+                    textColor: AppColors.cyberCyan,
+                    borderColor: AppColors.cyberCyan,
+                    onPressed: () async {
+                      Navigator.of(ctx).pop();
+                      final created = await CreateEditListModal.show(context);
+                      if (created != null && context.mounted) {
+                        await ref.read(userListsProvider.notifier).addItemToList(created.id, musicItem);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'CREATED & ADDED TO "${created.title.toUpperCase()}"',
+                                style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                              ),
+                              backgroundColor: AppColors.cyberCyan,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   Future<void> _launchSpotify(BuildContext context, String url) async {
     if (url.isEmpty) {
@@ -94,6 +245,15 @@ class MusicDetailScreen extends ConsumerWidget {
           style: AppTypography.monoLabel(fontSize: 11),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.playlist_add,
+              color: AppColors.cyberCyan,
+              size: 22,
+            ),
+            tooltip: 'Add to custom list',
+            onPressed: () => _showAddToListModal(context, ref, activeItem),
+          ),
           IconButton(
             icon: Icon(
               isWishlisted ? Icons.bookmark : Icons.bookmark_border,

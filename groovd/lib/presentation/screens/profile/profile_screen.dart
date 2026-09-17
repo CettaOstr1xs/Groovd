@@ -1,27 +1,167 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/services/spotify_mock_data.dart';
+import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
+import 'package:groovd/presentation/screens/lists/user_lists_screen.dart';
+import 'package:groovd/presentation/screens/profile/adjust_avatar_screen.dart';
+import 'package:groovd/presentation/screens/profile/logged_reviews_screen.dart';
+import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
+import 'package:groovd/presentation/screens/wishlist/wishlist_screen.dart';
+import 'package:groovd/presentation/widgets/album_art_card.dart';
+import 'package:groovd/presentation/widgets/brutalist_button.dart';
+import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/state/dossier_top_picks_provider.dart';
 import 'package:groovd/state/music_providers.dart';
 import 'package:groovd/state/review_providers.dart';
 import 'package:groovd/state/settings_provider.dart';
-import 'package:groovd/presentation/widgets/album_art_card.dart';
-import 'package:groovd/presentation/widgets/brutalist_button.dart';
-import 'package:groovd/presentation/widgets/review_card.dart';
-import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
-import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
-import 'package:groovd/presentation/screens/profile/logged_reviews_screen.dart';
-import 'package:groovd/presentation/screens/wishlist/wishlist_screen.dart';
+import 'package:groovd/state/user_lists_provider.dart';
+import 'package:groovd/state/user_profile_provider.dart';
 import 'package:groovd/state/wishlist_provider.dart';
-import 'dart:async';
-import 'package:flutter/services.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
+
+  void _showAvatarOptions(BuildContext context, WidgetRef ref) {
+    final profile = ref.read(userProfileProvider);
+    final hasCustomAvatar = profile.avatarPath != null;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.acidLime, width: 2.0)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('CRITIC AVATAR // PHOTO', style: AppTypography.displaySmall()),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Select a photo from your gallery and adjust the crop & position to fit your dossier.',
+              style: AppTypography.bodySmall(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 20),
+            BrutalistButton(
+              label: 'CHOOSE FROM GALLERY',
+              icon: Icons.photo_library_outlined,
+              isFullWidth: true,
+              backgroundColor: AppColors.acidLime,
+              textColor: AppColors.pureBlack,
+              borderColor: AppColors.pureBlack,
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                final rawFile = await ref
+                    .read(userProfileProvider.notifier)
+                    .pickRawImageFromGallery();
+                if (rawFile != null && context.mounted) {
+                  final croppedPath = await Navigator.of(context).push<String?>(
+                    AdjustAvatarScreen.route(imageFile: rawFile),
+                  );
+                  if (croppedPath != null && context.mounted) {
+                    await ref
+                        .read(userProfileProvider.notifier)
+                        .setCustomAvatar(croppedPath);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'CRITIC AVATAR UPDATED',
+                            style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                          ),
+                          backgroundColor: AppColors.acidLime,
+                        ),
+                      );
+                    }
+                  }
+                }
+              },
+            ),
+            if (hasCustomAvatar) ...[
+              const SizedBox(height: 12),
+              BrutalistButton(
+                label: 'RE-ADJUST CURRENT PHOTO',
+                icon: Icons.crop_outlined,
+                isFullWidth: true,
+                backgroundColor: AppColors.surfaceElevated,
+                textColor: AppColors.cyberCyan,
+                borderColor: AppColors.cyberCyan,
+                onPressed: () async {
+                  Navigator.of(ctx).pop();
+                  final currentFile = File(profile.avatarPath!);
+                  if (await currentFile.exists() && context.mounted) {
+                    final croppedPath = await Navigator.of(context).push<String?>(
+                      AdjustAvatarScreen.route(imageFile: currentFile),
+                    );
+                    if (croppedPath != null && context.mounted) {
+                      await ref
+                          .read(userProfileProvider.notifier)
+                          .setCustomAvatar(croppedPath);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'CRITIC AVATAR REPOSITIONED',
+                              style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                            ),
+                            backgroundColor: AppColors.cyberCyan,
+                          ),
+                        );
+                      }
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              BrutalistButton(
+                label: 'REMOVE PHOTO // USE MONOGRAM',
+                icon: Icons.delete_outline,
+                isFullWidth: true,
+                backgroundColor: AppColors.surfaceElevated,
+                textColor: AppColors.vermillion,
+                borderColor: AppColors.vermillion,
+                onPressed: () async {
+                  Navigator.of(ctx).pop();
+                  await ref.read(userProfileProvider.notifier).removeAvatar();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'AVATAR RESET TO MONOGRAM',
+                          style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                        ),
+                        backgroundColor: AppColors.vermillion,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _showSpotifySettings(BuildContext context, WidgetRef ref) {
     final settings = ref.read(spotifySettingsProvider);
@@ -318,9 +458,10 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userId = ref.watch(currentUserIdProvider);
-    final userName = ref.watch(currentUserNameProvider);
-    final userHandle = ref.watch(currentUserHandleProvider);
+    final profile = ref.watch(userProfileProvider);
+    final userId = profile.userId;
+    final userName = profile.userName;
+    final userHandle = profile.userHandle;
     final userReviewsAsync = ref.watch(userReviewsProvider(userId));
     final spotifySettings = ref.watch(spotifySettingsProvider);
     final topPicks = ref.watch(resolvedTopPicksProvider);
@@ -338,6 +479,11 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text('CRITIC DOSSIER', style: AppTypography.displaySmall()),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.queue_music_outlined, color: AppColors.cyberCyan),
+            tooltip: 'Curated Lists',
+            onPressed: () => Navigator.of(context).push(UserListsScreen.route()),
+          ),
           IconButton(
             icon: const Icon(Icons.bookmark_outline, color: AppColors.textPrimary),
             tooltip: 'Wantlist // Wishlist',
@@ -370,28 +516,74 @@ class ProfileScreen extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: AppColors.acidLime,
-                          border: Border.all(color: AppColors.pureBlack, width: 2.0),
-                          borderRadius: BorderRadius.circular(2),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: AppColors.pureBlack,
-                              offset: Offset(3, 3),
-                              blurRadius: 0,
+                      // Interactive Profile Avatar with Camera Badge
+                      GestureDetector(
+                        onTap: () => _showAvatarOptions(context, ref),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: AppColors.acidLime,
+                                border: Border.all(color: AppColors.pureBlack, width: 2.0),
+                                borderRadius: BorderRadius.circular(2),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: AppColors.pureBlack,
+                                    offset: Offset(3, 3),
+                                    blurRadius: 0,
+                                  ),
+                                ],
+                              ),
+                              child: profile.avatarPath != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(1),
+                                      child: Image.file(
+                                        File(profile.avatarPath!),
+                                        width: 64,
+                                        height: 64,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (ctx, err, stack) => Center(
+                                          child: Text(
+                                            'YOU',
+                                            style: AppTypography.monoBadge(
+                                              color: AppColors.pureBlack,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : Center(
+                                      child: Text(
+                                        'YOU',
+                                        style: AppTypography.monoBadge(
+                                          color: AppColors.pureBlack,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                            Positioned(
+                              right: -4,
+                              bottom: -4,
+                              child: Container(
+                                padding: const EdgeInsets.all(3.5),
+                                decoration: BoxDecoration(
+                                  color: AppColors.pureBlack,
+                                  border: Border.all(color: AppColors.acidLime, width: 1.5),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  size: 11,
+                                  color: AppColors.acidLime,
+                                ),
+                              ),
                             ),
                           ],
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'YOU',
-                          style: AppTypography.monoBadge(
-                            color: AppColors.pureBlack,
-                            fontSize: 14,
-                          ),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -555,19 +747,6 @@ class ProfileScreen extends ConsumerWidget {
               reviews: userReviewsAsync.asData?.value ?? [],
             ),
 
-            const SizedBox(height: 20),
-
-            // Wantlist / Wishlist Shortcut Button (Below Recent Activity)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _WishlistShortcutBanner(
-                count: ref.watch(wishlistCountProvider),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const WishlistScreen()),
-                ),
-              ),
-            ),
-
             const SizedBox(height: 24),
             const Divider(),
 
@@ -663,6 +842,32 @@ class ProfileScreen extends ConsumerWidget {
               error: (err, _) => Padding(
                 padding: const EdgeInsets.all(20),
                 child: Text('Error loading reviews: $err'),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Critic Wantlist / Wishlist Shortcut Banner (Moved below My Logged Reviews)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: _WishlistShortcutBanner(
+                count: ref.watch(wishlistCountProvider),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const WishlistScreen()),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Curated Lists Shortcut Banner
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: _ListsShortcutBanner(
+                count: ref.watch(userListsCountProvider),
+                onTap: () => Navigator.of(context).push(
+                  UserListsScreen.route(),
+                ),
               ),
             ),
 
@@ -1295,6 +1500,86 @@ class _WishlistShortcutBanner extends StatelessWidget {
               child: Text(
                 '$count QUEUED',
                 style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 9),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ListsShortcutBanner extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+
+  const _ListsShortcutBanner({
+    required this.count,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(2),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceElevated,
+          border: Border.all(color: AppColors.cyberCyan, width: 1.5),
+          borderRadius: BorderRadius.circular(2),
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.pureBlack,
+              offset: Offset(3, 3),
+              blurRadius: 0,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.cyberCyan,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: const Icon(
+                Icons.queue_music_outlined,
+                color: AppColors.pureBlack,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'CURATED LISTS // ARCHIVES',
+                    style: AppTypography.displaySmall(fontSize: 13),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'CUSTOM TRACK & ALBUM COLLECTIONS',
+                    style: AppTypography.monoLabel(color: AppColors.textSecondary, fontSize: 9),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCard,
+                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Text(
+                '$count ${count == 1 ? 'LIST' : 'LISTS'}',
+                style: AppTypography.monoBadge(color: AppColors.cyberCyan, fontSize: 9),
               ),
             ),
             const SizedBox(width: 8),

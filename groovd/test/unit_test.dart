@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/models/review.dart';
@@ -6,6 +7,8 @@ import 'package:groovd/data/services/spotify_repository.dart';
 import 'package:groovd/data/repositories/local_review_repository.dart';
 import 'package:groovd/data/models/wishlist_item.dart';
 import 'package:groovd/state/dossier_top_picks_provider.dart';
+import 'package:groovd/data/models/user_music_list.dart';
+import 'package:groovd/state/user_profile_provider.dart';
 
 void main() {
   group('Review Model Tests', () {
@@ -736,6 +739,172 @@ void main() {
       expect(merged.length, 2);
       expect(merged.first.id, 'r2'); // newest first
       expect(merged.last.id, 'r1');
+    });
+  });
+
+  group('UserMusicList Model Tests', () {
+    final sampleAlbum = MusicItem(
+      id: 'a1',
+      name: 'Blonde',
+      artist: 'Frank Ocean',
+      type: MusicType.album,
+      releaseDate: '2016-08-20',
+      coverUrl: 'https://example.com/blonde.jpg',
+      genres: ['R&B', 'SOUL'],
+    );
+
+    final sampleTrack = MusicItem(
+      id: 't1',
+      name: 'Nikes',
+      artist: 'Frank Ocean',
+      type: MusicType.song,
+      releaseDate: '2016-08-20',
+      coverUrl: 'https://example.com/nikes.jpg',
+      genres: ['R&B'],
+    );
+
+    test('Computes counts and summary label correctly', () {
+      final list = UserMusicList(
+        id: 'list-1',
+        title: 'Late Night Drives',
+        description: 'Vibes for midnight drives',
+        items: [sampleAlbum, sampleTrack],
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 2),
+      );
+
+      expect(list.itemCount, 2);
+      expect(list.albumCount, 1);
+      expect(list.songCount, 1);
+      expect(list.summaryLabel, '1 LP • 1 TRACK');
+      expect(list.previewCoverUrls.length, 2);
+      expect(list.previewCoverUrls.first, 'https://example.com/blonde.jpg');
+    });
+
+    test('Summary label handles empty and album-only/track-only lists', () {
+      final emptyList = UserMusicList(
+        id: 'empty-1',
+        title: 'Empty List',
+        items: [],
+        createdAt: DateTime.now(),
+      );
+      expect(emptyList.summaryLabel, 'EMPTY ARCHIVE');
+
+      final albumOnlyList = UserMusicList(
+        id: 'albums-1',
+        title: 'Vinyl Heavy',
+        items: [sampleAlbum, sampleAlbum.copyWith(id: 'a2', name: 'Channel Orange')],
+        createdAt: DateTime.now(),
+      );
+      expect(albumOnlyList.summaryLabel, '2 ALBUMS');
+
+      final trackOnlyList = UserMusicList(
+        id: 'tracks-1',
+        title: 'Singles Run',
+        items: [sampleTrack],
+        createdAt: DateTime.now(),
+      );
+      expect(trackOnlyList.summaryLabel, '1 TRACK');
+    });
+
+    test('Serializes to map and deserializes correctly', () {
+      final original = UserMusicList(
+        id: 'list-100',
+        title: 'Essentials',
+        description: 'Essential listening',
+        items: [sampleAlbum, sampleTrack],
+        createdAt: DateTime(2026, 3, 15, 10, 30),
+        updatedAt: DateTime(2026, 3, 16, 14, 0),
+      );
+
+      final map = original.toMap();
+      final revived = UserMusicList.fromMap(map);
+
+      expect(revived.id, original.id);
+      expect(revived.title, original.title);
+      expect(revived.description, original.description);
+      expect(revived.itemCount, 2);
+      expect(revived.items.first.id, sampleAlbum.id);
+      expect(revived.items.last.id, sampleTrack.id);
+      expect(revived.createdAt, original.createdAt);
+      expect(revived.updatedAt, original.updatedAt);
+    });
+
+    test('JSON serialization roundtrip works', () {
+      final original = UserMusicList(
+        id: 'list-200',
+        title: 'Top 100',
+        items: [sampleAlbum],
+        createdAt: DateTime(2026, 5, 1),
+      );
+
+      final jsonStr = jsonEncode(original.toMap());
+      final revived = UserMusicList.fromMap(jsonDecode(jsonStr) as Map<String, dynamic>);
+
+      expect(revived.id, original.id);
+      expect(revived.title, original.title);
+      expect(revived.items.length, 1);
+    });
+
+    test('copyWith updates fields without mutating originals', () {
+      final original = UserMusicList(
+        id: 'list-300',
+        title: 'Original Title',
+        items: [sampleAlbum],
+        createdAt: DateTime(2026, 1, 1),
+      );
+
+      final updated = original.copyWith(
+        title: 'New Title',
+        description: 'Updated desc',
+        items: [sampleAlbum, sampleTrack],
+      );
+
+      expect(original.title, 'Original Title');
+      expect(original.itemCount, 1);
+      expect(updated.title, 'New Title');
+      expect(updated.description, 'Updated desc');
+      expect(updated.itemCount, 2);
+    });
+  });
+
+  group('UserProfile Model Tests', () {
+    test('Initializes with expected default values', () {
+      const profile = UserProfile();
+      expect(profile.userName, 'CRITIC // YOU');
+      expect(profile.userHandle, '@groovd_me');
+      expect(profile.userId, 'user_me');
+      expect(profile.avatarPath, isNull);
+    });
+
+    test('Serializes to map and deserializes correctly', () {
+      const original = UserProfile(
+        userName: 'MELOMANIAC',
+        userHandle: '@melo',
+        userId: 'user_123',
+        avatarPath: '/data/user/0/com.example.groovd/avatar.jpg',
+      );
+
+      final map = original.toMap();
+      final revived = UserProfile.fromMap(map);
+
+      expect(revived.userName, original.userName);
+      expect(revived.userHandle, original.userHandle);
+      expect(revived.userId, original.userId);
+      expect(revived.avatarPath, original.avatarPath);
+    });
+
+    test('copyWith properly updates or clears avatar', () {
+      const profile = UserProfile(avatarPath: '/path/to/img.png');
+      expect(profile.avatarPath, '/path/to/img.png');
+
+      final updated = profile.copyWith(userName: 'NEW_NAME');
+      expect(updated.userName, 'NEW_NAME');
+      expect(updated.avatarPath, '/path/to/img.png');
+
+      // Clear avatar
+      final cleared = profile.copyWith(clearAvatar: true);
+      expect(cleared.avatarPath, isNull);
     });
   });
 }

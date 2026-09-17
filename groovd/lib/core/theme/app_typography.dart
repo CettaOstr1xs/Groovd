@@ -105,19 +105,19 @@ class AppTypography {
         color: color,
       );
 
-  static TextStyle bodyLarge({Color color = AppColors.textPrimary, double? fontSize}) =>
+  static TextStyle bodyLarge({Color color = AppColors.textPrimary, double? fontSize, FontWeight? fontWeight}) =>
       GoogleFonts.spaceGrotesk(
         fontSize: fontSize ?? 15,
-        fontWeight: FontWeight.w400,
+        fontWeight: fontWeight ?? FontWeight.w400,
         letterSpacing: -0.2,
         height: 1.45,
         color: color,
       );
 
-  static TextStyle bodyMedium({Color color = AppColors.textSecondary, double? fontSize}) =>
+  static TextStyle bodyMedium({Color color = AppColors.textSecondary, double? fontSize, FontWeight? fontWeight}) =>
       GoogleFonts.spaceGrotesk(
         fontSize: fontSize ?? 13,
-        fontWeight: FontWeight.w400,
+        fontWeight: fontWeight ?? FontWeight.w400,
         letterSpacing: -0.1,
         height: 1.4,
         color: color,
