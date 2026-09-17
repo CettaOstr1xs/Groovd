@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/music_item.dart';
@@ -59,6 +61,55 @@ class DossierTopPicksNotifier extends Notifier<DossierTopPicks> {
 
       state = DossierTopPicks(topAlbums: albums, topSongs: songs);
     } catch (_) {}
+
+    // Asynchronously synchronize with Cloud Firestore
+    _syncFromFirestore();
+  }
+
+  Future<void> _syncFromFirestore() async {
+    try {
+      if (Firebase.apps.isEmpty) return;
+      final docRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc('user_me')
+          .collection('dossier')
+          .doc('top_picks');
+
+      final doc = await docRef.get().timeout(const Duration(milliseconds: 3000));
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        final rawAlbums = data['topAlbums'] as List?;
+        final rawSongs = data['topSongs'] as List?;
+
+        final albums = List<MusicItem?>.from(state.topAlbums);
+        if (rawAlbums != null) {
+          for (int i = 0; i < rawAlbums.length && i < 3; i++) {
+            if (rawAlbums[i] != null && albums[i] == null) {
+              try {
+                albums[i] = MusicItem.fromMap(Map<String, dynamic>.from(rawAlbums[i] as Map));
+              } catch (_) {}
+            }
+          }
+        }
+
+        final songs = List<MusicItem?>.from(state.topSongs);
+        if (rawSongs != null) {
+          for (int i = 0; i < rawSongs.length && i < 3; i++) {
+            if (rawSongs[i] != null && songs[i] == null) {
+              try {
+                songs[i] = MusicItem.fromMap(Map<String, dynamic>.from(rawSongs[i] as Map));
+              } catch (_) {}
+            }
+          }
+        }
+
+        state = DossierTopPicks(topAlbums: albums, topSongs: songs);
+        await _persistLocal();
+      } else {
+        // Doc doesn't exist yet; push local picks up to cloud
+        await _syncToFirestore();
+      }
+    } catch (_) {}
   }
 
   Future<void> pinItem({
@@ -104,7 +155,7 @@ class DossierTopPicksNotifier extends Notifier<DossierTopPicks> {
     await _persist();
   }
 
-  Future<void> _persist() async {
+  Future<void> _persistLocal() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final albumStrs = state.topAlbums
@@ -116,6 +167,28 @@ class DossierTopPicksNotifier extends Notifier<DossierTopPicks> {
       await prefs.setStringList(_albumKey, albumStrs);
       await prefs.setStringList(_songKey, songStrs);
     } catch (_) {}
+  }
+
+  Future<void> _syncToFirestore() async {
+    try {
+      if (Firebase.apps.isEmpty) return;
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc('user_me')
+          .collection('dossier')
+          .doc('top_picks')
+          .set({
+            'topAlbums': state.topAlbums.map((a) => a?.toMap()).toList(),
+            'topSongs': state.topSongs.map((s) => s?.toMap()).toList(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true))
+          .timeout(const Duration(milliseconds: 2500));
+    } catch (_) {}
+  }
+
+  Future<void> _persist() async {
+    await _persistLocal();
+    _syncToFirestore();
   }
 }
 

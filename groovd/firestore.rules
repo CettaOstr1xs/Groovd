@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reviews collection: Open read for community critique feed & average score calculations
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if true;
+    }
+
+    // User subcollections (e.g. wishlist, dossier pins, profile preferences)
+    match /users/{userId}/{document=**} {
+      allow read, write: if true;
+    }
+
+    // Top-level wishlists
+    match /wishlists/{wishlistId} {
+      allow read, write: if true;
+    }
+  }
+}

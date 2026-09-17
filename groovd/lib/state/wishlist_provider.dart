@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/music_item.dart';
@@ -29,6 +31,53 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
       }
       state = items;
     } catch (_) {}
+
+    // Asynchronously synchronize with Cloud Firestore
+    _syncFromFirestore();
+  }
+
+  Future<void> _syncFromFirestore() async {
+    try {
+      if (Firebase.apps.isEmpty) return;
+      final firestore = FirebaseFirestore.instance;
+      final snapshot = await firestore
+          .collection('users')
+          .doc('user_me')
+          .collection('wishlist')
+          .get()
+          .timeout(const Duration(milliseconds: 3000));
+
+      final cloudItems = <WishlistItem>[];
+      for (final doc in snapshot.docs) {
+        try {
+          cloudItems.add(WishlistItem.fromMap(doc.data()));
+        } catch (_) {}
+      }
+
+      // Merge cloud items with current state
+      final currentMap = {for (final item in state) item.musicItem.id: item};
+      for (final c in cloudItems) {
+        currentMap.putIfAbsent(c.musicItem.id, () => c);
+      }
+
+      final merged = currentMap.values.toList();
+      merged.sort((a, b) => b.addedAt.compareTo(a.addedAt));
+      state = merged;
+      await _persist();
+
+      // Also push any local-only items up to cloud
+      for (final item in state) {
+        if (!cloudItems.any((c) => c.musicItem.id == item.musicItem.id)) {
+          await firestore
+              .collection('users')
+              .doc('user_me')
+              .collection('wishlist')
+              .doc(item.musicItem.id)
+              .set(item.toMap())
+              .timeout(const Duration(milliseconds: 2000));
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _persist() async {
@@ -55,13 +104,26 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
   Future<void> addItem(MusicItem item, {String note = ''}) async {
     final current = List<WishlistItem>.from(state);
     current.removeWhere((w) => w.musicItem.id == item.id);
-    current.insert(0, WishlistItem(
+    final newItem = WishlistItem(
       musicItem: item,
       addedAt: DateTime.now(),
       note: note,
-    ));
+    );
+    current.insert(0, newItem);
     state = current;
     await _persist();
+
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc('user_me')
+            .collection('wishlist')
+            .doc(item.id)
+            .set(newItem.toMap())
+            .timeout(const Duration(milliseconds: 2500));
+      }
+    } catch (_) {}
   }
 
   Future<void> removeItem(String musicItemId) async {
@@ -69,6 +131,18 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
     current.removeWhere((w) => w.musicItem.id == musicItemId);
     state = current;
     await _persist();
+
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc('user_me')
+            .collection('wishlist')
+            .doc(musicItemId)
+            .delete()
+            .timeout(const Duration(milliseconds: 2500));
+      }
+    } catch (_) {}
   }
 
   /// Automatically removes an item matching a review (by ID or matching Title + Artist).
@@ -77,16 +151,35 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
     final targetName = review.musicItemName.trim().toLowerCase();
     final targetArtist = review.artistName.trim().toLowerCase();
 
+    final removedIds = <String>[];
     current.removeWhere((w) {
       final idMatch = w.musicItem.id == review.musicItemId;
       final nameArtistMatch = w.musicItem.name.trim().toLowerCase() == targetName &&
           w.musicItem.artist.trim().toLowerCase() == targetArtist;
-      return idMatch || nameArtistMatch;
+      if (idMatch || nameArtistMatch) {
+        removedIds.add(w.musicItem.id);
+        return true;
+      }
+      return false;
     });
 
     if (current.length != state.length) {
       state = current;
       await _persist();
+
+      try {
+        if (Firebase.apps.isNotEmpty) {
+          for (final id in removedIds) {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc('user_me')
+                .collection('wishlist')
+                .doc(id)
+                .delete()
+                .timeout(const Duration(milliseconds: 2000));
+          }
+        }
+      } catch (_) {}
     }
   }
 
@@ -99,21 +192,56 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
         .map((r) => '${r.musicItemName.trim().toLowerCase()}:::${r.artistName.trim().toLowerCase()}')
         .toSet();
 
+    final removedIds = <String>[];
     current.removeWhere((w) {
-      if (reviewedItemIds.contains(w.musicItem.id)) return true;
+      final idMatches = reviewedItemIds.contains(w.musicItem.id);
       final key = '${w.musicItem.name.trim().toLowerCase()}:::${w.musicItem.artist.trim().toLowerCase()}';
-      return reviewedNameArtists.contains(key);
+      final nameMatches = reviewedNameArtists.contains(key);
+      if (idMatches || nameMatches) {
+        removedIds.add(w.musicItem.id);
+        return true;
+      }
+      return false;
     });
 
     if (current.length != state.length) {
       state = current;
       await _persist();
+
+      try {
+        if (Firebase.apps.isNotEmpty) {
+          for (final id in removedIds) {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc('user_me')
+                .collection('wishlist')
+                .doc(id)
+                .delete()
+                .timeout(const Duration(milliseconds: 2000));
+          }
+        }
+      } catch (_) {}
     }
   }
 
   Future<void> clear() async {
+    final oldIds = state.map((w) => w.musicItem.id).toList();
     state = const [];
     await _persist();
+
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        for (final id in oldIds) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc('user_me')
+              .collection('wishlist')
+              .doc(id)
+              .delete()
+              .timeout(const Duration(milliseconds: 1500));
+        }
+      }
+    } catch (_) {}
   }
 }
 

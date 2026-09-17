@@ -12,14 +12,36 @@ class FirestoreReviewRepository implements ReviewRepository {
   FirestoreReviewRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
+  bool _syncAttempted = false;
+
+  /// Background sync to push any locally-logged reviews to Firestore if they were saved offline
+  Future<void> syncLocalReviewsToFirestore() async {
+    if (_syncAttempted) return;
+    _syncAttempted = true;
+    try {
+      final localReviews = await _local.getRecentReviews(limit: 100);
+      for (final r in localReviews) {
+        if (!r.id.startsWith('seed_')) {
+          await _firestore
+              .collection(collectionPath)
+              .doc(r.id)
+              .set(r.toMap(), SetOptions(merge: true))
+              .timeout(const Duration(milliseconds: 2000));
+        }
+      }
+    } catch (_) {}
+  }
+
   @override
   Future<List<Review>> getReviewsForItem(String musicItemId) async {
+    // Opportunistically trigger background sync of local reviews
+    syncLocalReviewsToFirestore();
     try {
       final snapshot = await _firestore
           .collection(collectionPath)
           .where('musicItemId', isEqualTo: musicItemId)
           .get()
-          .timeout(const Duration(milliseconds: 2500));
+          .timeout(const Duration(milliseconds: 3000));
       final list = snapshot.docs.map((d) => Review.fromMap(d.data())).toList();
       final localList = await _local.getReviewsForItem(musicItemId);
       final map = <String, Review>{};
@@ -39,12 +61,15 @@ class FirestoreReviewRepository implements ReviewRepository {
 
   @override
   Future<List<Review>> getRecentReviews({int limit = 20}) async {
+    // Opportunistically trigger background sync of local reviews
+    syncLocalReviewsToFirestore();
     try {
       final snapshot = await _firestore
           .collection(collectionPath)
+          .orderBy('createdAt', descending: true)
           .limit(limit)
           .get()
-          .timeout(const Duration(milliseconds: 2500));
+          .timeout(const Duration(milliseconds: 3000));
       final list = snapshot.docs.map((d) => Review.fromMap(d.data())).toList();
       final localList = await _local.getRecentReviews(limit: limit);
       final map = <String, Review>{};

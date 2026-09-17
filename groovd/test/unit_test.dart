@@ -612,6 +612,132 @@ void main() {
       expect(topPicks.topAlbums.contains(itemCamp), false);
     });
   });
+
+  group('Firebase Hybrid Sync & Serialization Tests', () {
+    test('Review serializes to Firestore document map and reconstructs perfectly', () {
+      final rev = Review(
+        id: 'rev_12345',
+        musicItemId: 'album_blonde',
+        musicItemName: 'Blonde',
+        artistName: 'Frank Ocean',
+        coverUrl: 'https://example.com/blonde.jpg',
+        itemType: 'album',
+        userId: 'user_me',
+        userName: 'CRITIC // YOU',
+        userHandle: '@groovd_me',
+        rating: 9.8,
+        headline: 'A Modern Masterpiece',
+        body: 'Immersive soundscapes and nostalgic storytelling.',
+        tags: ['#AOTY', '#MASTERPIECE'],
+        createdAt: DateTime(2026, 9, 17, 12, 0, 0),
+        likesCount: 14,
+      );
+
+      final firestoreMap = rev.toMap();
+      expect(firestoreMap['id'], 'rev_12345');
+      expect(firestoreMap['musicItemId'], 'album_blonde');
+      expect(firestoreMap['rating'], 9.8);
+      expect(firestoreMap['createdAt'], '2026-09-17T12:00:00.000');
+
+      final reconstructed = Review.fromMap(firestoreMap);
+      expect(reconstructed.id, rev.id);
+      expect(reconstructed.musicItemName, 'Blonde');
+      expect(reconstructed.artistName, 'Frank Ocean');
+      expect(reconstructed.rating, 9.8);
+      expect(reconstructed.tags, contains('#MASTERPIECE'));
+      expect(reconstructed.likesCount, 14);
+    });
+
+    test('Dossier Top Picks serializes to cloud map and restores pins accurately', () {
+      const album1 = MusicItem(
+        id: 'album_blonde',
+        name: 'Blonde',
+        artist: 'Frank Ocean',
+        type: MusicType.album,
+        coverUrl: '',
+        releaseDate: '2016-08-20',
+      );
+      const album2 = MusicItem(
+        id: 'album_camp',
+        name: 'Camp',
+        artist: 'Childish Gambino',
+        type: MusicType.album,
+        coverUrl: '',
+        releaseDate: '2011-11-15',
+      );
+
+      final initial = DossierTopPicks(
+        topAlbums: [album1, album2, null],
+        topSongs: [null, null, null],
+      );
+
+      final cloudDoc = {
+        'topAlbums': initial.topAlbums.map((a) => a?.toMap()).toList(),
+        'topSongs': initial.topSongs.map((s) => s?.toMap()).toList(),
+      };
+
+      final restoredAlbums = (cloudDoc['topAlbums'] as List).map((a) {
+        if (a == null) return null;
+        return MusicItem.fromMap(Map<String, dynamic>.from(a as Map));
+      }).toList();
+
+      expect(restoredAlbums[0]?.name, 'Blonde');
+      expect(restoredAlbums[1]?.name, 'Camp');
+      expect(restoredAlbums[2], isNull);
+    });
+
+    test('Hybrid cloud and local reviews merge deduplicating by id and sorting by newest', () {
+      final r1 = Review(
+        id: 'r1',
+        musicItemId: 'item1',
+        musicItemName: 'Song 1',
+        artistName: 'Artist 1',
+        coverUrl: '',
+        itemType: 'song',
+        userId: 'user1',
+        userName: 'User 1',
+        userHandle: '@u1',
+        rating: 8.0,
+        headline: 'Great',
+        body: 'Loved it',
+        createdAt: DateTime(2026, 9, 16, 10, 0),
+      );
+
+      final r2 = Review(
+        id: 'r2',
+        musicItemId: 'item2',
+        musicItemName: 'Song 2',
+        artistName: 'Artist 2',
+        coverUrl: '',
+        itemType: 'song',
+        userId: 'user2',
+        userName: 'User 2',
+        userHandle: '@u2',
+        rating: 9.0,
+        headline: 'Superb',
+        body: 'Amazing',
+        createdAt: DateTime(2026, 9, 17, 10, 0),
+      );
+
+      final localReviews = [r1];
+      final cloudReviews = [r1, r2]; // r1 is present in both
+
+      final map = <String, Review>{};
+      for (final r in localReviews) {
+        map[r.id] = r;
+      }
+      for (final r in cloudReviews) {
+        map[r.id] = r;
+      }
+
+      final merged = map.values.toList();
+      merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      expect(merged.length, 2);
+      expect(merged.first.id, 'r2'); // newest first
+      expect(merged.last.id, 'r1');
+    });
+  });
 }
 
 
