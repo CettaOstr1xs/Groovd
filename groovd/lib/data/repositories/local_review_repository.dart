@@ -104,4 +104,22 @@ class LocalReviewRepository implements ReviewRepository {
     await _ensureInitialized();
     return _inMemoryReviews.where((r) => r.musicItemId == musicItemId).length;
   }
+
+  @override
+  Future<void> updateAuthorMetadata(String userId, String newName, String newHandle) async {
+    await _ensureInitialized();
+    bool changed = false;
+    for (int i = 0; i < _inMemoryReviews.length; i++) {
+      if (_inMemoryReviews[i].userId == userId) {
+        _inMemoryReviews[i] = _inMemoryReviews[i].copyWith(
+          userName: newName,
+          userHandle: newHandle,
+        );
+        changed = true;
+      }
+    }
+    if (changed) {
+      await _persist();
+    }
+  }
 }

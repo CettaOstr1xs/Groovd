@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:groovd/core/theme/app_colors.dart';
@@ -6,6 +7,7 @@ import 'package:groovd/presentation/screens/home/home_screen.dart';
 import 'package:groovd/presentation/screens/search/search_screen.dart';
 import 'package:groovd/presentation/screens/profile/profile_screen.dart';
 import 'package:groovd/state/settings_provider.dart';
+import 'package:groovd/state/user_profile_provider.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
@@ -27,6 +29,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   Widget build(BuildContext context) {
     // Eagerly initialize and observe Spotify API settings
     ref.watch(spotifySettingsProvider);
+    final profile = ref.watch(userProfileProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -105,6 +108,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                       icon: Icons.person_outline,
                       activeIcon: Icons.person,
                       label: 'DOSSIER',
+                      avatarPath: profile.avatarPath,
                     ),
                   ],
                 ),
@@ -121,8 +125,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     required IconData icon,
     required IconData activeIcon,
     required String label,
+    String? avatarPath,
   }) {
     final isSelected = _currentIndex == index;
+    final hasCustomAvatar = avatarPath != null && File(avatarPath).existsSync();
 
     return Expanded(
       child: InkWell(
@@ -141,11 +147,36 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                 scale: isSelected ? 1.15 : 1.0,
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutBack,
-                child: Icon(
-                  isSelected ? activeIcon : icon,
-                  color: isSelected ? AppColors.acidLime : AppColors.textMuted,
-                  size: 20,
-                ),
+                child: hasCustomAvatar
+                    ? Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: AppColors.pureBlack,
+                          border: Border.all(
+                            color: isSelected ? AppColors.acidLime : AppColors.borderBold,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(1),
+                          child: Image.file(
+                            File(avatarPath),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              isSelected ? activeIcon : icon,
+                              color: isSelected ? AppColors.acidLime : AppColors.textMuted,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        isSelected ? activeIcon : icon,
+                        color: isSelected ? AppColors.acidLime : AppColors.textMuted,
+                        size: 20,
+                      ),
               ),
               const SizedBox(height: 3),
               AnimatedDefaultTextStyle(

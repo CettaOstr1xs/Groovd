@@ -10,7 +10,10 @@ import 'package:groovd/presentation/screens/lists/user_lists_screen.dart';
 import 'package:groovd/presentation/screens/profile/adjust_avatar_screen.dart';
 import 'package:groovd/presentation/screens/profile/profile_screen.dart';
 import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
+import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
+import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/services/spotify_mock_data.dart';
+import 'package:groovd/presentation/widgets/review_card.dart';
 
 void main() {
   testWidgets('Groovd app renders main navigation and home screen', (WidgetTester tester) async {
@@ -233,5 +236,128 @@ void main() {
     // Ensure no exceptions or overflows occurred
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('ReviewDetailScreen share button launches Instagram Story designer modal', (WidgetTester tester) async {
+    final review = SpotifyMockData.seedReviews.first;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: ReviewDetailScreen(review: review),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Verify critique archive header and story button
+    expect(find.text('CRITIQUE ARCHIVE'), findsOneWidget);
+    expect(find.text('STORY'), findsOneWidget);
+
+    // Tap AppBar share icon button
+    await tester.tap(find.byTooltip('Share Critique'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Verify Instagram Story modal appears
+    expect(find.text('SHARE CRITIQUE'), findsWidgets);
+    expect(find.text('INSTANT 9:16 STORY DESIGNER'), findsOneWidget);
+    expect(find.text('STORY THEME'), findsOneWidget);
+    expect(find.text('DARK'), findsOneWidget);
+    expect(find.text('ACID'), findsOneWidget);
+    expect(find.text('CYBER'), findsOneWidget);
+    expect(find.text('ZINE'), findsOneWidget);
+    expect(find.text('SHARE TO INSTAGRAM STORIES'), findsOneWidget);
+    expect(find.text('SAVE STORY'), findsOneWidget);
+
+    // Tap ACID theme pill
+    await tester.tap(find.text('ACID'));
+    await tester.pump();
+
+    // Tap close button
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Modal is closed
+    expect(find.text('INSTANT 9:16 STORY DESIGNER'), findsNothing);
+  });
+
+  testWidgets('ReviewCard displays universal avatar and updated critic identity for current user', (WidgetTester tester) async {
+    final review = Review(
+      id: 'rev_mine',
+      musicItemId: 'm1',
+      musicItemName: 'IN RAINBOWS',
+      artistName: 'RADIOHEAD',
+      coverUrl: '',
+      itemType: 'album',
+      userId: 'user_me',
+      userName: 'INITIAL NAME',
+      userHandle: '@initial_handle',
+      rating: 9.6,
+      headline: 'A masterpiece of sonic texture',
+      body: 'Every instrument is in perfect harmony.',
+      createdAt: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: ReviewCard(review: review),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    // For current user, ReviewCard dynamically displays active profile userName
+    expect(find.text('CRITIC // YOU'), findsOneWidget);
+    expect(find.textContaining('@groovd_me'), findsOneWidget);
+  });
+
+  testWidgets('ProfileScreen settings modal renders CRITIC IDENTITY card and opens edit dialog', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: ProfileScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Tap the Settings gear icon
+    final settingsButton = find.byTooltip('Settings');
+    expect(settingsButton, findsOneWidget);
+    await tester.tap(settingsButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Verify Settings modal shows Critic Identity Card
+    expect(find.text('CRITIC IDENTITY'), findsOneWidget);
+    expect(find.text('GROOVD ID'), findsOneWidget);
+    expect(find.text('CHANGE USERNAME & HANDLE'), findsOneWidget);
+
+    // Tap CHANGE USERNAME & HANDLE button
+    await tester.tap(find.text('CHANGE USERNAME & HANDLE'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Verify Edit Username & Handle sheet opens
+    expect(find.text('DISPLAY NAME / USERNAME'), findsOneWidget);
+    expect(find.text('GROOVD HANDLE'), findsOneWidget);
+    expect(find.text('SAVE IDENTITY'), findsOneWidget);
+
+    // Tap close button on the edit dialog
+    await tester.tap(find.byIcon(Icons.close).last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('DISPLAY NAME / USERNAME'), findsNothing);
+  });
 }
+
 

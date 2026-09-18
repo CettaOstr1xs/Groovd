@@ -103,6 +103,12 @@ class ReviewController {
     await repo.likeReview(reviewId);
     ref.read(reviewRefreshProvider.notifier).notifyChanged();
   }
+
+  Future<void> updateUserIdentity(String userId, String newName, String newHandle) async {
+    final repo = ref.read(reviewRepositoryProvider);
+    await repo.updateAuthorMetadata(userId, newName, newHandle);
+    ref.read(reviewRefreshProvider.notifier).notifyChanged();
+  }
 }
 
 final reviewControllerProvider = Provider<ReviewController>((ref) {

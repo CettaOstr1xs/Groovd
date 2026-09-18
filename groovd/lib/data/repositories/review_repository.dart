@@ -8,4 +8,5 @@ abstract class ReviewRepository {
   Future<void> likeReview(String reviewId);
   Future<double> getAverageScore(String musicItemId);
   Future<int> getReviewCount(String musicItemId);
+  Future<void> updateAuthorMetadata(String userId, String newName, String newHandle);
 }

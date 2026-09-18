@@ -10,6 +10,8 @@ import 'package:groovd/state/dossier_top_picks_provider.dart';
 import 'package:groovd/data/models/user_music_list.dart';
 import 'package:groovd/state/user_profile_provider.dart';
 import 'package:groovd/state/music_providers.dart';
+import 'package:groovd/presentation/screens/review/critique_story_card.dart';
+import 'package:groovd/data/services/spotify_mock_data.dart';
 
 void main() {
   group('Review Model Tests', () {
@@ -970,7 +972,80 @@ void main() {
       expect(tracks, isEmpty);
     });
   });
+
+  group('Instagram Story Share Tests', () {
+    test('StoryTheme and StoryLayout enums contain expected options', () {
+      expect(StoryTheme.values.length, 4);
+      expect(StoryTheme.values.contains(StoryTheme.darkMatrix), isTrue);
+      expect(StoryTheme.values.contains(StoryTheme.acidBrutal), isTrue);
+      expect(StoryTheme.values.contains(StoryTheme.cyberCyan), isTrue);
+      expect(StoryTheme.values.contains(StoryTheme.zinePaper), isTrue);
+
+      expect(StoryLayout.values.length, 2);
+      expect(StoryLayout.values.contains(StoryLayout.fullCritique), isTrue);
+      expect(StoryLayout.values.contains(StoryLayout.posterCard), isTrue);
+    });
+
+    test('CritiqueStoryCard initializes with centered artwork top layout', () {
+      final review = SpotifyMockData.seedReviews.first;
+      final card = CritiqueStoryCard(
+        review: review,
+        layout: StoryLayout.posterCard,
+        theme: StoryTheme.acidBrutal,
+      );
+      expect(card.layout, StoryLayout.posterCard);
+      expect(card.theme, StoryTheme.acidBrutal);
+    });
+  });
+
+  group('UserProfile Identity & Review Synchronization Tests', () {
+    test('updateCriticIdentity formats handle with @ and updates userName', () {
+      const profile = UserProfile(userName: 'OLD_NAME', userHandle: '@old_handle');
+      final updated = profile.copyWith(
+        userName: 'SONIC ARCHIVIST',
+        userHandle: '@sonic_guru',
+      );
+      expect(updated.userName, 'SONIC ARCHIVIST');
+      expect(updated.userHandle, '@sonic_guru');
+    });
+
+    test('LocalReviewRepository updates author metadata across all matching user reviews', () async {
+      final repo = LocalReviewRepository();
+      final testReview = Review(
+        id: 'rev_test_sync',
+        musicItemId: 'm_sync',
+        musicItemName: 'Test Sync Album',
+        artistName: 'Test Artist',
+        coverUrl: '',
+        itemType: 'album',
+        userId: 'user_me',
+        userName: 'OLD_NAME',
+        userHandle: '@old_handle',
+        rating: 9.0,
+        headline: 'Great sound',
+        body: 'Terrific album',
+        createdAt: DateTime.now(),
+      );
+      await repo.addReview(testReview);
+
+      await repo.updateAuthorMetadata('user_me', 'NEW_CRITIC_NAME', '@new_handle');
+      final userReviews = await repo.getUserReviews('user_me');
+      final matching = userReviews.firstWhere((r) => r.id == 'rev_test_sync');
+      expect(matching.userName, 'NEW_CRITIC_NAME');
+      expect(matching.userHandle, '@new_handle');
+    });
+
+    test('CritiqueStoryCard constructor accepts custom avatarPath', () {
+      final review = SpotifyMockData.seedReviews.first;
+      final card = CritiqueStoryCard(
+        review: review,
+        avatarPath: '/custom/avatar/path.jpg',
+      );
+      expect(card.avatarPath, '/custom/avatar/path.jpg');
+    });
+  });
 }
+
 
 
 

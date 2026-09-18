@@ -280,6 +280,16 @@ class UserProfileNotifier extends Notifier<UserProfile> {
     );
     await _persist();
   }
+
+  /// Updates the user's Groovd display name and handle.
+  Future<void> updateCriticIdentity({required String name, required String handle}) async {
+    final cleanHandle = handle.trim().startsWith('@') ? handle.trim() : '@${handle.trim()}';
+    state = state.copyWith(
+      userName: name.trim(),
+      userHandle: cleanHandle,
+    );
+    await _persist();
+  }
 }
 
 final userProfileProvider =

@@ -1,10 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/review.dart';
+import 'package:groovd/state/user_profile_provider.dart';
 
-class ReviewCard extends StatelessWidget {
+class ReviewCard extends ConsumerWidget {
   final Review review;
   final bool showItemHeader;
   final VoidCallback? onLike;
@@ -27,7 +30,13 @@ class ReviewCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(userProfileProvider);
+    final isCurrentUser = review.userId == profile.userId || review.userId == 'user_me';
+    final authorName = isCurrentUser ? profile.userName : review.userName;
+    final authorHandle = isCurrentUser ? profile.userHandle : review.userHandle;
+    final hasCustomAvatar = isCurrentUser && profile.avatarPath != null;
+
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -47,15 +56,40 @@ class ReviewCard extends StatelessWidget {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceElevated,
-                    border: Border.all(color: AppColors.borderBold, width: 1.5),
+                    color: isCurrentUser && hasCustomAvatar
+                        ? AppColors.pureBlack
+                        : (isCurrentUser ? AppColors.acidLime : AppColors.surfaceElevated),
+                    border: Border.all(
+                      color: isCurrentUser ? AppColors.acidLime : AppColors.borderBold,
+                      width: 1.5,
+                    ),
                     borderRadius: BorderRadius.circular(2),
                   ),
                   alignment: Alignment.center,
-                  child: Text(
-                    review.userName.isNotEmpty ? review.userName[0].toUpperCase() : 'C',
-                    style: AppTypography.monoBadge(color: AppColors.textPrimary, fontSize: 11),
-                  ),
+                  child: hasCustomAvatar
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(1),
+                          child: Image.file(
+                            File(profile.avatarPath!),
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Text(
+                              authorName.isNotEmpty ? authorName[0].toUpperCase() : 'C',
+                              style: AppTypography.monoBadge(
+                                color: isCurrentUser ? AppColors.pureBlack : AppColors.textPrimary,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Text(
+                          authorName.isNotEmpty ? authorName[0].toUpperCase() : 'C',
+                          style: AppTypography.monoBadge(
+                            color: isCurrentUser ? AppColors.pureBlack : AppColors.textPrimary,
+                            fontSize: 11,
+                          ),
+                        ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -63,7 +97,7 @@ class ReviewCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        review.userName.toUpperCase(),
+                        authorName.toUpperCase(),
                         style: AppTypography.monoLabel(
                           color: AppColors.textPrimary,
                           fontSize: 10,
@@ -71,7 +105,7 @@ class ReviewCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${review.userHandle} • ${review.timeAgo}',
+                        '$authorHandle • ${review.timeAgo}',
                         style: AppTypography.monoLabel(
                           color: AppColors.textMuted,
                           fontSize: 9,

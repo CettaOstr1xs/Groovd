@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/state/review_providers.dart';
+import 'package:groovd/state/user_profile_provider.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
 
 class WriteReviewModal extends ConsumerStatefulWidget {
@@ -140,9 +142,10 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
   Future<void> _submit() async {
     setState(() => _isSubmitting = true);
 
-    final userId = ref.read(currentUserIdProvider);
-    final userName = ref.read(currentUserNameProvider);
-    final userHandle = ref.read(currentUserHandleProvider);
+    final profile = ref.read(userProfileProvider);
+    final userId = profile.userId;
+    final userName = profile.userName;
+    final userHandle = profile.userHandle;
 
     final newReview = Review(
       id: 'rev_${DateTime.now().millisecondsSinceEpoch}',
@@ -205,6 +208,7 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final profile = ref.watch(userProfileProvider);
 
     return Container(
       margin: EdgeInsets.only(
@@ -273,6 +277,62 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
               ],
             ),
             const Divider(height: 24),
+
+            // Critic Posting Persona Strip
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated,
+                borderRadius: BorderRadius.circular(2),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: profile.avatarPath != null ? AppColors.pureBlack : AppColors.acidLime,
+                      border: Border.all(color: AppColors.acidLime, width: 1.0),
+                      borderRadius: BorderRadius.circular(1.5),
+                    ),
+                    alignment: Alignment.center,
+                    child: profile.avatarPath != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(1),
+                            child: Image.file(
+                              File(profile.avatarPath!),
+                              width: 22,
+                              height: 22,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Text(
+                                profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
+                                style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 10),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
+                            style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 10),
+                          ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'POSTING AS ',
+                    style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 9),
+                  ),
+                  Expanded(
+                    child: Text(
+                      '${profile.userName.toUpperCase()} (${profile.userHandle})',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 9.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
             // Giant Score Live Display with bounce
             Center(

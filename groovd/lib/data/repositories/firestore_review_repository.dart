@@ -153,4 +153,22 @@ class FirestoreReviewRepository implements ReviewRepository {
     final reviews = await getReviewsForItem(musicItemId);
     return reviews.length;
   }
+
+  @override
+  Future<void> updateAuthorMetadata(String userId, String newName, String newHandle) async {
+    await _local.updateAuthorMetadata(userId, newName, newHandle);
+    try {
+      final userReviews = await _firestore
+          .collection(collectionPath)
+          .where('userId', isEqualTo: userId)
+          .get()
+          .timeout(const Duration(milliseconds: 2500));
+      for (final doc in userReviews.docs) {
+        await doc.reference.update({
+          'userName': newName,
+          'userHandle': newHandle,
+        }).timeout(const Duration(milliseconds: 1500));
+      }
+    } catch (_) {}
+  }
 }

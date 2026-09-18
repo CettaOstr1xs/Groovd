@@ -213,6 +213,128 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 20),
 
+                    // Critic Identity Feature (Username & Handle)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCard,
+                        border: Border.all(color: AppColors.border, width: 1.5),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.badge_outlined,
+                                    size: 18,
+                                    color: AppColors.acidLime,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'CRITIC IDENTITY',
+                                    style: AppTypography.monoLabel(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceElevated,
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Text(
+                                  'GROOVD ID',
+                                  style: AppTypography.monoBadge(
+                                    color: AppColors.acidLime,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: AppColors.acidLime,
+                                  border: Border.all(color: AppColors.pureBlack, width: 1.5),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                                child: profile.avatarPath != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(1),
+                                        child: Image.file(
+                                          File(profile.avatarPath!),
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (c, e, s) => Center(
+                                            child: Text(
+                                              profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
+                                              style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : Center(
+                                        child: Text(
+                                          profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
+                                          style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
+                                        ),
+                                      ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      profile.userName.toUpperCase(),
+                                      style: AppTypography.displaySmall(fontSize: 14),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      profile.userHandle,
+                                      style: AppTypography.monoLabel(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 10.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          BrutalistButton(
+                            label: 'CHANGE USERNAME & HANDLE',
+                            icon: Icons.edit_outlined,
+                            backgroundColor: AppColors.surfaceElevated,
+                            textColor: AppColors.textPrimary,
+                            borderColor: AppColors.borderBold,
+                            isSmall: true,
+                            isFullWidth: true,
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _showEditUsernameDialog(context, ref);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
                     // Header Banner Photo Feature
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -526,6 +648,134 @@ class ProfileScreen extends ConsumerWidget {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  void _showEditUsernameDialog(BuildContext context, WidgetRef ref) {
+    final profile = ref.read(userProfileProvider);
+    final nameController = TextEditingController(text: profile.userName);
+    final rawHandle = profile.userHandle.startsWith('@')
+        ? profile.userHandle.substring(1)
+        : profile.userHandle;
+    final handleController = TextEditingController(text: rawHandle);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: EdgeInsets.only(
+            top: 20,
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            border: Border(top: BorderSide(color: AppColors.acidLime, width: 2.0)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('CRITIC IDENTITY', style: AppTypography.displaySmall()),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Customize your Groovd critic persona. Changes apply universally to all your reviews, dossier, and shared critiques.',
+                style: AppTypography.bodySmall(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'DISPLAY NAME / USERNAME',
+                style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 10),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: nameController,
+                maxLength: 30,
+                textCapitalization: TextCapitalization.words,
+                style: AppTypography.bodyLarge(),
+                decoration: const InputDecoration(
+                  hintText: 'e.g. CRITIC // YOU',
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'GROOVD HANDLE',
+                style: AppTypography.monoBadge(color: AppColors.cyberCyan, fontSize: 10),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: handleController,
+                maxLength: 24,
+                style: AppTypography.bodyLarge(),
+                decoration: const InputDecoration(
+                  prefixText: '@',
+                  hintText: 'groovd_me',
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 20),
+              BrutalistButton(
+                label: 'SAVE IDENTITY',
+                icon: Icons.check,
+                isFullWidth: true,
+                onPressed: () async {
+                  final newName = nameController.text.trim();
+                  final rawH = handleController.text.trim().replaceAll('@', '').replaceAll(' ', '_');
+                  if (newName.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'USERNAME CANNOT BE EMPTY',
+                          style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                        ),
+                        backgroundColor: AppColors.vermillion,
+                      ),
+                    );
+                    return;
+                  }
+                  final newHandle = '@${rawH.isEmpty ? "critic" : rawH}';
+
+                  await ref.read(userProfileProvider.notifier).updateCriticIdentity(
+                        name: newName,
+                        handle: newHandle,
+                      );
+                  ref.read(currentUserNameProvider.notifier).set(newName);
+                  ref.read(currentUserHandleProvider.notifier).set(newHandle);
+
+                  final userId = ref.read(userProfileProvider).userId;
+                  await ref.read(reviewControllerProvider).updateUserIdentity(userId, newName, newHandle);
+
+                  if (ctx.mounted) {
+                    Navigator.of(ctx).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'CRITIC IDENTITY UPDATED',
+                          style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                        ),
+                        backgroundColor: AppColors.acidLime,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
         );
       },
     );
@@ -1060,23 +1310,41 @@ class ProfileScreen extends ConsumerWidget {
                       const SizedBox(width: 16),
                       // Critic name & handle vertically centered on the middle side of avatar
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              userName.toUpperCase(),
-                              style: AppTypography.displayMedium(fontSize: 20),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              userHandle,
-                              style: AppTypography.monoLabel(
-                                color: AppColors.textSecondary,
-                                fontSize: 11,
+                        child: InkWell(
+                          onTap: () => _showEditUsernameDialog(context, ref),
+                          borderRadius: BorderRadius.circular(2),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      userName.toUpperCase(),
+                                      style: AppTypography.displayMedium(fontSize: 20),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Icon(
+                                    Icons.edit_outlined,
+                                    size: 13,
+                                    color: AppColors.acidLime.withValues(alpha: 0.8),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 2),
+                              Text(
+                                userHandle,
+                                style: AppTypography.monoLabel(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],

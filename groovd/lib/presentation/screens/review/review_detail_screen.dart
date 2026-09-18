@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,10 +9,12 @@ import '../../../data/models/music_item.dart';
 import '../../../data/models/review.dart';
 import '../../../state/music_providers.dart';
 import '../../../state/review_providers.dart';
+import '../../../state/user_profile_provider.dart';
 import '../../widgets/album_art_card.dart';
 import '../../widgets/brutalist_button.dart';
 import '../../widgets/giant_score_badge.dart';
 import '../detail/music_detail_screen.dart';
+import 'instagram_story_modal.dart';
 
 class ReviewDetailScreen extends ConsumerStatefulWidget {
   final Review review;
@@ -44,18 +47,12 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
   }
 
   void _shareReview() {
-    final text = '“${_review.headline}”\n'
-        '${_review.musicItemName} by ${_review.artistName} — Scored ${_review.scoreFormatted}/10 on Groovd\n'
-        '${_review.body}';
-    Clipboard.setData(ClipboardData(text: text));
-    HapticFeedback.mediumImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppColors.surfaceElevated,
-        content: Text('CRITIQUE COPIED TO CLIPBOARD', style: AppTypography.monoBadge(color: AppColors.acidLime)),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    final profile = ref.read(userProfileProvider);
+    final isCurrentUser = _review.userId == profile.userId || _review.userId == 'user_me';
+    final reviewToShare = isCurrentUser
+        ? _review.copyWith(userName: profile.userName, userHandle: profile.userHandle)
+        : _review;
+    InstagramStoryModal.show(context, reviewToShare);
   }
 
   Future<void> _openMusicDetail() async {
@@ -84,6 +81,11 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('MMMM d, yyyy').format(_review.createdAt);
+    final profile = ref.watch(userProfileProvider);
+    final isCurrentUser = _review.userId == profile.userId || _review.userId == 'user_me';
+    final authorName = isCurrentUser ? profile.userName : _review.userName;
+    final authorHandle = isCurrentUser ? profile.userHandle : _review.userHandle;
+    final hasCustomAvatar = isCurrentUser && profile.avatarPath != null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -194,7 +196,9 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppColors.acidLime,
+                    color: isCurrentUser && hasCustomAvatar
+                        ? AppColors.pureBlack
+                        : AppColors.acidLime,
                     border: Border.all(color: AppColors.pureBlack, width: 2.0),
                     borderRadius: BorderRadius.circular(2),
                     boxShadow: const [
@@ -206,10 +210,24 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                     ],
                   ),
                   alignment: Alignment.center,
-                  child: Text(
-                    _review.userName.isNotEmpty ? _review.userName[0].toUpperCase() : 'C',
-                    style: AppTypography.displaySmall(fontSize: 18, color: AppColors.pureBlack),
-                  ),
+                  child: hasCustomAvatar
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(1),
+                          child: Image.file(
+                            File(profile.avatarPath!),
+                            width: 44,
+                            height: 44,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Text(
+                              authorName.isNotEmpty ? authorName[0].toUpperCase() : 'C',
+                              style: AppTypography.displaySmall(fontSize: 18, color: AppColors.pureBlack),
+                            ),
+                          ),
+                        )
+                      : Text(
+                          authorName.isNotEmpty ? authorName[0].toUpperCase() : 'C',
+                          style: AppTypography.displaySmall(fontSize: 18, color: AppColors.pureBlack),
+                        ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -220,7 +238,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                         children: [
                           Flexible(
                             child: Text(
-                              _review.userName.toUpperCase(),
+                              authorName.toUpperCase(),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: AppTypography.displaySmall(fontSize: 14),
@@ -235,7 +253,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                               borderRadius: BorderRadius.circular(1.5),
                             ),
                             child: Text(
-                              'CRITIC',
+                              isCurrentUser ? 'YOU' : 'CRITIC',
                               style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 8),
                             ),
                           ),
@@ -243,7 +261,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${_review.userHandle} • $formattedDate (${_review.timeAgo})',
+                        '$authorHandle • $formattedDate (${_review.timeAgo})',
                         style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 10),
                       ),
                     ],
@@ -360,6 +378,42 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                             style: AppTypography.monoBadge(
                               color: _isLiked ? AppColors.electricPink : AppColors.textPrimary,
                               fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  // Instagram Story Share Button
+                  InkWell(
+                    onTap: _shareReview,
+                    borderRadius: BorderRadius.circular(2),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCard,
+                        border: Border.all(
+                          color: AppColors.acidLime.withValues(alpha: 0.6),
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.auto_stories,
+                            color: AppColors.acidLime,
+                            size: 17,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'STORY',
+                            style: AppTypography.monoBadge(
+                              color: AppColors.acidLime,
+                              fontSize: 10,
                             ),
                           ),
                         ],
