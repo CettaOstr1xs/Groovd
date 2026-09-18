@@ -192,6 +192,42 @@ class HomeScreen extends ConsumerWidget {
 
                 hotTracksAsync.when(
                   data: (tracks) {
+                    if (tracks.isEmpty) {
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceCard,
+                          border: Border.all(color: AppColors.border, width: 1.5),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.wifi_off_outlined, color: AppColors.acidLime, size: 28),
+                            const SizedBox(height: 10),
+                            Text(
+                              'UNABLE TO SYNC LIVE HOT TRACKS',
+                              style: AppTypography.monoBadge(color: AppColors.textPrimary, fontSize: 11),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Check network connection or tap below to reconnect with Spotify.',
+                              textAlign: TextAlign.center,
+                              style: AppTypography.bodySmall(color: AppColors.textSecondary),
+                            ),
+                            const SizedBox(height: 14),
+                            BrutalistButton(
+                              label: 'RETRY SYNC',
+                              isSmall: true,
+                              backgroundColor: AppColors.acidLime,
+                              textColor: AppColors.pureBlack,
+                              onPressed: () => ref.invalidate(hotTracksProvider),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
                     return ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -217,7 +253,41 @@ class HomeScreen extends ConsumerWidget {
                       child: CircularProgressIndicator(color: AppColors.acidLime),
                     ),
                   ),
-                  error: (err, stack) => const SizedBox.shrink(),
+                  error: (err, stack) => Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceCard,
+                      border: Border.all(color: AppColors.border, width: 1.5),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.error_outline, color: AppColors.electricPink, size: 28),
+                        const SizedBox(height: 10),
+                        Text(
+                          'FAILED TO SYNC HOT TRACKS',
+                          style: AppTypography.monoBadge(color: AppColors.textPrimary, fontSize: 11),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '$err',
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.bodySmall(color: AppColors.textMuted),
+                        ),
+                        const SizedBox(height: 14),
+                        BrutalistButton(
+                          label: 'RETRY SYNC',
+                          isSmall: true,
+                          backgroundColor: AppColors.acidLime,
+                          textColor: AppColors.pureBlack,
+                          onPressed: () => ref.invalidate(hotTracksProvider),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
 
                 const SizedBox(height: 32),

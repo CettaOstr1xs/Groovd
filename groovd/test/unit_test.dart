@@ -963,6 +963,12 @@ void main() {
       expect(q1.hashCode, equals(q2.hashCode));
       expect(q1 == q3, isFalse);
     });
+
+    test('getHotTracks does not fallback to hardcoded mock items when offline or unconfigured', () async {
+      final unconfiguredRepo = SpotifyRepository(apiService: SpotifyApiService());
+      final tracks = await unconfiguredRepo.getHotTracks();
+      expect(tracks, isEmpty);
+    });
   });
 }
 

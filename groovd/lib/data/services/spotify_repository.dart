@@ -21,10 +21,18 @@ class SpotifyRepository {
 
   Future<List<MusicItem>> getHotTracks() async {
     if (isLiveMode) {
-      final searchResults = await apiService.search('top hits 2024', type: 'track', limit: 10);
-      if (searchResults.isNotEmpty) return searchResults;
+      final searchResults = await apiService.search('year:2024', type: 'track', limit: 10);
+      if (searchResults.isNotEmpty) {
+        searchResults.sort((a, b) => b.popularity.compareTo(a.popularity));
+        return searchResults;
+      }
+      final fallbackResults = await apiService.search('top hits', type: 'track', limit: 10);
+      if (fallbackResults.isNotEmpty) {
+        fallbackResults.sort((a, b) => b.popularity.compareTo(a.popularity));
+        return fallbackResults;
+      }
     }
-    return SpotifyMockData.hotTracks;
+    return [];
   }
 
   Future<List<MusicItem>> search(String query, {MusicType? type}) async {
