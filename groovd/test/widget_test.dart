@@ -9,6 +9,8 @@ import 'package:groovd/presentation/screens/review/write_review_modal.dart';
 import 'package:groovd/presentation/screens/lists/user_lists_screen.dart';
 import 'package:groovd/presentation/screens/profile/adjust_avatar_screen.dart';
 import 'package:groovd/presentation/screens/profile/profile_screen.dart';
+import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
+import 'package:groovd/data/services/spotify_mock_data.dart';
 
 void main() {
   testWidgets('Groovd app renders main navigation and home screen', (WidgetTester tester) async {
@@ -198,4 +200,38 @@ void main() {
     // Clean up
     tempDir.deleteSync(recursive: true);
   });
+
+  testWidgets('MusicDetailScreen renders Critical Reviews and More by Artist exploration shelf', (WidgetTester tester) async {
+    final blonde = SpotifyMockData.trendingAlbums.firstWhere((item) => item.id == 'album_blonde');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: MusicDetailScreen(item: blonde),
+        ),
+      ),
+    );
+
+    // Allow initial data to resolve and entrance animations to complete
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // Verify album title and artist
+    expect(find.text('BLONDE'), findsWidgets);
+    expect(find.text('FRANK OCEAN'), findsWidgets);
+
+    // Verify Critical Reviews section header
+    expect(find.text('CRITICAL REVIEWS'), findsOneWidget);
+
+    // Verify More by Artist section is rendered below reviews
+    expect(find.text('MORE BY FRANK OCEAN'), findsOneWidget);
+
+    // Verify other Frank Ocean pieces (NIGHTS) appear in the shelf
+    expect(find.text('NIGHTS'), findsOneWidget);
+
+    // Ensure no exceptions or overflows occurred
+    expect(tester.takeException(), isNull);
+  });
 }
+

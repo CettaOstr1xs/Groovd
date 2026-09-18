@@ -94,3 +94,32 @@ final musicItemDetailProvider = FutureProvider.family<MusicItem?, ItemQuery>((re
   final repo = ref.watch(spotifyRepositoryProvider);
   return repo.getItemById(query.id, type: query.type);
 });
+
+/// Query parameter for discovering more pieces by an artist
+class MoreByArtistQuery {
+  final String artist;
+  final String? currentItemId;
+
+  const MoreByArtistQuery({
+    required this.artist,
+    this.currentItemId,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MoreByArtistQuery &&
+          runtimeType == other.runtimeType &&
+          artist.toLowerCase() == other.artist.toLowerCase() &&
+          currentItemId == other.currentItemId;
+
+  @override
+  int get hashCode => artist.toLowerCase().hashCode ^ (currentItemId?.hashCode ?? 0);
+}
+
+/// Provider for retrieving more releases/tracks by the primary artist
+final moreByArtistProvider = FutureProvider.family<List<MusicItem>, MoreByArtistQuery>((ref, query) async {
+  final repo = ref.watch(spotifyRepositoryProvider);
+  return repo.getMoreByArtist(query.artist, currentItemId: query.currentItemId);
+});
+

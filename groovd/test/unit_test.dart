@@ -9,6 +9,7 @@ import 'package:groovd/data/models/wishlist_item.dart';
 import 'package:groovd/state/dossier_top_picks_provider.dart';
 import 'package:groovd/data/models/user_music_list.dart';
 import 'package:groovd/state/user_profile_provider.dart';
+import 'package:groovd/state/music_providers.dart';
 
 void main() {
   group('Review Model Tests', () {
@@ -923,7 +924,48 @@ void main() {
       expect(cleared.backdropPath, isNull);
     });
   });
+
+  group('More by Artist Tests', () {
+    final repo = SpotifyRepository(apiService: SpotifyApiService());
+
+    test('getMoreByArtist returns other pieces by artist excluding current item', () async {
+      final results = await repo.getMoreByArtist('FRANK OCEAN', currentItemId: 'album_blonde');
+      expect(results.isNotEmpty, isTrue);
+      expect(results.any((item) => item.id == 'album_blonde'), isFalse);
+      expect(results.any((item) => item.id == 'track_nights'), isTrue);
+    });
+
+    test('getMoreByArtist handles multi-release artists like Radiohead', () async {
+      final results = await repo.getMoreByArtist('RADIOHEAD', currentItemId: 'album_in_rainbows');
+      expect(results.isNotEmpty, isTrue);
+      expect(results.any((item) => item.id == 'album_in_rainbows'), isFalse);
+      expect(results.any((item) => item.id == 'album_ok_computer'), isTrue);
+    });
+
+    test('getMoreByArtist handles Kendrick Lamar across albums and tracks', () async {
+      final results = await repo.getMoreByArtist('KENDRICK LAMAR', currentItemId: 'track_not_like_us');
+      expect(results.isNotEmpty, isTrue);
+      expect(results.any((item) => item.id == 'track_not_like_us'), isFalse);
+      expect(results.any((item) => item.id == 'album_tpab'), isTrue);
+    });
+
+    test('getMoreByArtist returns empty when given empty artist string', () async {
+      final results = await repo.getMoreByArtist('   ');
+      expect(results, isEmpty);
+    });
+
+    test('MoreByArtistQuery value equality and hashCode', () {
+      const q1 = MoreByArtistQuery(artist: 'Frank Ocean', currentItemId: 'album_blonde');
+      const q2 = MoreByArtistQuery(artist: 'FRANK OCEAN', currentItemId: 'album_blonde');
+      const q3 = MoreByArtistQuery(artist: 'Kendrick Lamar', currentItemId: 'album_tpab');
+
+      expect(q1, equals(q2));
+      expect(q1.hashCode, equals(q2.hashCode));
+      expect(q1 == q3, isFalse);
+    });
+  });
 }
+
 
 
 

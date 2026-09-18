@@ -721,6 +721,9 @@ class MusicDetailScreen extends ConsumerWidget {
               ),
             ),
 
+            // More by Artist Exploration Section
+            _MoreByArtistSection(item: item),
+
             const SizedBox(height: 40),
           ],
         ),
@@ -728,3 +731,217 @@ class MusicDetailScreen extends ConsumerWidget {
     );
   }
 }
+
+class _MoreByArtistSection extends ConsumerWidget {
+  final MusicItem item;
+
+  const _MoreByArtistSection({required this.item});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final moreByArtistAsync = ref.watch(
+      moreByArtistProvider(
+        MoreByArtistQuery(artist: item.artist, currentItemId: item.id),
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'MORE BY ${item.artist.toUpperCase()}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.monoLabel(
+                    color: AppColors.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              moreByArtistAsync.when(
+                data: (items) => items.isNotEmpty
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceElevated,
+                          border: Border.all(color: AppColors.border),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: Text(
+                          '${items.length} ${items.length == 1 ? 'PIECE' : 'PIECES'}',
+                          style: AppTypography.monoBadge(
+                            color: AppColors.cyberCyan,
+                            fontSize: 9,
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
+        moreByArtistAsync.when(
+          data: (items) {
+            if (items.isEmpty) {
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceCard,
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.album_outlined, size: 20, color: AppColors.textMuted),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'NO OTHER RELEASES ARCHIVED YET',
+                        style: AppTypography.monoBadge(color: AppColors.textSecondary, fontSize: 10),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return SizedBox(
+              height: 228,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                itemCount: items.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 14),
+                itemBuilder: (context, index) {
+                  final moreItem = items[index];
+                  return _MoreByArtistCard(item: moreItem)
+                      .animate()
+                      .fadeIn(
+                        duration: 300.ms,
+                        delay: (index * 45).ms,
+                        curve: Curves.easeOutCubic,
+                      )
+                      .slideX(begin: 0.1, end: 0, curve: Curves.easeOutCubic);
+                },
+              ),
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 28),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(color: AppColors.cyberCyan, strokeWidth: 2),
+              ),
+            ),
+          ),
+          error: (err, _) => const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+}
+
+class _MoreByArtistCard extends ConsumerWidget {
+  final MusicItem item;
+
+  const _MoreByArtistCard({required this.item});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scoreAsync = ref.watch(itemAverageScoreProvider(item.id));
+    final tag = 'more_${item.id}';
+
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item, heroTag: tag)),
+        );
+      },
+      child: Container(
+        width: 142,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(color: AppColors.border, width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AlbumArtCard(
+              imageUrl: item.coverUrl,
+              width: 122,
+              height: 122,
+              showShadow: false,
+              heroTag: tag,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              item.name.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.displaySmall(fontSize: 13),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              item.artist.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.bodySmall(color: AppColors.textMuted, fontSize: 10),
+            ),
+            const Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: item.isAlbum
+                        ? AppColors.acidLime.withValues(alpha: 0.15)
+                        : AppColors.cyberCyan.withValues(alpha: 0.15),
+                    border: Border.all(
+                      color: item.isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                      width: 1,
+                    ),
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                  child: Text(
+                    item.isAlbum ? 'LP' : 'TRACK',
+                    style: AppTypography.monoBadge(
+                      color: item.isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                      fontSize: 8,
+                    ),
+                  ),
+                ),
+                if (item.formattedYear.isNotEmpty)
+                  Text(
+                    item.formattedYear,
+                    style: AppTypography.monoLabel(fontSize: 9, color: AppColors.textMuted),
+                  ),
+                scoreAsync.when(
+                  data: (s) => s > 0 ? GiantScoreBadge(score: s, compact: true) : const SizedBox.shrink(),
+                  loading: () => const SizedBox.shrink(),
+                  error: (err, stack) => const SizedBox.shrink(),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

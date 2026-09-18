@@ -74,4 +74,56 @@ class SpotifyRepository {
 
     return null;
   }
+
+  /// Retrieves other albums and tracks by the specified artist, excluding the current item.
+  Future<List<MusicItem>> getMoreByArtist(String artist, {String? currentItemId}) async {
+    final cleanArtist = artist.trim();
+    if (cleanArtist.isEmpty) return [];
+
+    String primaryArtist = cleanArtist;
+    if (!cleanArtist.toLowerCase().contains('the creator') && cleanArtist.contains(',')) {
+      primaryArtist = cleanArtist.split(',').first.trim();
+    }
+    final primaryLower = primaryArtist.toLowerCase();
+
+    if (isLiveMode) {
+      List<MusicItem> results = await apiService.search('artist:"$primaryArtist"', type: 'album,track', limit: 10);
+      if (results.isEmpty) {
+        results = await apiService.search(primaryArtist, type: 'album,track', limit: 10);
+      }
+
+      if (results.isNotEmpty) {
+        final filtered = <MusicItem>[];
+        final seenIds = <String>{};
+        if (currentItemId != null) seenIds.add(currentItemId);
+
+        for (final item in results) {
+          if (seenIds.contains(item.id)) continue;
+          final itemArtistLower = item.artist.toLowerCase();
+          if (itemArtistLower.contains(primaryLower) || primaryLower.contains(itemArtistLower)) {
+            seenIds.add(item.id);
+            filtered.add(item);
+          }
+        }
+
+        if (filtered.isNotEmpty) return filtered;
+      }
+    }
+
+    final filtered = <MusicItem>[];
+    final seenIds = <String>{};
+    if (currentItemId != null) seenIds.add(currentItemId);
+
+    for (final item in SpotifyMockData.allItems) {
+      if (seenIds.contains(item.id)) continue;
+      final itemArtistLower = item.artist.toLowerCase();
+      if (itemArtistLower.contains(primaryLower) || primaryLower.contains(itemArtistLower)) {
+        seenIds.add(item.id);
+        filtered.add(item);
+      }
+    }
+
+    return filtered;
+  }
 }
+
