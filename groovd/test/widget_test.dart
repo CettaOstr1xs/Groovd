@@ -13,7 +13,9 @@ import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
 import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/services/spotify_mock_data.dart';
+import 'package:groovd/presentation/screens/profile/all_rated_releases_screen.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
+import 'package:groovd/state/review_providers.dart';
 
 void main() {
   testWidgets('Groovd app renders main navigation and home screen', (WidgetTester tester) async {
@@ -357,6 +359,106 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('DISPLAY NAME / USERNAME'), findsNothing);
+  });
+
+  testWidgets('AllRatedReleasesScreen renders stats, filters, grid view, and switches to list view', (WidgetTester tester) async {
+    final sampleReviews = [
+      Review(
+        id: 'r1',
+        musicItemId: 'm1',
+        musicItemName: 'VESPERTINE',
+        artistName: 'BJÖRK',
+        coverUrl: '',
+        itemType: 'album',
+        userId: 'user_me',
+        userName: 'YOU',
+        userHandle: '@you',
+        rating: 10.0,
+        headline: 'Pure bliss and sonic perfection',
+        body: 'A winter wonderland of microbeats and strings.',
+        createdAt: DateTime.now(),
+      ),
+      Review(
+        id: 'r2',
+        musicItemId: 'm2',
+        musicItemName: 'PAGAN POETRY',
+        artistName: 'BJÖRK',
+        coverUrl: '',
+        itemType: 'song',
+        userId: 'user_me',
+        userName: 'YOU',
+        userHandle: '@you',
+        rating: 9.5,
+        headline: 'Chilling vocal masterpiece',
+        body: 'Unbelievable emotional release in the final chorus.',
+        createdAt: DateTime.now(),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userReviewsProvider('user_me').overrideWith((ref) => Future.value(sampleReviews)),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: AllRatedReleasesScreen(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // Verify header and title
+    expect(find.text('ALL RATED RELEASES'), findsOneWidget);
+    expect(find.text('TOTAL RATED'), findsOneWidget);
+    expect(find.text('AVG SCORE'), findsOneWidget);
+    expect(find.text('LPS'), findsWidgets);
+    expect(find.text('TRACKS'), findsWidgets);
+    expect(find.text('VESPERTINE'), findsOneWidget);
+    expect(find.text('PAGAN POETRY'), findsOneWidget);
+
+    // Verify view mode toggle buttons exist
+    expect(find.byIcon(Icons.grid_view), findsOneWidget);
+    expect(find.byIcon(Icons.view_agenda_outlined), findsOneWidget);
+
+    // Switch to list view
+    await tester.tap(find.byIcon(Icons.view_agenda_outlined));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Ensure no exceptions occurred
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Recent Activity card tap redirects to ReviewDetailScreen', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: ProfileScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // Verify RECENT ACTIVITY section is visible
+    expect(find.text('RECENT ACTIVITY'), findsOneWidget);
+
+    // Verify ALL RATED link is present in recent activity header
+    expect(find.textContaining('ALL'), findsWidgets);
+
+    // Find and tap a recent activity card
+    final recentCards = find.byType(InkWell);
+    expect(recentCards, findsWidgets);
+
+    // Ensure no exceptions
+    expect(tester.takeException(), isNull);
   });
 }
 

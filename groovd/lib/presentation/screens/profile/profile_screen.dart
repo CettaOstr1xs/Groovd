@@ -11,6 +11,7 @@ import 'package:groovd/data/services/spotify_mock_data.dart';
 import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
 import 'package:groovd/presentation/screens/lists/user_lists_screen.dart';
 import 'package:groovd/presentation/screens/profile/adjust_avatar_screen.dart';
+import 'package:groovd/presentation/screens/profile/all_rated_releases_screen.dart';
 import 'package:groovd/presentation/screens/profile/logged_reviews_screen.dart';
 import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
 import 'package:groovd/presentation/screens/wishlist/wishlist_screen.dart';
@@ -1409,10 +1410,16 @@ class ProfileScreen extends ConsumerWidget {
                   child: Row(
                     children: [
                       Expanded(
-                        child: _StatBox(
-                          label: 'LOGGED',
-                          value: '$totalLogged',
-                          accentColor: AppColors.textPrimary,
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(
+                            AllRatedReleasesScreen.route(),
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                          child: _StatBox(
+                            label: 'LOGGED',
+                            value: '$totalLogged',
+                            accentColor: AppColors.textPrimary,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -1980,16 +1987,29 @@ class _RecentActivitySection extends StatelessWidget {
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated,
-                  border: Border.all(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(2),
+              InkWell(
+                onTap: () => Navigator.of(context).push(
+                  AllRatedReleasesScreen.route(),
                 ),
-                child: Text(
-                  '${reviews.length} SCORED',
-                  style: AppTypography.monoBadge(color: AppColors.textSecondary, fontSize: 8),
+                borderRadius: BorderRadius.circular(2),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceElevated,
+                    border: Border.all(color: AppColors.acidLime.withValues(alpha: 0.6)),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'ALL ${reviews.length} RATED',
+                        style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 8),
+                      ),
+                      const SizedBox(width: 3),
+                      const Icon(Icons.chevron_right, size: 12, color: AppColors.acidLime),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -2065,24 +2085,12 @@ class _RecentActivityCard extends ConsumerWidget {
     final isAlbum = review.itemType == 'album';
 
     return InkWell(
-      onTap: () async {
-        MusicItem? item = await ref.read(spotifyRepositoryProvider).getItemById(
-              review.musicItemId,
-              type: isAlbum ? MusicType.album : MusicType.song,
-            );
-        item ??= MusicItem(
-          id: review.musicItemId,
-          name: review.musicItemName,
-          artist: review.artistName,
-          type: isAlbum ? MusicType.album : MusicType.song,
-          coverUrl: review.coverUrl,
-          releaseDate: '',
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ReviewDetailScreen(review: review),
+          ),
         );
-        if (context.mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item!)),
-          );
-        }
       },
       borderRadius: BorderRadius.circular(2),
       child: Container(

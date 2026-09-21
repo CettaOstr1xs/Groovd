@@ -7,6 +7,7 @@ import '../../../state/review_providers.dart';
 import '../../widgets/brutalist_button.dart';
 import '../../widgets/review_card.dart';
 import '../review/review_detail_screen.dart';
+import 'all_rated_releases_screen.dart';
 
 enum _LoggedReviewsFilter { all, albums, songs }
 enum _LoggedReviewsSort { newest, oldest, highestScore, lowestScore }
@@ -163,6 +164,13 @@ class _LoggedReviewsScreenState extends ConsumerState<LoggedReviewsScreen>
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.grid_view, size: 20, color: AppColors.acidLime),
+            tooltip: 'All Rated Releases',
+            onPressed: () => Navigator.of(context).push(AllRatedReleasesScreen.route()),
+          ),
+        ],
       ),
       body: reviewsAsync.when(
         data: (allReviews) {

@@ -817,7 +817,7 @@ class _MoreByArtistSection extends ConsumerWidget {
             }
 
             return SizedBox(
-              height: 228,
+              height: 242,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -871,7 +871,7 @@ class _MoreByArtistCard extends ConsumerWidget {
         );
       },
       child: Container(
-        width: 142,
+        width: 148,
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: AppColors.surfaceCard,
@@ -883,8 +883,8 @@ class _MoreByArtistCard extends ConsumerWidget {
           children: [
             AlbumArtCard(
               imageUrl: item.coverUrl,
-              width: 122,
-              height: 122,
+              width: 124,
+              height: 124,
               showShadow: false,
               heroTag: tag,
             ),
@@ -906,33 +906,69 @@ class _MoreByArtistCard extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: item.isAlbum
-                        ? AppColors.acidLime.withValues(alpha: 0.15)
-                        : AppColors.cyberCyan.withValues(alpha: 0.15),
-                    border: Border.all(
-                      color: item.isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
-                      width: 1,
-                    ),
-                    borderRadius: BorderRadius.circular(1),
-                  ),
-                  child: Text(
-                    item.isAlbum ? 'LP' : 'TRACK',
-                    style: AppTypography.monoBadge(
-                      color: item.isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
-                      fontSize: 8,
-                    ),
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: item.isAlbum
+                              ? AppColors.acidLime.withValues(alpha: 0.15)
+                              : AppColors.cyberCyan.withValues(alpha: 0.15),
+                          border: Border.all(
+                            color: item.isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                            width: 1,
+                          ),
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
+                        child: Text(
+                          item.isAlbum ? 'LP' : 'TRACK',
+                          style: AppTypography.monoBadge(
+                            color: item.isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                            fontSize: 8,
+                          ),
+                        ),
+                      ),
+                      if (item.formattedYear.isNotEmpty) ...[
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            item.formattedYear,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.monoLabel(fontSize: 8.5, color: AppColors.textMuted),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                if (item.formattedYear.isNotEmpty)
-                  Text(
-                    item.formattedYear,
-                    style: AppTypography.monoLabel(fontSize: 9, color: AppColors.textMuted),
-                  ),
+                const SizedBox(width: 4),
                 scoreAsync.when(
-                  data: (s) => s > 0 ? GiantScoreBadge(score: s, compact: true) : const SizedBox.shrink(),
+                  data: (s) {
+                    if (s <= 0) return const SizedBox.shrink();
+                    final scoreColor = s >= 9.0
+                        ? AppColors.acidLime
+                        : (s >= 8.0
+                            ? AppColors.cyberCyan
+                            : (s >= 6.5 ? AppColors.electricPink : const Color(0xFFFFB800)));
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: scoreColor,
+                        borderRadius: BorderRadius.circular(1.5),
+                        border: Border.all(color: AppColors.pureBlack, width: 1),
+                      ),
+                      child: Text(
+                        s.toStringAsFixed(1),
+                        style: AppTypography.monoBadge(
+                          color: AppColors.pureBlack,
+                          fontSize: 8.5,
+                        ),
+                      ),
+                    );
+                  },
                   loading: () => const SizedBox.shrink(),
                   error: (err, stack) => const SizedBox.shrink(),
                 ),
