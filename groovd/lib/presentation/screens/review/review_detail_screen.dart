@@ -15,6 +15,7 @@ import '../../widgets/brutalist_button.dart';
 import '../../widgets/giant_score_badge.dart';
 import '../detail/music_detail_screen.dart';
 import 'instagram_story_modal.dart';
+import 'write_review_modal.dart';
 
 class ReviewDetailScreen extends ConsumerStatefulWidget {
   final Review review;
@@ -55,6 +56,37 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
     InstagramStoryModal.show(context, reviewToShare);
   }
 
+  Future<void> _openEditReview() async {
+    final itemType = _review.itemType == 'song' ? MusicType.song : MusicType.album;
+    MusicItem? item = await ref.read(spotifyRepositoryProvider).getItemById(
+          _review.musicItemId,
+          type: itemType,
+        );
+
+    item ??= MusicItem(
+      id: _review.musicItemId,
+      name: _review.musicItemName,
+      artist: _review.artistName,
+      type: itemType,
+      coverUrl: _review.coverUrl,
+      releaseDate: '',
+    );
+
+    if (!mounted) return;
+
+    final updated = await WriteReviewModal.show(
+      context,
+      item,
+      existingReview: _review,
+    );
+
+    if (updated != null && mounted) {
+      setState(() {
+        _review = updated;
+      });
+    }
+  }
+
   Future<void> _openMusicDetail() async {
     final itemType = _review.itemType == 'song' ? MusicType.song : MusicType.album;
     MusicItem? item = await ref.read(spotifyRepositoryProvider).getItemById(
@@ -92,6 +124,12 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
       appBar: AppBar(
         title: Text('CRITIQUE ARCHIVE', style: AppTypography.displaySmall()),
         actions: [
+          if (isCurrentUser)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: AppColors.acidLime, size: 20),
+              tooltip: 'Edit Rating & Critique',
+              onPressed: _openEditReview,
+            ),
           IconButton(
             icon: const Icon(Icons.share_outlined, color: AppColors.textPrimary, size: 20),
             tooltip: 'Share Critique',
@@ -184,6 +222,22 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
 
             // Giant Score Badge Section
             GiantScoreBadge(score: _review.rating),
+
+            if (isCurrentUser) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: BrutalistButton(
+                  label: 'EDIT RATING & REVIEW',
+                  icon: Icons.edit_note,
+                  backgroundColor: AppColors.surfaceElevated,
+                  textColor: AppColors.acidLime,
+                  borderColor: AppColors.acidLime.withValues(alpha: 0.6),
+                  isSmall: true,
+                  onPressed: _openEditReview,
+                ),
+              ),
+            ],
 
             const SizedBox(height: 20),
             const Divider(),

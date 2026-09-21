@@ -1044,6 +1044,82 @@ void main() {
       expect(card.avatarPath, '/custom/avatar/path.jpg');
     });
   });
+
+  group('Review Editing Tests', () {
+    test('Review can be edited using copyWith while preserving original id and timestamp', () {
+      final original = Review(
+        id: 'rev_to_edit',
+        musicItemId: 'm123',
+        musicItemName: 'OK Computer',
+        artistName: 'Radiohead',
+        coverUrl: 'https://example.com/cover.jpg',
+        itemType: 'album',
+        userId: 'user_me',
+        userName: 'YOU',
+        userHandle: '@you',
+        rating: 8.5,
+        headline: 'Great album',
+        body: 'Solid tracklist',
+        tags: ['#CLASSIC'],
+        createdAt: DateTime(2024, 5, 1),
+        likesCount: 12,
+      );
+
+      final edited = original.copyWith(
+        rating: 9.8,
+        headline: 'Absolute Masterpiece',
+        body: 'Every single song hits on a deep emotional level.',
+        tags: ['#CLASSIC', '#ESSENTIAL', '#AOTY'],
+      );
+
+      expect(edited.id, 'rev_to_edit');
+      expect(edited.musicItemId, 'm123');
+      expect(edited.rating, 9.8);
+      expect(edited.scoreTierLabel, 'MASTERPIECE');
+      expect(edited.headline, 'Absolute Masterpiece');
+      expect(edited.body, 'Every single song hits on a deep emotional level.');
+      expect(edited.tags, ['#CLASSIC', '#ESSENTIAL', '#AOTY']);
+      expect(edited.createdAt, DateTime(2024, 5, 1));
+      expect(edited.likesCount, 12);
+    });
+
+    test('LocalReviewRepository updates existing review in place when adding edited review with matching id', () async {
+      final repo = LocalReviewRepository();
+      final initial = Review(
+        id: 'rev_inplace_edit',
+        musicItemId: 'item_xyz',
+        musicItemName: 'Debut',
+        artistName: 'Artist',
+        coverUrl: '',
+        itemType: 'album',
+        userId: 'user_me',
+        userName: 'YOU',
+        userHandle: '@you',
+        rating: 7.0,
+        headline: 'Good start',
+        body: 'Promising work',
+        createdAt: DateTime(2024, 1, 1),
+      );
+      await repo.addReview(initial);
+
+      final userReviewsBefore = await repo.getUserReviews('user_me');
+      expect(userReviewsBefore.any((r) => r.id == 'rev_inplace_edit' && r.rating == 7.0), isTrue);
+
+      final updated = initial.copyWith(
+        rating: 9.2,
+        headline: 'Grew on me immensely',
+        body: 'A true classic upon revisiting.',
+      );
+      await repo.addReview(updated);
+
+      final userReviewsAfter = await repo.getUserReviews('user_me');
+      final fetched = userReviewsAfter.firstWhere((r) => r.id == 'rev_inplace_edit');
+      expect(fetched.rating, 9.2);
+      expect(fetched.headline, 'Grew on me immensely');
+      expect(fetched.body, 'A true classic upon revisiting.');
+      expect(userReviewsAfter.where((r) => r.id == 'rev_inplace_edit').length, 1);
+    });
+  });
 }
 
 

@@ -460,6 +460,105 @@ void main() {
     // Ensure no exceptions
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('ReviewDetailScreen displays EDIT RATING & REVIEW button for current user and opens edit modal', (WidgetTester tester) async {
+    final myReview = Review(
+      id: 'rev_detail_edit_test',
+      musicItemId: 'm_detail_edit',
+      musicItemName: 'KID A',
+      artistName: 'RADIOHEAD',
+      coverUrl: '',
+      itemType: 'album',
+      userId: 'user_me',
+      userName: 'YOU',
+      userHandle: '@you',
+      rating: 9.2,
+      headline: 'Experimental brilliance',
+      body: 'Revolutionary soundscapes and haunting vocals.',
+      tags: ['#AOTY', '#CLASSIC'],
+      createdAt: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: ReviewDetailScreen(review: myReview),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Verify EDIT button appears in appbar or below score badge
+    expect(find.text('EDIT RATING & REVIEW'), findsOneWidget);
+    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+
+    // Tap EDIT RATING & REVIEW button
+    await tester.tap(find.text('EDIT RATING & REVIEW'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Verify modal opened with 'EDIT YOUR REVIEW' title and pre-filled headline/body
+    expect(find.text('EDIT YOUR REVIEW'), findsOneWidget);
+    expect(find.descendant(of: find.byType(WriteReviewModal), matching: find.text('Experimental brilliance')), findsOneWidget);
+    expect(find.descendant(of: find.byType(WriteReviewModal), matching: find.text('Revolutionary soundscapes and haunting vocals.')), findsOneWidget);
+    expect(find.textContaining('UPDATE CRITIQUE'), findsOneWidget);
+
+    // Close the modal
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('EDIT YOUR REVIEW'), findsNothing);
+  });
+
+  testWidgets('MusicDetailScreen shows EDIT YOUR REVIEW button when user has already rated release', (WidgetTester tester) async {
+    final myReview = Review(
+      id: 'rev_music_detail_test',
+      musicItemId: 'm_already_rated',
+      musicItemName: 'IN RAINBOWS',
+      artistName: 'RADIOHEAD',
+      coverUrl: '',
+      itemType: 'album',
+      userId: 'user_me',
+      userName: 'YOU',
+      userHandle: '@you',
+      rating: 9.8,
+      headline: 'Flawless art rock',
+      body: 'From 15 Step to Videotape, perfection.',
+      createdAt: DateTime.now(),
+    );
+
+    final musicItem = MusicItem(
+      id: 'm_already_rated',
+      name: 'IN RAINBOWS',
+      artist: 'RADIOHEAD',
+      coverUrl: '',
+      type: MusicType.album,
+      releaseDate: '2007',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          itemReviewsProvider('m_already_rated').overrideWith((ref) => Future.value([myReview])),
+        ],
+        child: MaterialApp(
+          home: MusicDetailScreen(item: musicItem),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+
+    // Verify the bottom action bar displays 'EDIT YOUR REVIEW [9.8]' instead of '+ LOG YOUR REVIEW'
+    expect(find.text('EDIT YOUR REVIEW [9.8]'), findsOneWidget);
+    expect(find.byIcon(Icons.edit_note), findsOneWidget);
+  });
 }
 
 

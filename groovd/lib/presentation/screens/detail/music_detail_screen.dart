@@ -227,6 +227,10 @@ class MusicDetailScreen extends ConsumerWidget {
         : item;
 
     final reviewsAsync = ref.watch(itemReviewsProvider(item.id));
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final existingUserReview = reviewsAsync.asData?.value
+        .where((r) => r.userId == currentUserId || r.userId == 'user_me')
+        .firstOrNull;
     final avgScoreAsync = ref.watch(itemAverageScoreProvider(item.id));
     final reviewCountAsync = ref.watch(itemReviewCountProvider(item.id));
     final isWishlisted = ref.watch(isInWishlistProvider(activeItem.id));
@@ -301,12 +305,20 @@ class MusicDetailScreen extends ConsumerWidget {
             children: [
               Expanded(
                 child: BrutalistButton(
-                  label: '+ LOG YOUR REVIEW',
-                  icon: Icons.rate_review_outlined,
+                  label: existingUserReview != null
+                      ? 'EDIT YOUR REVIEW [${existingUserReview.rating.toStringAsFixed(1)}]'
+                      : '+ LOG YOUR REVIEW',
+                  icon: existingUserReview != null
+                      ? Icons.edit_note
+                      : Icons.rate_review_outlined,
                   backgroundColor: AppColors.acidLime,
                   textColor: AppColors.pureBlack,
                   isFullWidth: true,
-                  onPressed: () => WriteReviewModal.show(context, activeItem),
+                  onPressed: () => WriteReviewModal.show(
+                    context,
+                    activeItem,
+                    existingReview: existingUserReview,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),

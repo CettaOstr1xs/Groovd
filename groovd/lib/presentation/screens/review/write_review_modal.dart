@@ -13,15 +13,27 @@ import 'package:groovd/presentation/widgets/brutalist_button.dart';
 
 class WriteReviewModal extends ConsumerStatefulWidget {
   final MusicItem musicItem;
+  final Review? existingReview;
 
-  const WriteReviewModal({super.key, required this.musicItem});
+  const WriteReviewModal({
+    super.key,
+    required this.musicItem,
+    this.existingReview,
+  });
 
-  static Future<void> show(BuildContext context, MusicItem musicItem) {
-    return showModalBottomSheet(
+  static Future<Review?> show(
+    BuildContext context,
+    MusicItem musicItem, {
+    Review? existingReview,
+  }) {
+    return showModalBottomSheet<Review>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => WriteReviewModal(musicItem: musicItem),
+      builder: (context) => WriteReviewModal(
+        musicItem: musicItem,
+        existingReview: existingReview,
+      ),
     );
   }
 
@@ -57,6 +69,12 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
   @override
   void initState() {
     super.initState();
+    if (widget.existingReview != null) {
+      _rating = widget.existingReview!.rating;
+      _headlineController.text = widget.existingReview!.headline;
+      _bodyController.text = widget.existingReview!.body;
+      _selectedTags.addAll(widget.existingReview!.tags);
+    }
     _loadCustomTags();
     _headlineController.addListener(() => setState(() {}));
     _bodyController.addListener(() => setState(() {}));
@@ -147,38 +165,50 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
     final userName = profile.userName;
     final userHandle = profile.userHandle;
 
-    final newReview = Review(
-      id: 'rev_${DateTime.now().millisecondsSinceEpoch}',
-      musicItemId: widget.musicItem.id,
-      musicItemName: widget.musicItem.name,
-      artistName: widget.musicItem.artist,
-      coverUrl: widget.musicItem.coverUrl,
-      itemType: widget.musicItem.isAlbum ? 'album' : 'song',
-      userId: userId,
-      userName: userName,
-      userHandle: userHandle,
-      rating: _rating,
-      headline: _headlineController.text.trim(),
-      body: _bodyController.text.trim(),
-      tags: _selectedTags,
-      createdAt: DateTime.now(),
-      likesCount: 0,
-    );
+    final isEditing = widget.existingReview != null;
+    final reviewToSave = isEditing
+        ? widget.existingReview!.copyWith(
+            rating: _rating,
+            headline: _headlineController.text.trim(),
+            body: _bodyController.text.trim(),
+            tags: _selectedTags,
+            userName: userName,
+            userHandle: userHandle,
+          )
+        : Review(
+            id: 'rev_${DateTime.now().millisecondsSinceEpoch}',
+            musicItemId: widget.musicItem.id,
+            musicItemName: widget.musicItem.name,
+            artistName: widget.musicItem.artist,
+            coverUrl: widget.musicItem.coverUrl,
+            itemType: widget.musicItem.isAlbum ? 'album' : 'song',
+            userId: userId,
+            userName: userName,
+            userHandle: userHandle,
+            rating: _rating,
+            headline: _headlineController.text.trim(),
+            body: _bodyController.text.trim(),
+            tags: _selectedTags,
+            createdAt: DateTime.now(),
+            likesCount: 0,
+          );
 
     try {
       await ref
           .read(reviewControllerProvider)
-          .submitReview(newReview)
+          .submitReview(reviewToSave)
           .timeout(const Duration(seconds: 3));
 
       if (mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(reviewToSave);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              newReview.hasWrittenReview
-                  ? 'CRITIQUE DISPATCHED TO ARCHIVE'
-                  : 'RATING LOGGED TO DOSSIER',
+              isEditing
+                  ? 'CRITIQUE & RATING UPDATED'
+                  : (reviewToSave.hasWrittenReview
+                      ? 'CRITIQUE DISPATCHED TO ARCHIVE'
+                      : 'RATING LOGGED TO DOSSIER'),
               style: AppTypography.monoBadge(color: AppColors.pureBlack),
             ),
             backgroundColor: AppColors.acidLime,
@@ -187,11 +217,11 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
       }
     } catch (e) {
       if (mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(reviewToSave);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'SAVED TO LOCAL LOG',
+              isEditing ? 'SAVED EDITED REVIEW LOCALLY' : 'SAVED TO LOCAL LOG',
               style: AppTypography.monoBadge(color: AppColors.pureBlack),
             ),
             backgroundColor: AppColors.cyberCyan,
@@ -256,7 +286,7 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'LOG YOUR REVIEW',
+                        widget.existingReview != null ? 'EDIT YOUR REVIEW' : 'LOG YOUR REVIEW',
                         style: AppTypography.displaySmall(),
                       ),
                       const SizedBox(height: 2),
@@ -579,13 +609,17 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
 
               const SizedBox(height: 24),
 
-              // Submit Button (Dynamic for written review vs quick rating)
+              // Submit Button (Dynamic for written review vs quick rating vs editing)
               BrutalistButton(
                 label: _isSubmitting
-                    ? 'PUBLISHING...'
-                    : _hasWrittenText
-                        ? 'PUBLISH CRITIQUE'
-                        : 'LOG SCORE [${_rating.toStringAsFixed(1)}] // QUICK RATE',
+                    ? 'SAVING...'
+                    : widget.existingReview != null
+                        ? (_hasWrittenText
+                            ? 'UPDATE CRITIQUE [${_rating.toStringAsFixed(1)}]'
+                            : 'UPDATE RATING [${_rating.toStringAsFixed(1)}]')
+                        : (_hasWrittenText
+                            ? 'PUBLISH CRITIQUE'
+                            : 'LOG SCORE [${_rating.toStringAsFixed(1)}] // QUICK RATE'),
                 icon: Icons.check,
                 isFullWidth: true,
                 backgroundColor: AppColors.acidLime,
