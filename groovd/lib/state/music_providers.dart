@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants/spotify_config.dart';
+import '../data/models/artist.dart';
 import '../data/models/music_item.dart';
 import '../data/services/spotify_api_service.dart';
 import '../data/services/spotify_repository.dart';
@@ -43,6 +44,19 @@ class SearchQueryNotifier extends Notifier<String> {
 
 final searchQueryProvider = NotifierProvider<SearchQueryNotifier, String>(SearchQueryNotifier.new);
 
+/// Search Category enum supporting ALL, ARTISTS, ALBUMS, TRACKS
+enum SearchCategory { all, artists, albums, tracks }
+
+/// Search Category Notifier
+class SearchCategoryNotifier extends Notifier<SearchCategory> {
+  @override
+  SearchCategory build() => SearchCategory.all;
+
+  void updateCategory(SearchCategory cat) => state = cat;
+}
+
+final searchCategoryProvider = NotifierProvider<SearchCategoryNotifier, SearchCategory>(SearchCategoryNotifier.new);
+
 /// Search Filter Type Notifier (null for ALL, MusicType.album, MusicType.song)
 class SearchFilterNotifier extends Notifier<MusicType?> {
   @override
@@ -52,6 +66,18 @@ class SearchFilterNotifier extends Notifier<MusicType?> {
 }
 
 final searchFilterProvider = NotifierProvider<SearchFilterNotifier, MusicType?>(SearchFilterNotifier.new);
+
+/// Artist Search Results Provider (retrieves matching artists from Spotify/mock data)
+final artistSearchResultsProvider = FutureProvider<List<Artist>>((ref) async {
+  final query = ref.watch(searchQueryProvider);
+  final repo = ref.watch(spotifyRepositoryProvider);
+
+  if (query.trim().isEmpty) {
+    return [];
+  }
+
+  return repo.searchArtists(query.trim(), limit: 5);
+});
 
 /// Search Results Provider
 final searchResultsProvider = FutureProvider<List<MusicItem>>((ref) async {

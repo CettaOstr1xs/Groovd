@@ -1,3 +1,4 @@
+import '../models/artist.dart';
 import '../models/music_item.dart';
 import '../models/review.dart';
 
@@ -415,6 +416,75 @@ class SpotifyMockData {
       tags: ['#ART_ROCK', '#PERFECTION', '#WARM_VINYL'],
       createdAt: DateTime.now().subtract(const Duration(days: 3)),
       likesCount: 178,
+    ),
+  ];
+
+  static final List<Artist> mockArtists = [
+    const Artist(
+      id: 'artist_radiohead',
+      name: 'RADIOHEAD',
+      imageUrl: 'https://i.scdn.co/image/ab6761610000e5ebc8b093226a2e2f694e929f07',
+      genres: ['ART ROCK', 'ALTERNATIVE', 'EXPERIMENTAL'],
+      followers: 8900000,
+      popularity: 84,
+      bio: 'Radiohead are an English rock band formed in Abingdon, Oxfordshire, in 1985. The band consists of Thom Yorke, brothers Jonny Greenwood and Colin Greenwood, Ed O\'Brien, and Philip Selway. They have worked with producer Nigel Godrich since 1994, pioneering experimental alternative rock across landmark albums like OK Computer and In Rainbows.',
+      shortDescription: 'English rock band',
+      spotifyUrl: 'https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb',
+    ),
+    const Artist(
+      id: 'artist_kendrick',
+      name: 'KENDRICK LAMAR',
+      imageUrl: 'https://i.scdn.co/image/ab6761610000e5eb437b9e2a82505b3d93fe1022',
+      genres: ['CONSCIOUS HIP HOP', 'WEST COAST RAP', 'JAZZ RAP'],
+      followers: 29500000,
+      popularity: 95,
+      bio: 'Kendrick Lamar Duckworth is an American rapper and songwriter, widely regarded as one of the most influential and accomplished hip-hop artists of his generation. Winner of the Pulitzer Prize for Music, his discography spans classic opuses including To Pimp a Butterfly and Good Kid, M.A.A.D City.',
+      shortDescription: 'American rapper and songwriter',
+      spotifyUrl: 'https://open.spotify.com/artist/2YZyLoL8N0Wb9xBt1NhZWg',
+    ),
+    const Artist(
+      id: 'artist_frank_ocean',
+      name: 'FRANK OCEAN',
+      imageUrl: 'https://i.scdn.co/image/ab6761610000e5eb9687e148e9c704f056d68010',
+      genres: ['R&B', 'AVANT-POP', 'NEO-SOUL'],
+      followers: 16200000,
+      popularity: 89,
+      bio: 'Christopher Francis Ocean is an American singer, songwriter, and rapper acclaimed for his idiosyncratic, introspective songwriting and sonic evolution across Channel Orange and the monumental Blonde.',
+      shortDescription: 'American singer and songwriter',
+      spotifyUrl: 'https://open.spotify.com/artist/2h93pZao492I3698GQi8kn',
+    ),
+    const Artist(
+      id: 'artist_charli',
+      name: 'CHARLI XCX',
+      imageUrl: 'https://i.scdn.co/image/ab6761610000e5eb3b9944a95618f6eeaf4b3ed0',
+      genres: ['HYPERPOP', 'ELECTROPOP', 'CLUB'],
+      followers: 5400000,
+      popularity: 91,
+      bio: 'Charlotte Emma Aitchison, known professionally as Charli XCX, is an English singer, songwriter, and executive producer who redefined avant-garde pop and internet club culture, celebrated worldwide for her 2024 cultural phenomenon BRAT.',
+      shortDescription: 'English singer and songwriter',
+      spotifyUrl: 'https://open.spotify.com/artist/25uiPmTg16RbhZWAqwLBy5',
+    ),
+    const Artist(
+      id: 'artist_slowdive',
+      name: 'SLOWDIVE',
+      imageUrl: 'https://i.scdn.co/image/ab6761610000e5eb7bb3f4ca3260c6d3bc01b44b',
+      genres: ['SHOEGAZE', 'DREAM POP', 'AMBIENT'],
+      followers: 990000,
+      popularity: 69,
+      bio: 'Slowdive are an English rock band formed in Reading, Berkshire, in 1989. Pioneers of the shoegaze movement alongside My Bloody Valentine, their shimmering sonic textures on Souvlaki and Pygmalion are timeless masterpieces.',
+      shortDescription: 'English rock band',
+      spotifyUrl: 'https://open.spotify.com/artist/72X6FHJwXMZX0zDYDrNkZG',
+    ),
+    const Artist(
+      id: 'artist_bjork',
+      name: 'BJÖRK',
+      imageUrl: 'https://i.scdn.co/image/ab6761610000e5ebec9be36e76aafe09a9042b47',
+      genres: ['ART POP', 'EXPERIMENTAL', 'ELECTRONIC'],
+      followers: 1950000,
+      popularity: 72,
+      bio: 'Björk Guðmundsdóttir is an Icelandic singer, songwriter, composer, and producer. Renowned for her distinct four-octave vocal range and eccentric musical explorations spanning dance, classical, and avant-garde art music.',
+      shortDescription: 'Icelandic singer and composer',
+      spotifyUrl: 'https://open.spotify.com/artist/7w29UYBi0qsHi5RTcv3lmE',
     ),
   ];
 }

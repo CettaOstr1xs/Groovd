@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
+import 'package:groovd/presentation/screens/artist/artist_detail_screen.dart';
 import 'package:groovd/presentation/screens/lists/create_edit_list_modal.dart';
 import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
 import 'package:groovd/presentation/screens/review/write_review_modal.dart';
@@ -438,10 +439,33 @@ class MusicDetailScreen extends ConsumerWidget {
 
                   const SizedBox(height: 6),
 
-                  // Artist Name
-                  Text(
-                    'BY ${activeItem.artist.toUpperCase()}',
-                    style: AppTypography.headline(color: AppColors.textSecondary),
+                  // Artist Name (Interactive Dossier Link)
+                  InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ArtistDetailScreen(
+                            artistIdOrName: activeItem.artist,
+                            initialArtistName: activeItem.artist,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(2),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'BY ${activeItem.artist.toUpperCase()}',
+                            style: AppTypography.headline(color: AppColors.textSecondary),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.arrow_forward, size: 14, color: AppColors.acidLime),
+                        ],
+                      ),
+                    ),
                   ),
 
                   const SizedBox(height: 20),
@@ -767,17 +791,66 @@ class _MoreByArtistSection extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
-                  'MORE BY ${item.artist.toUpperCase()}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.monoLabel(
-                    color: AppColors.textPrimary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ArtistDetailScreen(
+                          artistIdOrName: item.artist,
+                          initialArtistName: item.artist,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'MORE BY ${item.artist.toUpperCase()}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.monoLabel(
+                            color: AppColors.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.arrow_forward, size: 12, color: AppColors.acidLime),
+                    ],
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ArtistDetailScreen(
+                        artistIdOrName: item.artist,
+                        initialArtistName: item.artist,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.acidLime,
+                    borderRadius: BorderRadius.circular(2),
+                    border: Border.all(color: AppColors.pureBlack),
+                  ),
+                  child: Text(
+                    'DOSSIER',
+                    style: AppTypography.monoBadge(
+                      color: AppColors.pureBlack,
+                      fontSize: 8.5,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
               moreByArtistAsync.when(
                 data: (items) => items.isNotEmpty
                     ? Container(

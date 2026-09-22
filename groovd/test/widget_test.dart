@@ -13,8 +13,12 @@ import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
 import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/services/spotify_mock_data.dart';
+import 'package:groovd/data/models/artist.dart';
+import 'package:groovd/presentation/screens/artist/artist_detail_screen.dart';
 import 'package:groovd/presentation/screens/profile/all_rated_releases_screen.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
+import 'package:groovd/presentation/screens/search/search_screen.dart';
+import 'package:groovd/state/artist_providers.dart';
 import 'package:groovd/state/review_providers.dart';
 
 void main() {
@@ -558,6 +562,252 @@ void main() {
     // Verify the bottom action bar displays 'EDIT YOUR REVIEW [9.8]' instead of '+ LOG YOUR REVIEW'
     expect(find.text('EDIT YOUR REVIEW [9.8]'), findsOneWidget);
     expect(find.byIcon(Icons.edit_note), findsOneWidget);
+  });
+
+  testWidgets('ArtistDetailScreen renders artist header, stats bar, biography card, and discography', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const artist = Artist(
+      id: 'artist_radiohead',
+      name: 'RADIOHEAD',
+      imageUrl: '',
+      genres: ['ART ROCK', 'ALTERNATIVE'],
+      followers: 8900000,
+      popularity: 84,
+      bio: 'Radiohead are an English rock band formed in Abingdon, Oxfordshire, in 1985.',
+      shortDescription: 'English rock band',
+      spotifyUrl: 'https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb',
+    );
+
+    final mockTopTracks = [
+      const MusicItem(
+        id: 'track_creep',
+        name: 'Creep',
+        artist: 'Radiohead',
+        type: MusicType.song,
+        coverUrl: '',
+        releaseDate: '1993',
+        durationMs: 238000,
+      ),
+    ];
+
+    final mockDiscography = [
+      const MusicItem(
+        id: 'album_in_rainbows',
+        name: 'In Rainbows',
+        artist: 'Radiohead',
+        type: MusicType.album,
+        coverUrl: '',
+        releaseDate: '2007',
+      ),
+      const MusicItem(
+        id: 'track_creep',
+        name: 'Creep',
+        artist: 'Radiohead',
+        type: MusicType.song,
+        coverUrl: '',
+        releaseDate: '1993',
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          artistDetailProvider('RADIOHEAD').overrideWith((ref) => Future.value(artist)),
+          artistTopTracksProvider('RADIOHEAD').overrideWith((ref) => Future.value(mockTopTracks)),
+          artistDiscographyProvider('RADIOHEAD').overrideWith((ref) => Future.value(mockDiscography)),
+          artistCareerStatsProvider('RADIOHEAD').overrideWith((ref) => Future.value(
+            const ArtistCareerStats(
+              averageScore: 9.4,
+              totalCommunityReviews: 12,
+              userRatedCount: 2,
+              totalReleasesCount: 2,
+              communityFavoriteTitle: 'IN RAINBOWS',
+              communityFavoriteScore: 9.9,
+            ),
+          )),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ArtistDetailScreen(artistIdOrName: 'RADIOHEAD'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // Verify AppBar & Hero Title
+    expect(find.text('ARTIST DOSSIER'), findsOneWidget);
+    expect(find.text('RADIOHEAD'), findsOneWidget);
+    expect(find.text('ENGLISH ROCK BAND'), findsOneWidget);
+    expect(find.text('8.9M FOLLOWERS'), findsOneWidget);
+    expect(find.text('ROTATION INDEX 84%'), findsOneWidget);
+
+    // Verify Career Stats
+    expect(find.text('GROOVD CRITIC CAREER STATS'), findsOneWidget);
+    expect(find.text('CAREER SCORE'), findsOneWidget);
+
+    // Verify Wikipedia Briefing Box
+    expect(find.text('ARCHIVE BRIEFING // BIOGRAPHY'), findsOneWidget);
+    expect(find.textContaining('Abingdon'), findsOneWidget);
+
+    // Verify Essential In Rotation (Top Tracks)
+    expect(find.text('ESSENTIAL IN ROTATION'), findsOneWidget);
+    expect(find.text('CREEP'), findsWidgets);
+
+    // Verify Discography
+    expect(find.text('DISCOGRAPHY'), findsOneWidget);
+    expect(find.textContaining('ALL'), findsWidgets);
+    expect(find.textContaining('STUDIO LPS'), findsOneWidget);
+    expect(find.textContaining('SINGLES & EPS'), findsOneWidget);
+
+    // Test filter tapping
+    await tester.tap(find.textContaining('STUDIO LPS'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+  });
+
+  testWidgets('MusicDetailScreen artist name tap opens ArtistDetailScreen', (WidgetTester tester) async {
+    const musicItem = MusicItem(
+      id: 'm_nav_artist_test',
+      name: 'BLONDE',
+      artist: 'FRANK OCEAN',
+      coverUrl: '',
+      type: MusicType.album,
+      releaseDate: '2016',
+    );
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: MusicDetailScreen(item: musicItem),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Tap artist header
+    final artistLink = find.text('BY FRANK OCEAN');
+    expect(artistLink, findsOneWidget);
+    await tester.tap(artistLink);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Verify ArtistDetailScreen opened
+    expect(find.text('ARTIST DOSSIER'), findsOneWidget);
+  });
+
+  testWidgets('SearchScreen renders filter tabs and prominent artist dossier card when searching an artist', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: SearchScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Verify search catalog header and all 4 filter tabs
+    expect(find.text('SEARCH CATALOG'), findsOneWidget);
+    expect(find.text('ALL'), findsOneWidget);
+    expect(find.text('ARTISTS'), findsOneWidget);
+    expect(find.text('ALBUMS'), findsOneWidget);
+    expect(find.text('TRACKS'), findsOneWidget);
+
+    // Enter artist name in search field
+    await tester.enterText(find.byType(TextField), 'Radiohead');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Prominent artist dossier card should now appear
+    expect(find.text('MATCHING ARTIST DOSSIER'), findsOneWidget);
+    expect(find.text('RADIOHEAD'), findsWidgets);
+    expect(find.text('ARTIST // DOSSIER'), findsOneWidget);
+    expect(find.text('OPEN DOSSIER'), findsOneWidget);
+
+    // Tap the Artist Dossier card
+    await tester.tap(find.text('ARTIST // DOSSIER').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // Navigated to ArtistDetailScreen
+    expect(find.text('ARTIST DOSSIER'), findsOneWidget);
+  });
+
+  testWidgets('SearchScreen switches to ARTISTS category and displays artist results', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: SearchScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Tap ARTISTS filter chip
+    await tester.tap(find.text('ARTISTS'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // In ARTISTS category without query, search prompt is displayed (no fake mock artists)
+    expect(find.text('SEARCH ARTIST DOSSIERS'), findsOneWidget);
+
+    // Type artist name
+    await tester.enterText(find.byType(TextField), 'Radiohead');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Matching artist dossier card appears
+    expect(find.text('RADIOHEAD'), findsWidgets);
+    expect(find.text('ARTIST // DOSSIER'), findsOneWidget);
+  });
+
+  testWidgets('ArtistDetailScreen hides follower badge when followers count is 0', (WidgetTester tester) async {
+    const zeroFollowerArtist = Artist(
+      id: 'zero_followers_test',
+      name: 'UNKNOWN BAND',
+      imageUrl: '',
+      followers: 0,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          artistDetailProvider('zero_followers_test').overrideWith((ref) => zeroFollowerArtist),
+          artistTopTracksProvider('zero_followers_test').overrideWith((ref) => []),
+          artistDiscographyProvider('zero_followers_test').overrideWith((ref) => []),
+          artistCareerStatsProvider('UNKNOWN BAND').overrideWith((ref) => const ArtistCareerStats(
+                averageScore: 0.0,
+                totalCommunityReviews: 0,
+                userRatedCount: 0,
+                totalReleasesCount: 0,
+              )),
+        ],
+        child: const MaterialApp(
+          home: ArtistDetailScreen(artistIdOrName: 'zero_followers_test'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('UNKNOWN BAND'), findsOneWidget);
+    // Should NOT find '0 FOLLOWERS'
+    expect(find.text('0 FOLLOWERS'), findsNothing);
   });
 }
 

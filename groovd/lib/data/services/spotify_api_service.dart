@@ -300,4 +300,202 @@ class SpotifyApiService {
       return await search('tag:new', type: 'album', limit: safeLimit);
     }
   }
+
+  /// Get artist profile details by artist ID.
+  Future<Map<String, dynamic>?> getArtist(String artistId) async {
+    final token = await _getValidToken();
+    if (token == null) return null;
+
+    try {
+      final uri = Uri.parse('https://api.spotify.com/v1/artists/$artistId');
+      var response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 401) {
+        final freshToken = await _getValidToken(forceRefresh: true);
+        if (freshToken != null) {
+          response = await http.get(uri, headers: {'Authorization': 'Bearer $freshToken'});
+        }
+      }
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      // ignore: avoid_print
+      print('Spotify GetArtist Exception: $e');
+      return null;
+    }
+  }
+
+  /// Get top tracks for an artist.
+  Future<List<MusicItem>> getArtistTopTracks(String artistId, {String market = 'US', String? artistName}) async {
+    final token = await _getValidToken();
+    if (token == null) return [];
+
+    try {
+      final uri = Uri.parse('https://api.spotify.com/v1/artists/$artistId/top-tracks?market=$market');
+      var response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 401) {
+        final freshToken = await _getValidToken(forceRefresh: true);
+        if (freshToken != null) {
+          response = await http.get(uri, headers: {'Authorization': 'Bearer $freshToken'});
+        }
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final tracksJson = data['tracks'] as List?;
+        if (tracksJson != null && tracksJson.isNotEmpty) {
+          return tracksJson.map((t) => MusicItem.fromSpotifyTrack(t as Map<String, dynamic>)).toList();
+        }
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('Spotify GetArtistTopTracks Exception: $e');
+    }
+
+    // Fallback: If top-tracks endpoint returns 403 Forbidden (Spotify developer mode policy),
+    // search directly for tracks by this artist!
+    if (artistName != null && artistName.trim().isNotEmpty) {
+      final cleanName = artistName.trim();
+      final searched = await search('artist:"$cleanName"', type: 'track', limit: 10);
+      if (searched.isNotEmpty) return searched;
+      return await search(cleanName, type: 'track', limit: 10);
+    }
+
+    return [];
+  }
+
+  /// Get discography (albums and singles) for an artist.
+  Future<List<MusicItem>> getArtistAlbums(String artistId, {int limit = 10}) async {
+    final token = await _getValidToken();
+    if (token == null) return [];
+
+    // Spotify restricts limit to 10 in Developer Mode; exceeding causes 400 'Invalid limit'
+    final safeLimit = limit.clamp(1, 10);
+
+    try {
+      final uri = Uri.parse('https://api.spotify.com/v1/artists/$artistId/albums?include_groups=album,single&limit=$safeLimit');
+      var response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 401) {
+        final freshToken = await _getValidToken(forceRefresh: true);
+        if (freshToken != null) {
+          response = await http.get(uri, headers: {'Authorization': 'Bearer $freshToken'});
+        }
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final itemsJson = data['items'] as List?;
+        if (itemsJson != null) {
+          final list = <MusicItem>[];
+          final seenTitles = <String>{};
+          for (final a in itemsJson) {
+            final item = MusicItem.fromSpotifyAlbum(a as Map<String, dynamic>);
+            final normTitle = item.name.toLowerCase().trim();
+            if (!seenTitles.contains(normTitle)) {
+              seenTitles.add(normTitle);
+              list.add(item);
+            }
+          }
+          return list;
+        }
+      }
+      return [];
+    } catch (e) {
+      // ignore: avoid_print
+      print('Spotify GetArtistAlbums Exception: $e');
+      return [];
+    }
+  }
+
+  /// Search Spotify for an artist by name to resolve their artist ID and details.
+  Future<Map<String, dynamic>?> searchArtist(String artistName) async {
+    final token = await _getValidToken();
+    if (token == null) return null;
+
+    try {
+      final uri = Uri.https('api.spotify.com', '/v1/search', {
+        'q': artistName,
+        'type': 'artist',
+        'limit': '1',
+      });
+      var response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 401) {
+        final freshToken = await _getValidToken(forceRefresh: true);
+        if (freshToken != null) {
+          response = await http.get(uri, headers: {'Authorization': 'Bearer $freshToken'});
+        }
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final artistsJson = data['artists']?['items'] as List?;
+        if (artistsJson != null && artistsJson.isNotEmpty) {
+          return artistsJson.first as Map<String, dynamic>;
+        }
+      }
+      return null;
+    } catch (e) {
+      // ignore: avoid_print
+      print('Spotify SearchArtist Exception: $e');
+      return null;
+    }
+  }
+
+  /// Search Spotify for matching artists list.
+  Future<List<Map<String, dynamic>>> searchArtists(String query, {int limit = 5}) async {
+    final clean = query.trim();
+    if (clean.isEmpty) return [];
+    final token = await _getValidToken();
+    if (token == null) return [];
+
+    final safeLimit = limit.clamp(1, 10);
+
+    try {
+      final uri = Uri.https('api.spotify.com', '/v1/search', {
+        'q': clean,
+        'type': 'artist',
+        'limit': safeLimit.toString(),
+      });
+      var response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 401) {
+        final freshToken = await _getValidToken(forceRefresh: true);
+        if (freshToken != null) {
+          response = await http.get(uri, headers: {'Authorization': 'Bearer $freshToken'});
+        }
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final artistsJson = data['artists']?['items'] as List?;
+        if (artistsJson != null) {
+          return artistsJson.cast<Map<String, dynamic>>();
+        }
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
 }

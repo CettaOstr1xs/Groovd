@@ -13,6 +13,7 @@ import '../../../state/user_profile_provider.dart';
 import '../../widgets/album_art_card.dart';
 import '../../widgets/brutalist_button.dart';
 import '../../widgets/giant_score_badge.dart';
+import '../artist/artist_detail_screen.dart';
 import '../detail/music_detail_screen.dart';
 import 'instagram_story_modal.dart';
 import 'write_review_modal.dart';
@@ -203,11 +204,32 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                             style: AppTypography.displaySmall(fontSize: 14),
                           ),
                           const SizedBox(height: 1),
-                          Text(
-                            _review.artistName.toUpperCase(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.monoLabel(color: AppColors.textSecondary, fontSize: 10),
+                          InkWell(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ArtistDetailScreen(
+                                    artistIdOrName: _review.artistName,
+                                    initialArtistName: _review.artistName,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    _review.artistName.toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.monoLabel(color: AppColors.cyberCyan, fontSize: 10),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_forward, size: 10, color: AppColors.cyberCyan),
+                              ],
+                            ),
                           ),
                         ],
                       ),

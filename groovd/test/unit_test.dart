@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:groovd/data/models/artist.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/services/spotify_api_service.dart';
 import 'package:groovd/data/services/spotify_repository.dart';
+import 'package:groovd/data/services/wikipedia_api_service.dart';
 import 'package:groovd/data/repositories/local_review_repository.dart';
 import 'package:groovd/data/models/wishlist_item.dart';
 import 'package:groovd/state/dossier_top_picks_provider.dart';
@@ -1118,6 +1120,82 @@ void main() {
       expect(fetched.headline, 'Grew on me immensely');
       expect(fetched.body, 'A true classic upon revisiting.');
       expect(userReviewsAfter.where((r) => r.id == 'rev_inplace_edit').length, 1);
+    });
+  });
+
+  group('Artist Dossier & Catalog Tests', () {
+    test('Artist model serializes, deserializes and formats followers accurately', () {
+      const artist = Artist(
+        id: 'art_100',
+        name: 'PORTISHEAD',
+        imageUrl: 'https://example.com/portishead.jpg',
+        genres: ['TRIP HOP', 'DOWNTEMPO'],
+        followers: 2450000,
+        popularity: 76,
+        bio: 'Portishead are an English band formed in 1991 in Bristol.',
+        shortDescription: 'English band',
+        spotifyUrl: 'https://open.spotify.com/artist/6FXMGgJwohJLJhsqUDMPqd',
+      );
+
+      expect(artist.formattedFollowers, '2.5M FOLLOWERS');
+
+      final map = artist.toMap();
+      final revived = Artist.fromMap(map);
+      expect(revived.id, 'art_100');
+      expect(revived.name, 'PORTISHEAD');
+      expect(revived.followers, 2450000);
+      expect(revived.genres, ['TRIP HOP', 'DOWNTEMPO']);
+      expect(revived.bio, contains('Bristol'));
+    });
+
+    test('SpotifyRepository retrieves mock artist, top tracks, and discography', () async {
+      final repo = SpotifyRepository(apiService: SpotifyApiService());
+      final radiohead = await repo.getArtist('RADIOHEAD');
+      expect(radiohead, isNotNull);
+      expect(radiohead!.name, 'RADIOHEAD');
+      expect(radiohead.genres, contains('ART ROCK'));
+      expect(radiohead.bio, isNotNull);
+
+      final topTracks = await repo.getArtistTopTracks('RADIOHEAD');
+      expect(topTracks.isNotEmpty, isTrue);
+
+      final discography = await repo.getArtistDiscography('RADIOHEAD');
+      expect(discography.isNotEmpty, isTrue);
+      expect(discography.any((item) => item.name.contains('IN RAINBOWS')), isTrue);
+    });
+
+    test('SpotifyRepository returns null for empty artist query', () async {
+      final repo = SpotifyRepository(apiService: SpotifyApiService());
+      final empty = await repo.getArtist('   ');
+      expect(empty, isNull);
+    });
+
+    test('SpotifyRepository searchArtists finds matching artists and getFeaturedArtists returns list', () async {
+      final repo = SpotifyRepository(apiService: SpotifyApiService());
+      final emptyResults = await repo.searchArtists('   ');
+      expect(emptyResults, isEmpty);
+
+      final radioheadResults = await repo.searchArtists('Radiohead');
+      expect(radioheadResults.isNotEmpty, isTrue);
+      expect(radioheadResults.first.name, 'RADIOHEAD');
+
+      final featured = await repo.getFeaturedArtists();
+      expect(featured, isEmpty);
+    });
+
+    test('SpotifyRepository discography and top tracks fallback correctly for query without mock ID', () async {
+      final repo = SpotifyRepository(apiService: SpotifyApiService());
+      final tracks = await repo.getArtistTopTracks('Frank Ocean');
+      expect(tracks.isNotEmpty, isTrue);
+
+      final disco = await repo.getArtistDiscography('Frank Ocean');
+      expect(disco.isNotEmpty, isTrue);
+    });
+
+    test('WikipediaApiService handles empty input gracefully without network call', () async {
+      final wiki = WikipediaApiService();
+      final res = await wiki.getArtistSummary('   ');
+      expect(res, isNull);
     });
   });
 }
