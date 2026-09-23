@@ -87,10 +87,11 @@ class AppTypography {
   static TextStyle monoBadge({
     Color color = AppColors.pureBlack,
     double fontSize = 10,
+    FontWeight fontWeight = FontWeight.w700,
   }) =>
       GoogleFonts.spaceMono(
         fontSize: fontSize,
-        fontWeight: FontWeight.w700,
+        fontWeight: fontWeight,
         letterSpacing: 1.2,
         color: color,
       );

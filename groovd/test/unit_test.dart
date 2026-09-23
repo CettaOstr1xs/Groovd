@@ -12,6 +12,8 @@ import 'package:groovd/state/dossier_top_picks_provider.dart';
 import 'package:groovd/data/models/user_music_list.dart';
 import 'package:groovd/state/user_profile_provider.dart';
 import 'package:groovd/state/music_providers.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:groovd/data/services/auth_service.dart';
 import 'package:groovd/presentation/screens/review/critique_story_card.dart';
 import 'package:groovd/data/services/spotify_mock_data.dart';
 
@@ -1196,6 +1198,112 @@ void main() {
       final wiki = WikipediaApiService();
       final res = await wiki.getArtistSummary('   ');
       expect(res, isNull);
+    });
+  });
+
+  group('AuthService & Cloud Sync Unit Tests', () {
+    test('AuthService.getHumanReadableError translates FirebaseAuthException codes to brutalist messages', () {
+      expect(
+        AuthService.getHumanReadableError(FirebaseAuthException(code: 'user-not-found')),
+        'NO CRITIC DOSSIER FOUND FOR THIS EMAIL',
+      );
+      expect(
+        AuthService.getHumanReadableError(FirebaseAuthException(code: 'wrong-password')),
+        'INCORRECT PASSWORD PROVIDED',
+      );
+      expect(
+        AuthService.getHumanReadableError(FirebaseAuthException(code: 'email-already-in-use')),
+        'A DOSSIER WITH THIS EMAIL ALREADY EXISTS',
+      );
+      expect(
+        AuthService.getHumanReadableError(FirebaseAuthException(code: 'weak-password')),
+        'SECURITY COMPROMISED: PASSWORD MUST BE AT LEAST 6 CHARACTERS',
+      );
+      expect(
+        AuthService.getHumanReadableError(FirebaseAuthException(code: 'invalid-email')),
+        'MALFORMED EMAIL ADDRESS ENTERED',
+      );
+      expect(
+        AuthService.getHumanReadableError(FirebaseAuthException(code: 'network-request-failed')),
+        'NETWORK TIMEOUT: CHECK INTERNET CONNECTION',
+      );
+      expect(
+        AuthService.getHumanReadableError(FirebaseAuthException(code: 'too-many-requests')),
+        'RATE LIMITED: TOO MANY FAILED ATTEMPTS. TRY AGAIN LATER',
+      );
+      expect(
+        AuthService.getHumanReadableError(Exception('Generic server failure')),
+        contains('GENERIC SERVER FAILURE'),
+      );
+    });
+
+    test('UserProfile model supports guest and authenticated state transitions', () {
+      const guest = UserProfile();
+      expect(guest.userId, 'user_me');
+      expect(guest.userName, 'CRITIC // YOU');
+      expect(guest.userHandle, '@groovd_me');
+
+      final authed = guest.copyWith(
+        userId: 'firebase_uid_123',
+        userName: 'RADIO CRITIC',
+        userHandle: '@radio_head',
+      );
+      expect(authed.userId, 'firebase_uid_123');
+      expect(authed.userName, 'RADIO CRITIC');
+      expect(authed.userHandle, '@radio_head');
+
+      final map = authed.toMap();
+      expect(map['userId'], 'firebase_uid_123');
+      expect(map['userName'], 'RADIO CRITIC');
+      expect(map['userHandle'], '@radio_head');
+
+      final reconstituted = UserProfile.fromMap(map);
+      expect(reconstituted.userId, 'firebase_uid_123');
+      expect(reconstituted.userName, 'RADIO CRITIC');
+    });
+
+    test('LocalReviewRepository.migrateUserReviews transfers guest reviews and isolates guest state on logout', () async {
+      final repo = LocalReviewRepository();
+      final guestReview = Review(
+        id: 'rev_guest_migration_test',
+        musicItemId: 'item_test_1',
+        musicItemName: 'Test Album',
+        artistName: 'Test Artist',
+        coverUrl: 'https://example.com/cover.jpg',
+        itemType: 'album',
+        userId: 'user_me',
+        userName: 'CRITIC // GUEST',
+        userHandle: '@groovd_me',
+        rating: 9.5,
+        headline: 'Masterpiece',
+        body: 'Amazing release',
+        tags: const ['VINYL'],
+        createdAt: DateTime.now(),
+      );
+
+      await repo.addReview(guestReview);
+      final initialGuestReviews = await repo.getUserReviews('user_me');
+      expect(initialGuestReviews.any((r) => r.id == 'rev_guest_migration_test'), isTrue);
+
+      // User registers account and migrates dossier
+      await repo.migrateUserReviews(
+        fromUserId: 'user_me',
+        toUserId: 'uid_authed_user',
+        newName: 'AUTHENTICATED CRITIC',
+        newHandle: '@auth_critic',
+      );
+
+      // Authenticated user now owns the review
+      final authedReviews = await repo.getUserReviews('uid_authed_user');
+      expect(authedReviews.any((r) => r.id == 'rev_guest_migration_test'), isTrue);
+      final migratedReview = authedReviews.firstWhere((r) => r.id == 'rev_guest_migration_test');
+      expect(migratedReview.userId, 'uid_authed_user');
+      expect(migratedReview.userName, 'AUTHENTICATED CRITIC');
+      expect(migratedReview.userHandle, '@auth_critic');
+
+      // User logs out -> Guest mode sees 0 reviews for user_me
+      final postLogoutGuestReviews = await repo.getUserReviews('user_me');
+      expect(postLogoutGuestReviews.where((r) => r.id == 'rev_guest_migration_test').isEmpty, isTrue);
     });
   });
 }

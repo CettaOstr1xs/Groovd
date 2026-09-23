@@ -9,4 +9,10 @@ abstract class ReviewRepository {
   Future<double> getAverageScore(String musicItemId);
   Future<int> getReviewCount(String musicItemId);
   Future<void> updateAuthorMetadata(String userId, String newName, String newHandle);
+  Future<void> migrateUserReviews({
+    required String fromUserId,
+    required String toUserId,
+    required String newName,
+    required String newHandle,
+  });
 }

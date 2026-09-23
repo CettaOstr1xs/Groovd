@@ -8,6 +8,8 @@ import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/services/spotify_mock_data.dart';
+import 'package:groovd/presentation/screens/auth/login_screen.dart';
+import 'package:groovd/presentation/screens/auth/register_screen.dart';
 import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
 import 'package:groovd/presentation/screens/lists/user_lists_screen.dart';
 import 'package:groovd/presentation/screens/profile/adjust_avatar_screen.dart';
@@ -18,6 +20,7 @@ import 'package:groovd/presentation/screens/wishlist/wishlist_screen.dart';
 import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
+import 'package:groovd/state/auth_providers.dart';
 import 'package:groovd/state/dossier_top_picks_provider.dart';
 import 'package:groovd/state/music_providers.dart';
 import 'package:groovd/state/review_providers.dart';
@@ -174,6 +177,7 @@ class ProfileScreen extends ConsumerWidget {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final profile = ref.watch(userProfileProvider);
+            final isAuthenticated = ref.watch(isAuthenticatedProvider);
 
             return Container(
               padding: EdgeInsets.only(
@@ -275,16 +279,27 @@ class ProfileScreen extends ConsumerWidget {
                                 child: profile.avatarPath != null
                                     ? ClipRRect(
                                         borderRadius: BorderRadius.circular(1),
-                                        child: Image.file(
-                                          File(profile.avatarPath!),
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (c, e, s) => Center(
-                                            child: Text(
-                                              profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
-                                              style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
-                                            ),
-                                          ),
-                                        ),
+                                        child: (profile.avatarPath!.startsWith('http://') || profile.avatarPath!.startsWith('https://'))
+                                            ? Image.network(
+                                                profile.avatarPath!,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (c, e, s) => Center(
+                                                  child: Text(
+                                                    profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
+                                                    style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
+                                                  ),
+                                                ),
+                                              )
+                                            : Image.file(
+                                                File(profile.avatarPath!),
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (c, e, s) => Center(
+                                                  child: Text(
+                                                    profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
+                                                    style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
+                                                  ),
+                                                ),
+                                              ),
                                       )
                                     : Center(
                                         child: Text(
@@ -311,6 +326,29 @@ class ProfileScreen extends ConsumerWidget {
                                         fontSize: 10.5,
                                       ),
                                     ),
+                                    if (isAuthenticated) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 6,
+                                            height: 6,
+                                            decoration: const BoxDecoration(
+                                              color: AppColors.acidLime,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            'CLOUD SYNC ACTIVE',
+                                            style: AppTypography.monoBadge(
+                                              color: AppColors.acidLime,
+                                              fontSize: 9,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -643,6 +681,169 @@ class ProfileScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 16),
+
+                    // Cloud Dossier / Authentication Section
+                    Consumer(
+                      builder: (ctx, cRef, _) {
+                        final isAuth = cRef.watch(isAuthenticatedProvider);
+                        final email = cRef.watch(currentUserEmailProvider);
+
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceCard,
+                            border: Border.all(
+                              color: isAuth ? AppColors.acidLime : AppColors.border,
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        isAuth ? Icons.cloud_done : Icons.cloud_queue,
+                                        size: 18,
+                                        color: isAuth ? AppColors.acidLime : AppColors.textSecondary,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'CLOUD DOSSIER // SYNC',
+                                        style: AppTypography.monoLabel(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: isAuth
+                                          ? AppColors.acidLime.withValues(alpha: 0.15)
+                                          : AppColors.surfaceElevated,
+                                      border: Border.all(
+                                        color: isAuth ? AppColors.acidLime : AppColors.border,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      isAuth ? 'ACTIVE' : 'OFFLINE',
+                                      style: AppTypography.monoBadge(
+                                        color: isAuth ? AppColors.acidLime : AppColors.textSecondary,
+                                        fontSize: 9,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              if (isAuth) ...[
+                                Text(
+                                  'AUTHENTICATED CRITIC EMAIL:',
+                                  style: AppTypography.monoLabel(
+                                    color: AppColors.textMuted,
+                                    fontSize: 9.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  email ?? 'CRITIC DOSSIER SYNCED',
+                                  style: AppTypography.bodySmall(
+                                    color: AppColors.pureWhite,
+                                  ).copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Your reviews, ratings, lists, and wantlist are actively synchronized with Cloud Firestore.',
+                                  style: AppTypography.bodySmall(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                BrutalistButton(
+                                  label: 'LOG OUT // DISCONNECT SESSION',
+                                  icon: Icons.logout,
+                                  backgroundColor: AppColors.surfaceElevated,
+                                  textColor: AppColors.vermillion,
+                                  borderColor: AppColors.vermillion,
+                                  isSmall: true,
+                                  isFullWidth: true,
+                                  onPressed: () async {
+                                    final messenger = ScaffoldMessenger.of(context);
+                                    Navigator.of(context).pop();
+                                    await cRef.read(authServiceProvider).signOut();
+                                    await cRef.read(userProfileProvider.notifier).resetToGuest();
+                                    await cRef.read(wishlistProvider.notifier).resetToGuest();
+                                    await cRef.read(dossierTopPicksProvider.notifier).resetToGuest();
+                                    await cRef.read(userListsProvider.notifier).resetToGuest();
+                                    cRef.invalidate(userReviewsProvider);
+                                    cRef.read(reviewRefreshProvider.notifier).notifyChanged();
+                                    messenger.showSnackBar(
+                                      SnackBar(
+                                        backgroundColor: AppColors.pureBlack,
+                                        content: Text(
+                                          'SESSION TERMINATED // REVERTED TO LOCAL GUEST MODE',
+                                          style: AppTypography.monoBadge(color: AppColors.acidLime),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ] else ...[
+                                Text(
+                                  'You are currently exploring in guest/offline mode. Register or log in to sync your reviews, ratings, wantlist, and curated lists across devices.',
+                                  style: AppTypography.bodySmall(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: BrutalistButton(
+                                        label: 'LOG IN',
+                                        icon: Icons.login,
+                                        backgroundColor: AppColors.acidLime,
+                                        textColor: AppColors.pureBlack,
+                                        borderColor: AppColors.pureBlack,
+                                        isSmall: true,
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                          Navigator.of(context).push(LoginScreen.route());
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: BrutalistButton(
+                                        label: 'REGISTER',
+                                        icon: Icons.person_add_alt_1,
+                                        backgroundColor: AppColors.surfaceElevated,
+                                        textColor: AppColors.pureWhite,
+                                        borderColor: AppColors.pureWhite,
+                                        isSmall: true,
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                          Navigator.of(context).push(RegisterScreen.route());
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                     const SizedBox(height: 12),
                   ],
                 ),
@@ -755,8 +956,6 @@ class ProfileScreen extends ConsumerWidget {
                         name: newName,
                         handle: newHandle,
                       );
-                  ref.read(currentUserNameProvider.notifier).set(newName);
-                  ref.read(currentUserHandleProvider.notifier).set(newHandle);
 
                   final userId = ref.read(userProfileProvider).userId;
                   await ref.read(reviewControllerProvider).updateUserIdentity(userId, newName, newHandle);
@@ -1140,7 +1339,9 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userProfileProvider);
-    final userId = profile.userId;
+    final isAuthenticated = ref.watch(isAuthenticatedProvider);
+    final currentUserEmail = ref.watch(currentUserEmailProvider);
+    final userId = ref.watch(currentUserIdProvider);
     final userName = profile.userName;
     final userHandle = profile.userHandle;
     final userReviewsAsync = ref.watch(userReviewsProvider(userId));
@@ -1170,6 +1371,20 @@ class ProfileScreen extends ConsumerWidget {
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const WishlistScreen()),
             ),
+          ),
+          IconButton(
+            icon: Icon(
+              isAuthenticated ? Icons.cloud_done : Icons.cloud_queue_outlined,
+              color: isAuthenticated ? AppColors.acidLime : AppColors.textPrimary,
+            ),
+            tooltip: isAuthenticated ? 'Cloud Sync Active ($currentUserEmail)' : 'Log in / Cloud Sync',
+            onPressed: () {
+              if (isAuthenticated) {
+                _showSettingsModal(context, ref);
+              } else {
+                Navigator.of(context).push(LoginScreen.route());
+              }
+            },
           ),
           IconButton(
             icon: const Icon(Icons.settings, color: AppColors.textPrimary),
@@ -1262,21 +1477,37 @@ class ProfileScreen extends ConsumerWidget {
                               child: profile.avatarPath != null
                                   ? ClipRRect(
                                       borderRadius: BorderRadius.circular(1),
-                                      child: Image.file(
-                                        File(profile.avatarPath!),
-                                        width: 64,
-                                        height: 64,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (ctx, err, stack) => Center(
-                                          child: Text(
-                                            'YOU',
-                                            style: AppTypography.monoBadge(
-                                              color: AppColors.pureBlack,
-                                              fontSize: 14,
+                                      child: (profile.avatarPath!.startsWith('http://') || profile.avatarPath!.startsWith('https://'))
+                                          ? Image.network(
+                                              profile.avatarPath!,
+                                              width: 64,
+                                              height: 64,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (ctx, err, stack) => Center(
+                                                child: Text(
+                                                  'YOU',
+                                                  style: AppTypography.monoBadge(
+                                                    color: AppColors.pureBlack,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                          : Image.file(
+                                              File(profile.avatarPath!),
+                                              width: 64,
+                                              height: 64,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (ctx, err, stack) => Center(
+                                                child: Text(
+                                                  'YOU',
+                                                  style: AppTypography.monoBadge(
+                                                    color: AppColors.pureBlack,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      ),
                                     )
                                   : Center(
                                       child: Text(
@@ -1395,6 +1626,90 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ),
+
+            // Cloud Sync Prompt Banner (If in Guest Mode)
+            if (!isAuthenticated)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceElevated,
+                    border: Border.all(color: AppColors.acidLime, width: 1.5),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: AppColors.acidLime,
+                        offset: Offset(3, 3),
+                        blurRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.acidLime,
+                              border: Border.all(color: AppColors.pureBlack, width: 1),
+                            ),
+                            child: Text(
+                              'CLOUD BACKUP // GUEST MODE',
+                              style: AppTypography.monoBadge(
+                                color: AppColors.pureBlack,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          const Icon(Icons.cloud_off_outlined, color: AppColors.acidLime, size: 18),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'BACK UP & SYNC YOUR CRITIC DOSSIER',
+                        style: AppTypography.displaySmall(fontSize: 13, color: AppColors.pureWhite),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Retain your reviews, ratings, vinyl wantlist, and curated lists across devices with Cloud Firestore.',
+                        style: AppTypography.bodySmall(color: AppColors.textSecondary, fontSize: 11),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: BrutalistButton(
+                              label: 'LOG IN',
+                              icon: Icons.login,
+                              backgroundColor: AppColors.acidLime,
+                              textColor: AppColors.pureBlack,
+                              borderColor: AppColors.pureBlack,
+                              isSmall: true,
+                              onPressed: () => Navigator.of(context).push(LoginScreen.route()),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: BrutalistButton(
+                              label: 'REGISTER',
+                              icon: Icons.person_add_alt_1,
+                              backgroundColor: AppColors.surfaceElevated,
+                              textColor: AppColors.pureWhite,
+                              borderColor: AppColors.pureWhite,
+                              isSmall: true,
+                              onPressed: () => Navigator.of(context).push(RegisterScreen.route()),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
 
             // Statistics Grid
             userReviewsAsync.when(

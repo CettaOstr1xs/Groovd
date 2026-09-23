@@ -50,7 +50,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
 
   void _shareReview() {
     final profile = ref.read(userProfileProvider);
-    final isCurrentUser = _review.userId == profile.userId || _review.userId == 'user_me';
+    final isCurrentUser = _review.userId == profile.userId;
     final reviewToShare = isCurrentUser
         ? _review.copyWith(userName: profile.userName, userHandle: profile.userHandle)
         : _review;
@@ -115,7 +115,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('MMMM d, yyyy').format(_review.createdAt);
     final profile = ref.watch(userProfileProvider);
-    final isCurrentUser = _review.userId == profile.userId || _review.userId == 'user_me';
+    final isCurrentUser = _review.userId == profile.userId;
     final authorName = isCurrentUser ? profile.userName : _review.userName;
     final authorHandle = isCurrentUser ? profile.userHandle : _review.userHandle;
     final hasCustomAvatar = isCurrentUser && profile.avatarPath != null;

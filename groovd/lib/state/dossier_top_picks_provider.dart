@@ -4,6 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/music_item.dart';
+import 'auth_providers.dart';
+import 'user_profile_provider.dart';
 
 class DossierTopPicks {
   final List<MusicItem?> topAlbums; // length 3
@@ -28,6 +30,12 @@ class DossierTopPicks {
 class DossierTopPicksNotifier extends Notifier<DossierTopPicks> {
   static const String _albumKey = 'groovd_dossier_top_albums_v1';
   static const String _songKey = 'groovd_dossier_top_songs_v1';
+
+  String get _currentUserId {
+    final authUser = ref.read(authStateProvider).asData?.value;
+    if (authUser != null) return authUser.uid;
+    return ref.read(userProfileProvider).userId;
+  }
 
   @override
   DossierTopPicks build() {
@@ -66,12 +74,13 @@ class DossierTopPicksNotifier extends Notifier<DossierTopPicks> {
     _syncFromFirestore();
   }
 
-  Future<void> _syncFromFirestore() async {
+  Future<void> _syncFromFirestore([String? targetUserId]) async {
+    final uid = targetUserId ?? _currentUserId;
     try {
       if (Firebase.apps.isEmpty) return;
       final docRef = FirebaseFirestore.instance
           .collection('users')
-          .doc('user_me')
+          .doc(uid)
           .collection('dossier')
           .doc('top_picks');
 
@@ -174,7 +183,7 @@ class DossierTopPicksNotifier extends Notifier<DossierTopPicks> {
       if (Firebase.apps.isEmpty) return;
       await FirebaseFirestore.instance
           .collection('users')
-          .doc('user_me')
+          .doc(_currentUserId)
           .collection('dossier')
           .doc('top_picks')
           .set({
@@ -183,6 +192,19 @@ class DossierTopPicksNotifier extends Notifier<DossierTopPicks> {
             'updatedAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true))
           .timeout(const Duration(milliseconds: 2500));
+    } catch (_) {}
+  }
+
+  Future<void> syncForUser(String userId) async {
+    await _syncFromFirestore(userId);
+  }
+
+  Future<void> resetToGuest() async {
+    state = const DossierTopPicks();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_albumKey);
+      await prefs.remove(_songKey);
     } catch (_) {}
   }
 

@@ -17,6 +17,8 @@ import 'package:groovd/data/models/artist.dart';
 import 'package:groovd/presentation/screens/artist/artist_detail_screen.dart';
 import 'package:groovd/presentation/screens/profile/all_rated_releases_screen.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
+import 'package:groovd/presentation/screens/auth/login_screen.dart';
+import 'package:groovd/presentation/screens/auth/register_screen.dart';
 import 'package:groovd/presentation/screens/search/search_screen.dart';
 import 'package:groovd/state/artist_providers.dart';
 import 'package:groovd/state/review_providers.dart';
@@ -808,6 +810,116 @@ void main() {
     expect(find.text('UNKNOWN BAND'), findsOneWidget);
     // Should NOT find '0 FOLLOWERS'
     expect(find.text('0 FOLLOWERS'), findsNothing);
+  });
+
+  testWidgets('LoginScreen renders properly with email and google options and validates inputs', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: LoginScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('CRITIC PORTAL // AUTHENTICATION'), findsOneWidget);
+    expect(find.text('LOG IN TO GROOVD'), findsOneWidget);
+    expect(find.text('CRITIC EMAIL'), findsOneWidget);
+    expect(find.text('PASSWORD'), findsOneWidget);
+    expect(find.text('LOG IN // AUTHENTICATE'), findsOneWidget);
+    expect(find.text('CONTINUE WITH GOOGLE'), findsOneWidget);
+    expect(find.text('CONTINUE AS GUEST // OFFLINE MODE'), findsOneWidget);
+
+    // Tap Log In with empty fields to trigger validation
+    await tester.tap(find.text('LOG IN // AUTHENTICATE'));
+    await tester.pump();
+
+    expect(find.text('ENTER YOUR EMAIL ADDRESS'), findsOneWidget);
+    expect(find.text('ENTER YOUR PASSWORD'), findsOneWidget);
+
+    // Tap Forgot Password
+    await tester.tap(find.text('FORGOT PASSWORD?'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('RESET PASSWORD'), findsOneWidget);
+    expect(find.text('SEND RESET LINK'), findsOneWidget);
+  });
+
+  testWidgets('RegisterScreen renders properly with fields and validates inputs', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: RegisterScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('CRITIC ENROLLMENT'), findsOneWidget);
+    expect(find.text('CREATE YOUR\nCRITIC DOSSIER'), findsOneWidget);
+    expect(find.text('CRITIC DISPLAY NAME'), findsOneWidget);
+    expect(find.text('CRITIC HANDLE (OPTIONAL)'), findsOneWidget);
+    expect(find.text('EMAIL ADDRESS'), findsOneWidget);
+    expect(find.text('PASSWORD (MIN 6 CHARS)'), findsOneWidget);
+    expect(find.text('CONFIRM PASSWORD'), findsOneWidget);
+    expect(find.text('REGISTER // ENROLL DOSSIER'), findsOneWidget);
+    expect(find.text('CONTINUE WITH GOOGLE'), findsOneWidget);
+
+    // Submit empty to trigger validation
+    await tester.tap(find.text('REGISTER // ENROLL DOSSIER'));
+    await tester.pump();
+
+    expect(find.text('ENTER YOUR CRITIC DISPLAY NAME'), findsOneWidget);
+    expect(find.text('ENTER YOUR EMAIL ADDRESS'), findsOneWidget);
+    expect(find.text('ENTER A PASSWORD'), findsOneWidget);
+  });
+
+  testWidgets('ProfileScreen renders guest mode Cloud Backup card and opens settings with Cloud Dossier', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: ProfileScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // In guest mode, cloud backup prompt card is rendered
+    expect(find.text('CLOUD BACKUP // GUEST MODE'), findsOneWidget);
+    expect(find.text('BACK UP & SYNC YOUR CRITIC DOSSIER'), findsOneWidget);
+
+    // Open settings modal
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Drag settings modal up to reveal Cloud Dossier section if needed
+    await tester.drag(find.text('SETTINGS'), const Offset(0, -300));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // Verify Cloud Dossier sync section
+    expect(find.text('CLOUD DOSSIER // SYNC'), findsOneWidget);
+    expect(find.text('OFFLINE'), findsOneWidget);
   });
 }
 

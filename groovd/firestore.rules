@@ -9,13 +9,20 @@ service cloud.firestore {
       allow delete: if true;
     }
 
-    // User subcollections (e.g. wishlist, dossier pins, profile preferences)
-    match /users/{userId}/{document=**} {
+    // User profile documents and subcollections (wishlist, custom lists, dossier pins)
+    match /users/{userId} {
+      allow read, write: if true;
+      match /{document=**} {
+        allow read, write: if true;
+      }
+    }
+
+    // Top-level wishlists & user lists
+    match /wishlists/{wishlistId} {
       allow read, write: if true;
     }
 
-    // Top-level wishlists
-    match /wishlists/{wishlistId} {
+    match /user_lists/{listId} {
       allow read, write: if true;
     }
   }

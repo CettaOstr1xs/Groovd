@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'auth_providers.dart';
 
 class UserProfile {
   final String userId;
@@ -79,6 +81,14 @@ class UserProfileNotifier extends Notifier<UserProfile> {
   @override
   UserProfile build() {
     _loadFromPrefs();
+
+    ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
+      final user = next.asData?.value;
+      if (user != null) {
+        syncWithFirebaseUser(user);
+      }
+    });
+
     return const UserProfile();
   }
 
@@ -93,17 +103,25 @@ class UserProfileNotifier extends Notifier<UserProfile> {
 
       String? validAvatarPath;
       if (savedAvatar != null && savedAvatar.isNotEmpty) {
-        final file = File(savedAvatar);
-        if (await file.exists()) {
+        if (savedAvatar.startsWith('http://') || savedAvatar.startsWith('https://')) {
           validAvatarPath = savedAvatar;
+        } else {
+          final file = File(savedAvatar);
+          if (await file.exists()) {
+            validAvatarPath = savedAvatar;
+          }
         }
       }
 
       String? validBackdropPath;
       if (savedBackdrop != null && savedBackdrop.isNotEmpty) {
-        final file = File(savedBackdrop);
-        if (await file.exists()) {
+        if (savedBackdrop.startsWith('http://') || savedBackdrop.startsWith('https://')) {
           validBackdropPath = savedBackdrop;
+        } else {
+          final file = File(savedBackdrop);
+          if (await file.exists()) {
+            validBackdropPath = savedBackdrop;
+          }
         }
       }
 
@@ -289,6 +307,45 @@ class UserProfileNotifier extends Notifier<UserProfile> {
       userHandle: cleanHandle,
     );
     await _persist();
+  }
+
+  /// Syncs user profile state with authenticated Firebase User & Firestore.
+  Future<void> syncWithFirebaseUser(User user) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        state = UserProfile(
+          userId: user.uid,
+          userName: data['userName'] as String? ?? (user.displayName ?? 'CRITIC').toUpperCase(),
+          userHandle: data['userHandle'] as String? ?? '@${(user.displayName ?? 'critic').toLowerCase().replaceAll(RegExp(r'\s+'), '_')}',
+          bio: data['bio'] as String? ?? state.bio,
+          avatarPath: data['avatarPath'] as String? ?? user.photoURL,
+          backdropPath: data['backdropPath'] as String?,
+        );
+      } else {
+        state = state.copyWith(
+          userId: user.uid,
+          userName: (user.displayName ?? state.userName).toUpperCase(),
+        );
+      }
+      await _persist();
+    } catch (_) {
+      state = state.copyWith(userId: user.uid);
+    }
+  }
+
+  /// Resets user profile to local guest mode upon signing out.
+  Future<void> resetToGuest() async {
+    state = const UserProfile(userId: 'user_me');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_avatarKey);
+      await prefs.remove(_backdropKey);
+      await prefs.setString(_nameKey, state.userName);
+      await prefs.setString(_handleKey, state.userHandle);
+      await prefs.setString(_bioKey, state.bio);
+    } catch (_) {}
   }
 }
 

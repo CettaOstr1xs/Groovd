@@ -5,10 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/music_item.dart';
 import '../data/models/user_music_list.dart';
+import 'auth_providers.dart';
+import 'user_profile_provider.dart';
 
 class UserListsNotifier extends Notifier<List<UserMusicList>> {
   static const String _storageKey = 'groovd_user_lists_v1';
-  static const String _userId = 'user_me';
+
+  String get _currentUserId {
+    final authUser = ref.read(authStateProvider).asData?.value;
+    if (authUser != null) return authUser.uid;
+    return ref.read(userProfileProvider).userId;
+  }
 
   @override
   List<UserMusicList> build() {
@@ -36,13 +43,14 @@ class UserListsNotifier extends Notifier<List<UserMusicList>> {
     _syncFromFirestore();
   }
 
-  Future<void> _syncFromFirestore() async {
+  Future<void> _syncFromFirestore([String? targetUserId]) async {
+    final uid = targetUserId ?? _currentUserId;
     try {
       if (Firebase.apps.isEmpty) return;
       final firestore = FirebaseFirestore.instance;
       final snapshot = await firestore
           .collection('users')
-          .doc(_userId)
+          .doc(uid)
           .collection('lists')
           .get()
           .timeout(const Duration(milliseconds: 3000));
@@ -71,13 +79,25 @@ class UserListsNotifier extends Notifier<List<UserMusicList>> {
         if (!cloudLists.any((c) => c.id == l.id)) {
           await firestore
               .collection('users')
-              .doc(_userId)
+              .doc(uid)
               .collection('lists')
               .doc(l.id)
               .set(l.toMap(), SetOptions(merge: true))
               .timeout(const Duration(milliseconds: 2000));
         }
       }
+    } catch (_) {}
+  }
+
+  Future<void> syncForUser(String userId) async {
+    await _syncFromFirestore(userId);
+  }
+
+  Future<void> resetToGuest() async {
+    state = const [];
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_storageKey);
     } catch (_) {}
   }
 
@@ -94,7 +114,7 @@ class UserListsNotifier extends Notifier<List<UserMusicList>> {
       if (Firebase.apps.isNotEmpty) {
         await FirebaseFirestore.instance
             .collection('users')
-            .doc(_userId)
+            .doc(_currentUserId)
             .collection('lists')
             .doc(list.id)
             .set(list.toMap())
@@ -108,7 +128,7 @@ class UserListsNotifier extends Notifier<List<UserMusicList>> {
       if (Firebase.apps.isNotEmpty) {
         await FirebaseFirestore.instance
             .collection('users')
-            .doc(_userId)
+            .doc(_currentUserId)
             .collection('lists')
             .doc(listId)
             .delete()

@@ -32,7 +32,7 @@ class ReviewCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userProfileProvider);
-    final isCurrentUser = review.userId == profile.userId || review.userId == 'user_me';
+    final isCurrentUser = review.userId == profile.userId;
     final authorName = isCurrentUser ? profile.userName : review.userName;
     final authorHandle = isCurrentUser ? profile.userHandle : review.userHandle;
     final hasCustomAvatar = isCurrentUser && profile.avatarPath != null;

@@ -188,7 +188,7 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal> {
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(userProfileProvider);
-    final isCurrentUser = widget.review.userId == profile.userId || widget.review.userId == 'user_me';
+    final isCurrentUser = widget.review.userId == profile.userId;
     final customAvatarPath = isCurrentUser ? profile.avatarPath : null;
 
     return Container(

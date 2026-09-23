@@ -12,6 +12,7 @@ class AppColors {
 
   // Pure Neutrals
   static const Color white = Color(0xFFF7F7F8);
+  static const Color pureWhite = Color(0xFFFFFFFF);
   static const Color cream = Color(0xFFF4F0E8);
   static const Color pureBlack = Color(0xFF000000);
 

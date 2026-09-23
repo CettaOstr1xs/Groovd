@@ -6,9 +6,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/music_item.dart';
 import '../data/models/review.dart';
 import '../data/models/wishlist_item.dart';
+import 'auth_providers.dart';
+import 'user_profile_provider.dart';
 
 class WishlistNotifier extends Notifier<List<WishlistItem>> {
   static const String _storageKey = 'groovd_wishlist_items_v1';
+
+  String get _currentUserId {
+    final authUser = ref.read(authStateProvider).asData?.value;
+    if (authUser != null) return authUser.uid;
+    return ref.read(userProfileProvider).userId;
+  }
 
   @override
   List<WishlistItem> build() {
@@ -36,13 +44,14 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
     _syncFromFirestore();
   }
 
-  Future<void> _syncFromFirestore() async {
+  Future<void> _syncFromFirestore([String? targetUserId]) async {
+    final uid = targetUserId ?? _currentUserId;
     try {
       if (Firebase.apps.isEmpty) return;
       final firestore = FirebaseFirestore.instance;
       final snapshot = await firestore
           .collection('users')
-          .doc('user_me')
+          .doc(uid)
           .collection('wishlist')
           .get()
           .timeout(const Duration(milliseconds: 3000));
@@ -70,13 +79,25 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
         if (!cloudItems.any((c) => c.musicItem.id == item.musicItem.id)) {
           await firestore
               .collection('users')
-              .doc('user_me')
+              .doc(uid)
               .collection('wishlist')
               .doc(item.musicItem.id)
               .set(item.toMap())
               .timeout(const Duration(milliseconds: 2000));
         }
       }
+    } catch (_) {}
+  }
+
+  Future<void> syncForUser(String userId) async {
+    await _syncFromFirestore(userId);
+  }
+
+  Future<void> resetToGuest() async {
+    state = const [];
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_storageKey);
     } catch (_) {}
   }
 
@@ -117,7 +138,7 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
       if (Firebase.apps.isNotEmpty) {
         await FirebaseFirestore.instance
             .collection('users')
-            .doc('user_me')
+            .doc(_currentUserId)
             .collection('wishlist')
             .doc(item.id)
             .set(newItem.toMap())
@@ -136,7 +157,7 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
       if (Firebase.apps.isNotEmpty) {
         await FirebaseFirestore.instance
             .collection('users')
-            .doc('user_me')
+            .doc(_currentUserId)
             .collection('wishlist')
             .doc(musicItemId)
             .delete()
@@ -172,7 +193,7 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
           for (final id in removedIds) {
             await FirebaseFirestore.instance
                 .collection('users')
-                .doc('user_me')
+                .doc(_currentUserId)
                 .collection('wishlist')
                 .doc(id)
                 .delete()
@@ -213,7 +234,7 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
           for (final id in removedIds) {
             await FirebaseFirestore.instance
                 .collection('users')
-                .doc('user_me')
+                .doc(_currentUserId)
                 .collection('wishlist')
                 .doc(id)
                 .delete()
@@ -234,7 +255,7 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
         for (final id in oldIds) {
           await FirebaseFirestore.instance
               .collection('users')
-              .doc('user_me')
+              .doc(_currentUserId)
               .collection('wishlist')
               .doc(id)
               .delete()

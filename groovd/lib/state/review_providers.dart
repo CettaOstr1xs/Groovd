@@ -4,6 +4,8 @@ import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/repositories/review_repository.dart';
 import 'package:groovd/data/repositories/local_review_repository.dart';
 import 'package:groovd/data/repositories/firestore_review_repository.dart';
+import 'auth_providers.dart';
+import 'user_profile_provider.dart';
 import 'wishlist_provider.dart';
 
 /// Active Review Repository Provider (auto-switches to Firestore when Firebase is initialized)
@@ -16,27 +18,29 @@ final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
   return LocalReviewRepository();
 });
 
-/// Current User Info Notifiers
-class CurrentUserIdNotifier extends Notifier<String> {
-  @override
-  String build() => 'user_me';
-  void set(String id) => state = id;
-}
-final currentUserIdProvider = NotifierProvider<CurrentUserIdNotifier, String>(CurrentUserIdNotifier.new);
+/// Current User Info Computed Providers
+final currentUserIdProvider = Provider<String>((ref) {
+  final authUser = ref.watch(authStateProvider).asData?.value;
+  if (authUser != null) return authUser.uid;
+  return ref.watch(userProfileProvider).userId;
+});
 
-class CurrentUserNameNotifier extends Notifier<String> {
-  @override
-  String build() => 'CRITIC // YOU';
-  void set(String name) => state = name;
-}
-final currentUserNameProvider = NotifierProvider<CurrentUserNameNotifier, String>(CurrentUserNameNotifier.new);
+final currentUserNameProvider = Provider<String>((ref) {
+  final profile = ref.watch(userProfileProvider);
+  if (profile.userName.isNotEmpty && profile.userName != 'CRITIC // YOU') {
+    return profile.userName;
+  }
+  final authUser = ref.watch(authStateProvider).asData?.value;
+  if (authUser?.displayName != null && authUser!.displayName!.isNotEmpty) {
+    return authUser.displayName!.toUpperCase();
+  }
+  return profile.userName;
+});
 
-class CurrentUserHandleNotifier extends Notifier<String> {
-  @override
-  String build() => '@groovd_me';
-  void set(String handle) => state = handle;
-}
-final currentUserHandleProvider = NotifierProvider<CurrentUserHandleNotifier, String>(CurrentUserHandleNotifier.new);
+final currentUserHandleProvider = Provider<String>((ref) {
+  final profile = ref.watch(userProfileProvider);
+  return profile.userHandle;
+});
 
 /// State notifier to trigger refreshes when reviews are added/liked
 class ReviewRefreshNotifier extends Notifier<int> {
@@ -107,6 +111,22 @@ class ReviewController {
   Future<void> updateUserIdentity(String userId, String newName, String newHandle) async {
     final repo = ref.read(reviewRepositoryProvider);
     await repo.updateAuthorMetadata(userId, newName, newHandle);
+    ref.read(reviewRefreshProvider.notifier).notifyChanged();
+  }
+
+  Future<void> migrateUserReviews({
+    required String fromUserId,
+    required String toUserId,
+    required String newName,
+    required String newHandle,
+  }) async {
+    final repo = ref.read(reviewRepositoryProvider);
+    await repo.migrateUserReviews(
+      fromUserId: fromUserId,
+      toUserId: toUserId,
+      newName: newName,
+      newHandle: newHandle,
+    );
     ref.read(reviewRefreshProvider.notifier).notifyChanged();
   }
 }

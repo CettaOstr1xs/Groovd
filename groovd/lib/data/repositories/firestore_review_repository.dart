@@ -171,4 +171,33 @@ class FirestoreReviewRepository implements ReviewRepository {
       }
     } catch (_) {}
   }
+
+  @override
+  Future<void> migrateUserReviews({
+    required String fromUserId,
+    required String toUserId,
+    required String newName,
+    required String newHandle,
+  }) async {
+    await _local.migrateUserReviews(
+      fromUserId: fromUserId,
+      toUserId: toUserId,
+      newName: newName,
+      newHandle: newHandle,
+    );
+    try {
+      final snapshot = await _firestore
+          .collection(collectionPath)
+          .where('userId', isEqualTo: fromUserId)
+          .get()
+          .timeout(const Duration(milliseconds: 3000));
+      for (final doc in snapshot.docs) {
+        await doc.reference.update({
+          'userId': toUserId,
+          'userName': newName,
+          'userHandle': newHandle,
+        }).timeout(const Duration(milliseconds: 1500));
+      }
+    } catch (_) {}
+  }
 }

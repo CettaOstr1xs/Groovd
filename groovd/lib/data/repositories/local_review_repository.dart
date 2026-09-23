@@ -122,4 +122,28 @@ class LocalReviewRepository implements ReviewRepository {
       await _persist();
     }
   }
+
+  @override
+  Future<void> migrateUserReviews({
+    required String fromUserId,
+    required String toUserId,
+    required String newName,
+    required String newHandle,
+  }) async {
+    await _ensureInitialized();
+    bool changed = false;
+    for (int i = 0; i < _inMemoryReviews.length; i++) {
+      if (_inMemoryReviews[i].userId == fromUserId) {
+        _inMemoryReviews[i] = _inMemoryReviews[i].copyWith(
+          userId: toUserId,
+          userName: newName,
+          userHandle: newHandle,
+        );
+        changed = true;
+      }
+    }
+    if (changed) {
+      await _persist();
+    }
+  }
 }

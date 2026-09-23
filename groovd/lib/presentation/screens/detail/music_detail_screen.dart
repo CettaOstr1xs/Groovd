@@ -230,7 +230,7 @@ class MusicDetailScreen extends ConsumerWidget {
     final reviewsAsync = ref.watch(itemReviewsProvider(item.id));
     final currentUserId = ref.watch(currentUserIdProvider);
     final existingUserReview = reviewsAsync.asData?.value
-        .where((r) => r.userId == currentUserId || r.userId == 'user_me')
+        .where((r) => r.userId == currentUserId)
         .firstOrNull;
     final avgScoreAsync = ref.watch(itemAverageScoreProvider(item.id));
     final reviewCountAsync = ref.watch(itemReviewCountProvider(item.id));
