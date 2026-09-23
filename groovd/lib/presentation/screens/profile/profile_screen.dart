@@ -8,6 +8,7 @@ import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/services/spotify_mock_data.dart';
+import 'package:groovd/presentation/screens/auth/landing_screen.dart';
 import 'package:groovd/presentation/screens/auth/login_screen.dart';
 import 'package:groovd/presentation/screens/auth/register_screen.dart';
 import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
@@ -23,6 +24,7 @@ import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/state/auth_providers.dart';
 import 'package:groovd/state/dossier_top_picks_provider.dart';
 import 'package:groovd/state/music_providers.dart';
+import 'package:groovd/state/onboarding_provider.dart';
 import 'package:groovd/state/review_providers.dart';
 import 'package:groovd/state/user_lists_provider.dart';
 import 'package:groovd/state/user_profile_provider.dart';
@@ -776,6 +778,7 @@ class ProfileScreen extends ConsumerWidget {
                                   isSmall: true,
                                   isFullWidth: true,
                                   onPressed: () async {
+                                    final navigator = Navigator.of(context);
                                     final messenger = ScaffoldMessenger.of(context);
                                     final authService = ref.read(authServiceProvider);
                                     final profileNotifier = ref.read(userProfileProvider.notifier);
@@ -783,8 +786,9 @@ class ProfileScreen extends ConsumerWidget {
                                     final topPicksNotifier = ref.read(dossierTopPicksProvider.notifier);
                                     final userListsNotifier = ref.read(userListsProvider.notifier);
                                     final reviewRefreshNotifier = ref.read(reviewRefreshProvider.notifier);
+                                    final onboardingNotifier = ref.read(onboardingProvider.notifier);
 
-                                    Navigator.of(context).pop();
+                                    navigator.pop();
 
                                     try {
                                       await authService.signOut();
@@ -806,8 +810,17 @@ class ProfileScreen extends ConsumerWidget {
                                       await userListsNotifier.resetToGuest();
                                     } catch (_) {}
 
+                                    try {
+                                      await onboardingNotifier.resetOnboarding();
+                                    } catch (_) {}
+
                                     ref.invalidate(userReviewsProvider);
                                     reviewRefreshNotifier.notifyChanged();
+
+                                    navigator.pushAndRemoveUntil(
+                                      MaterialPageRoute(builder: (_) => const LandingScreen()),
+                                      (route) => false,
+                                    );
 
                                     messenger.showSnackBar(
                                       SnackBar(

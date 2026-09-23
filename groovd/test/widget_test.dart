@@ -17,14 +17,31 @@ import 'package:groovd/data/models/artist.dart';
 import 'package:groovd/presentation/screens/artist/artist_detail_screen.dart';
 import 'package:groovd/presentation/screens/profile/all_rated_releases_screen.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
+import 'package:groovd/presentation/screens/auth/landing_screen.dart';
 import 'package:groovd/presentation/screens/auth/login_screen.dart';
 import 'package:groovd/presentation/screens/auth/register_screen.dart';
 import 'package:groovd/presentation/screens/search/search_screen.dart';
 import 'package:groovd/state/artist_providers.dart';
+import 'package:groovd/state/onboarding_provider.dart';
 import 'package:groovd/state/review_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class _CompletedOnboardingNotifier extends OnboardingNotifier {
+  @override
+  bool build() => true;
+}
 
 void main() {
-  testWidgets('Groovd app renders main navigation and home screen', (WidgetTester tester) async {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  testWidgets('Groovd app renders landing screen for first-time guests and allows guest entry into main navigation', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       const ProviderScope(
         child: GroovdApp(),
@@ -35,11 +52,90 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Verify main brand name and tabs render
+    // Verify Landing Screen elements
+    expect(find.text('THE MUSIC CRITIC’S NOTEBOOK'), findsOneWidget);
+    expect(find.text('CREATE CRITIC DOSSIER'), findsOneWidget);
+    expect(find.text('HAVE AN ACCOUNT? SIGN IN'), findsOneWidget);
+    expect(find.text('CONTINUE WITH GOOGLE'), findsOneWidget);
+    expect(find.text('EXPLORE AS GUEST →'), findsOneWidget);
+
+    // Tap 'EXPLORE AS GUEST →'
+    await tester.tap(find.text('EXPLORE AS GUEST →'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+
+    // Verify main brand name and tabs render after bypassing onboarding
+    expect(find.text('DISPATCH'), findsOneWidget);
+    expect(find.text('SEARCH'), findsOneWidget);
+    expect(find.text('DOSSIER'), findsOneWidget);
+  });
+
+  testWidgets('Groovd app directly renders main navigation when guest has already completed onboarding', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          onboardingProvider.overrideWith(_CompletedOnboardingNotifier.new),
+        ],
+        child: const GroovdApp(),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+
     expect(find.text('GROOVD'), findsOneWidget);
     expect(find.text('DISPATCH'), findsOneWidget);
     expect(find.text('SEARCH'), findsOneWidget);
     expect(find.text('DOSSIER'), findsOneWidget);
+  });
+
+  testWidgets('LandingScreen renders all interactive auth buttons and opens register/login screens', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: LandingScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('THE MUSIC CRITIC’S NOTEBOOK'), findsOneWidget);
+    expect(find.text('CREATE CRITIC DOSSIER'), findsOneWidget);
+    expect(find.text('CONTINUE WITH GOOGLE'), findsOneWidget);
+    expect(find.text('HAVE AN ACCOUNT? SIGN IN'), findsOneWidget);
+
+    // Tap CREATE CRITIC DOSSIER
+    await tester.tap(find.text('CREATE CRITIC DOSSIER'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('CREATE YOUR\nCRITIC DOSSIER'), findsOneWidget);
+
+    // Close Register Screen
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Tap SIGN IN
+    await tester.tap(find.text('HAVE AN ACCOUNT? SIGN IN'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('LOG IN TO GROOVD'), findsOneWidget);
   });
 
   testWidgets('LoggedReviewsScreen renders with smooth entrance animation', (WidgetTester tester) async {
@@ -580,6 +676,7 @@ void main() {
 
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump(const Duration(milliseconds: 400));
 
     // Verify the bottom action bar displays 'EDIT YOUR REVIEW [9.8]' instead of '+ LOG YOUR REVIEW'
     expect(find.text('EDIT YOUR REVIEW [9.8]'), findsOneWidget);

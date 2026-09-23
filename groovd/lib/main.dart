@@ -7,6 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/brutalist_theme.dart';
 import 'firebase_options.dart';
 import 'presentation/navigation/main_navigation_screen.dart';
+import 'presentation/screens/auth/landing_screen.dart';
+import 'state/auth_providers.dart';
+import 'state/onboarding_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,7 +52,41 @@ class GroovdApp extends StatelessWidget {
       title: 'Groovd // Music Critique',
       debugShowCheckedModeBanner: false,
       theme: BrutalistTheme.darkTheme,
-      home: const MainNavigationScreen(),
+      home: const AppStartupGate(),
+    );
+  }
+}
+
+/// Startup gate that directs users to either the eye-catching [LandingScreen]
+/// for first-time / unauthenticated guests, or straight into [MainNavigationScreen]
+/// if already authenticated or if the guest has already completed / bypassed onboarding.
+class AppStartupGate extends ConsumerWidget {
+  const AppStartupGate({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasSeenLanding = ref.watch(onboardingProvider);
+    final authState = ref.watch(authStateProvider);
+
+    return authState.when(
+      data: (user) {
+        if (user != null || hasSeenLanding) {
+          return const MainNavigationScreen();
+        }
+        return const LandingScreen();
+      },
+      loading: () {
+        if (hasSeenLanding) {
+          return const MainNavigationScreen();
+        }
+        return const LandingScreen();
+      },
+      error: (_, _) {
+        if (hasSeenLanding) {
+          return const MainNavigationScreen();
+        }
+        return const LandingScreen();
+      },
     );
   }
 }
