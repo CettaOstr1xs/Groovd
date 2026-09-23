@@ -14,6 +14,10 @@ import 'package:groovd/state/user_profile_provider.dart';
 import 'package:groovd/state/music_providers.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:groovd/data/services/auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:groovd/state/wishlist_provider.dart';
+import 'package:groovd/state/user_lists_provider.dart';
 import 'package:groovd/presentation/screens/review/critique_story_card.dart';
 import 'package:groovd/data/services/spotify_mock_data.dart';
 
@@ -1304,6 +1308,139 @@ void main() {
       // User logs out -> Guest mode sees 0 reviews for user_me
       final postLogoutGuestReviews = await repo.getUserReviews('user_me');
       expect(postLogoutGuestReviews.where((r) => r.id == 'rev_guest_migration_test').isEmpty, isTrue);
+    });
+
+    test('Perfect 10s calculation is consistent: only ratings >= 10.0 are counted', () {
+      final reviews = [
+        Review(
+          id: '1',
+          musicItemId: 'm1',
+          musicItemName: 'Masterpiece 10',
+          artistName: 'Artist A',
+          coverUrl: '',
+          itemType: 'album',
+          userId: 'user_me',
+          userName: 'CRITIC',
+          userHandle: '@critic',
+          rating: 10.0,
+          headline: 'Masterpiece',
+          body: 'Perfect release',
+          tags: const ['ESSENTIAL'],
+          createdAt: DateTime.now(),
+        ),
+        Review(
+          id: '2',
+          musicItemId: 'm2',
+          musicItemName: 'Masterpiece 9.5',
+          artistName: 'Artist B',
+          coverUrl: '',
+          itemType: 'album',
+          userId: 'user_me',
+          userName: 'CRITIC',
+          userHandle: '@critic',
+          rating: 9.5,
+          headline: 'Almost Perfect',
+          body: 'Great release',
+          tags: const ['GREAT'],
+          createdAt: DateTime.now(),
+        ),
+      ];
+
+      final dossierPerfectTens = reviews.where((r) => r.rating >= 10.0).length;
+      final allRatedPerfectTens = reviews.where((r) => r.rating >= 10.0).length;
+      expect(dossierPerfectTens, 1);
+      expect(allRatedPerfectTens, 1);
+      expect(dossierPerfectTens, allRatedPerfectTens);
+    });
+  });
+
+  group('Logout & Guest State Reset Tests', () {
+    test('UserProfileNotifier.resetToGuest resets userId, clears bio, and wipes avatar/backdrop', () async {
+      SharedPreferences.setMockInitialValues({
+        'groovd_user_avatar_path_v1': '/path/to/avatar.jpg',
+        'groovd_user_backdrop_path_v1': '/path/to/backdrop.jpg',
+        'groovd_user_name_v1': 'AUTHENTICATED USER',
+        'groovd_user_handle_v1': '@auth_user',
+        'groovd_user_bio_v1': 'A previously logged in bio statement.',
+      });
+
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(userProfileProvider.notifier);
+      await notifier.resetToGuest();
+
+      final profile = container.read(userProfileProvider);
+      expect(profile.userId, 'user_me');
+      expect(profile.userName, 'CRITIC // YOU');
+      expect(profile.userHandle, '@groovd_me');
+      expect(profile.bio, ''); // Bio must be empty string upon logout
+      expect(profile.avatarPath, isNull);
+      expect(profile.backdropPath, isNull);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('groovd_user_bio_v1'), '');
+      expect(prefs.getString('groovd_user_avatar_path_v1'), isNull);
+      expect(prefs.getString('groovd_user_backdrop_path_v1'), isNull);
+    });
+
+    test('WishlistNotifier.resetToGuest clears wantlist and removes storage', () async {
+      SharedPreferences.setMockInitialValues({
+        'groovd_wishlist_items_v1': ['{"musicItem":{"id":"item1","name":"Test","artistName":"Art","itemType":"album"}}'],
+      });
+
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(wishlistProvider.notifier);
+      await notifier.resetToGuest();
+
+      final items = container.read(wishlistProvider);
+      expect(items, isEmpty);
+      expect(container.read(wishlistCountProvider), 0);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getStringList('groovd_wishlist_items_v1'), isNull);
+    });
+
+    test('DossierTopPicksNotifier.resetToGuest unpins all top albums and top songs', () async {
+      SharedPreferences.setMockInitialValues({
+        'groovd_dossier_top_albums_v1': ['{"id":"a1","name":"A1","artistName":"Art1","itemType":"album"}'],
+        'groovd_dossier_top_songs_v1': ['{"id":"s1","name":"S1","artistName":"Art1","itemType":"track"}'],
+      });
+
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(dossierTopPicksProvider.notifier);
+      await notifier.resetToGuest();
+
+      final picks = container.read(dossierTopPicksProvider);
+      expect(picks.topAlbums.every((a) => a == null), isTrue);
+      expect(picks.topSongs.every((s) => s == null), isTrue);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getStringList('groovd_dossier_top_albums_v1'), isNull);
+      expect(prefs.getStringList('groovd_dossier_top_songs_v1'), isNull);
+    });
+
+    test('UserListsNotifier.resetToGuest clears curated lists and removes storage', () async {
+      SharedPreferences.setMockInitialValues({
+        'groovd_user_lists_v1': ['{"id":"list1","name":"My List","description":"","itemIds":[]}'],
+      });
+
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(userListsProvider.notifier);
+      await notifier.resetToGuest();
+
+      final lists = container.read(userListsProvider);
+      expect(lists, isEmpty);
+      expect(container.read(userListsCountProvider), 0);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getStringList('groovd_user_lists_v1'), isNull);
     });
   });
 }

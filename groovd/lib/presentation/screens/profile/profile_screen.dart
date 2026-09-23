@@ -777,14 +777,38 @@ class ProfileScreen extends ConsumerWidget {
                                   isFullWidth: true,
                                   onPressed: () async {
                                     final messenger = ScaffoldMessenger.of(context);
+                                    final authService = ref.read(authServiceProvider);
+                                    final profileNotifier = ref.read(userProfileProvider.notifier);
+                                    final wishlistNotifier = ref.read(wishlistProvider.notifier);
+                                    final topPicksNotifier = ref.read(dossierTopPicksProvider.notifier);
+                                    final userListsNotifier = ref.read(userListsProvider.notifier);
+                                    final reviewRefreshNotifier = ref.read(reviewRefreshProvider.notifier);
+
                                     Navigator.of(context).pop();
-                                    await cRef.read(authServiceProvider).signOut();
-                                    await cRef.read(userProfileProvider.notifier).resetToGuest();
-                                    await cRef.read(wishlistProvider.notifier).resetToGuest();
-                                    await cRef.read(dossierTopPicksProvider.notifier).resetToGuest();
-                                    await cRef.read(userListsProvider.notifier).resetToGuest();
-                                    cRef.invalidate(userReviewsProvider);
-                                    cRef.read(reviewRefreshProvider.notifier).notifyChanged();
+
+                                    try {
+                                      await authService.signOut();
+                                    } catch (_) {}
+
+                                    try {
+                                      await profileNotifier.resetToGuest();
+                                    } catch (_) {}
+
+                                    try {
+                                      await wishlistNotifier.resetToGuest();
+                                    } catch (_) {}
+
+                                    try {
+                                      await topPicksNotifier.resetToGuest();
+                                    } catch (_) {}
+
+                                    try {
+                                      await userListsNotifier.resetToGuest();
+                                    } catch (_) {}
+
+                                    ref.invalidate(userReviewsProvider);
+                                    reviewRefreshNotifier.notifyChanged();
+
                                     messenger.showSnackBar(
                                       SnackBar(
                                         backgroundColor: AppColors.pureBlack,
@@ -1718,7 +1742,7 @@ class ProfileScreen extends ConsumerWidget {
                 final avgScore = totalLogged > 0
                     ? (reviews.fold<double>(0.0, (acc, r) => acc + r.rating) / totalLogged)
                     : 0.0;
-                final perfectTens = reviews.where((r) => r.rating >= 9.5).length;
+                final perfectTens = reviews.where((r) => r.rating >= 10.0).length;
 
                 return Container(
                   padding: const EdgeInsets.all(20),
@@ -1747,10 +1771,18 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: _StatBox(
-                          label: 'PERFECT 10s',
-                          value: '$perfectTens',
-                          accentColor: AppColors.electricPink,
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(
+                            AllRatedReleasesScreen.route(
+                              initialFilter: RatedFilter.perfect10s,
+                            ),
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                          child: _StatBox(
+                            label: 'PERFECT 10s',
+                            value: '$perfectTens',
+                            accentColor: AppColors.electricPink,
+                          ),
                         ),
                       ),
                     ],

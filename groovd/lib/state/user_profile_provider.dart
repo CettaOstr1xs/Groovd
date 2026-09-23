@@ -86,6 +86,8 @@ class UserProfileNotifier extends Notifier<UserProfile> {
       final user = next.asData?.value;
       if (user != null) {
         syncWithFirebaseUser(user);
+      } else if (previous?.asData?.value != null && user == null) {
+        resetToGuest();
       }
     });
 
@@ -337,15 +339,22 @@ class UserProfileNotifier extends Notifier<UserProfile> {
 
   /// Resets user profile to local guest mode upon signing out.
   Future<void> resetToGuest() async {
-    state = const UserProfile(userId: 'user_me');
+    state = const UserProfile(
+      userId: 'user_me',
+      bio: '',
+    );
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_avatarKey);
       await prefs.remove(_backdropKey);
       await prefs.setString(_nameKey, state.userName);
       await prefs.setString(_handleKey, state.userHandle);
-      await prefs.setString(_bioKey, state.bio);
+      await prefs.setString(_bioKey, '');
     } catch (_) {}
+    state = const UserProfile(
+      userId: 'user_me',
+      bio: '',
+    );
   }
 }
 

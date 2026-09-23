@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -40,6 +41,17 @@ class DossierTopPicksNotifier extends Notifier<DossierTopPicks> {
   @override
   DossierTopPicks build() {
     _loadFromPrefs();
+
+    ref.listen<AsyncValue<User?>>(authStateProvider, (previous, next) {
+      final prevUser = previous?.asData?.value;
+      final nextUser = next.asData?.value;
+      if (prevUser != null && nextUser == null) {
+        resetToGuest();
+      } else if (nextUser != null && prevUser?.uid != nextUser.uid) {
+        syncForUser(nextUser.uid);
+      }
+    });
+
     return const DossierTopPicks();
   }
 
@@ -206,6 +218,7 @@ class DossierTopPicksNotifier extends Notifier<DossierTopPicks> {
       await prefs.remove(_albumKey);
       await prefs.remove(_songKey);
     } catch (_) {}
+    state = const DossierTopPicks();
   }
 
   Future<void> _persist() async {

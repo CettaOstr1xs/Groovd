@@ -9,17 +9,23 @@ import '../../widgets/album_art_card.dart';
 import '../../widgets/brutalist_button.dart';
 import '../review/review_detail_screen.dart';
 
-enum _RatedFilter { all, albums, songs, perfect10s }
+enum RatedFilter { all, albums, songs, perfect10s }
 enum _RatedSort { newest, oldest, highestScore, lowestScore, titleAZ, artistAZ }
 enum _RatedViewMode { grid, list }
 
 class AllRatedReleasesScreen extends ConsumerStatefulWidget {
-  const AllRatedReleasesScreen({super.key});
+  final RatedFilter initialFilter;
+
+  const AllRatedReleasesScreen({
+    super.key,
+    this.initialFilter = RatedFilter.all,
+  });
 
   /// Custom neo-brutalist smooth slide and fade route transition
-  static Route<T> route<T>() {
+  static Route<T> route<T>({RatedFilter initialFilter = RatedFilter.all}) {
     return PageRouteBuilder<T>(
-      pageBuilder: (context, animation, secondaryAnimation) => const AllRatedReleasesScreen(),
+      pageBuilder: (context, animation, secondaryAnimation) =>
+          AllRatedReleasesScreen(initialFilter: initialFilter),
       transitionDuration: const Duration(milliseconds: 320),
       reverseTransitionDuration: const Duration(milliseconds: 260),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -48,7 +54,7 @@ class AllRatedReleasesScreen extends ConsumerStatefulWidget {
 
 class _AllRatedReleasesScreenState extends ConsumerState<AllRatedReleasesScreen>
     with SingleTickerProviderStateMixin {
-  _RatedFilter _filter = _RatedFilter.all;
+  late RatedFilter _filter;
   _RatedSort _sort = _RatedSort.newest;
   _RatedViewMode _viewMode = _RatedViewMode.grid;
   final TextEditingController _searchController = TextEditingController();
@@ -61,6 +67,7 @@ class _AllRatedReleasesScreenState extends ConsumerState<AllRatedReleasesScreen>
   @override
   void initState() {
     super.initState();
+    _filter = widget.initialFilter;
     _entranceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -90,11 +97,11 @@ class _AllRatedReleasesScreenState extends ConsumerState<AllRatedReleasesScreen>
     var filtered = List<Review>.from(reviews);
 
     // Filter by type or perfect 10
-    if (_filter == _RatedFilter.albums) {
+    if (_filter == RatedFilter.albums) {
       filtered = filtered.where((r) => r.itemType == 'album').toList();
-    } else if (_filter == _RatedFilter.songs) {
+    } else if (_filter == RatedFilter.songs) {
       filtered = filtered.where((r) => r.itemType == 'song').toList();
-    } else if (_filter == _RatedFilter.perfect10s) {
+    } else if (_filter == RatedFilter.perfect10s) {
       filtered = filtered.where((r) => r.rating >= 10.0).toList();
     }
 
@@ -338,31 +345,31 @@ class _AllRatedReleasesScreenState extends ConsumerState<AllRatedReleasesScreen>
                                   children: [
                                     _FilterPill(
                                       label: 'ALL (${allReviews.length})',
-                                      isSelected: _filter == _RatedFilter.all,
+                                      isSelected: _filter == RatedFilter.all,
                                       accentColor: AppColors.textPrimary,
-                                      onTap: () => setState(() => _filter = _RatedFilter.all),
+                                      onTap: () => setState(() => _filter = RatedFilter.all),
                                     ),
                                     const SizedBox(width: 6),
                                     _FilterPill(
                                       label: 'LPS ($albumCount)',
-                                      isSelected: _filter == _RatedFilter.albums,
+                                      isSelected: _filter == RatedFilter.albums,
                                       accentColor: AppColors.acidLime,
-                                      onTap: () => setState(() => _filter = _RatedFilter.albums),
+                                      onTap: () => setState(() => _filter = RatedFilter.albums),
                                     ),
                                     const SizedBox(width: 6),
                                     _FilterPill(
                                       label: 'TRACKS ($songCount)',
-                                      isSelected: _filter == _RatedFilter.songs,
+                                      isSelected: _filter == RatedFilter.songs,
                                       accentColor: AppColors.cyberCyan,
-                                      onTap: () => setState(() => _filter = _RatedFilter.songs),
+                                      onTap: () => setState(() => _filter = RatedFilter.songs),
                                     ),
                                     if (perfectTenCount > 0) ...[
                                       const SizedBox(width: 6),
                                       _FilterPill(
                                         label: '10S ($perfectTenCount)',
-                                        isSelected: _filter == _RatedFilter.perfect10s,
+                                        isSelected: _filter == RatedFilter.perfect10s,
                                         accentColor: AppColors.electricPink,
-                                        onTap: () => setState(() => _filter = _RatedFilter.perfect10s),
+                                        onTap: () => setState(() => _filter = RatedFilter.perfect10s),
                                       ),
                                     ],
                                   ],
@@ -497,7 +504,7 @@ class _AllRatedReleasesScreenState extends ConsumerState<AllRatedReleasesScreen>
                                   _searchController.clear();
                                   setState(() {
                                     _searchQuery = '';
-                                    _filter = _RatedFilter.all;
+                                    _filter = RatedFilter.all;
                                   });
                                 },
                               ),
