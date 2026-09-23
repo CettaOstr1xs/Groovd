@@ -9,7 +9,7 @@ import '../../widgets/album_art_card.dart';
 import '../../widgets/brutalist_button.dart';
 import '../review/review_detail_screen.dart';
 
-enum RatedFilter { all, albums, songs, perfect10s }
+enum RatedFilter { all, albums, eps, songs, perfect10s }
 enum _RatedSort { newest, oldest, highestScore, lowestScore, titleAZ, artistAZ }
 enum _RatedViewMode { grid, list }
 
@@ -99,6 +99,8 @@ class _AllRatedReleasesScreenState extends ConsumerState<AllRatedReleasesScreen>
     // Filter by type or perfect 10
     if (_filter == RatedFilter.albums) {
       filtered = filtered.where((r) => r.itemType == 'album').toList();
+    } else if (_filter == RatedFilter.eps) {
+      filtered = filtered.where((r) => r.itemType == 'ep').toList();
     } else if (_filter == RatedFilter.songs) {
       filtered = filtered.where((r) => r.itemType == 'song').toList();
     } else if (_filter == RatedFilter.perfect10s) {
@@ -186,6 +188,7 @@ class _AllRatedReleasesScreenState extends ConsumerState<AllRatedReleasesScreen>
           final displayedReleases = _applyFiltersAndSort(allReviews);
 
           final albumCount = allReviews.where((r) => r.itemType == 'album').length;
+          final epCount = allReviews.where((r) => r.itemType == 'ep').length;
           final songCount = allReviews.where((r) => r.itemType == 'song').length;
           final perfectTenCount = allReviews.where((r) => r.rating >= 10.0).length;
 
@@ -356,6 +359,15 @@ class _AllRatedReleasesScreenState extends ConsumerState<AllRatedReleasesScreen>
                                       accentColor: AppColors.acidLime,
                                       onTap: () => setState(() => _filter = RatedFilter.albums),
                                     ),
+                                    if (epCount > 0) ...[
+                                      const SizedBox(width: 6),
+                                      _FilterPill(
+                                        label: 'EPS ($epCount)',
+                                        isSelected: _filter == RatedFilter.eps,
+                                        accentColor: AppColors.electricPink,
+                                        onTap: () => setState(() => _filter = RatedFilter.eps),
+                                      ),
+                                    ],
                                     const SizedBox(width: 6),
                                     _FilterPill(
                                       label: 'TRACKS ($songCount)',
@@ -686,6 +698,11 @@ class _RatedPosterCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAlbum = review.itemType == 'album';
+    final isEp = review.itemType == 'ep';
+    final badgeColor = isEp
+        ? AppColors.electricPink
+        : (isAlbum ? AppColors.acidLime : AppColors.cyberCyan);
+    final badgeText = isEp ? 'EP' : (isAlbum ? 'LP' : 'TRACK');
 
     return InkWell(
       onTap: onTap,
@@ -752,19 +769,17 @@ class _RatedPosterCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               decoration: BoxDecoration(
-                color: isAlbum
-                    ? AppColors.acidLime.withValues(alpha: 0.15)
-                    : AppColors.cyberCyan.withValues(alpha: 0.15),
+                color: badgeColor.withValues(alpha: 0.15),
                 border: Border.all(
-                  color: isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                  color: badgeColor,
                   width: 1,
                 ),
                 borderRadius: BorderRadius.circular(1),
               ),
               child: Text(
-                isAlbum ? 'LP' : 'TRACK',
+                badgeText,
                 style: AppTypography.monoBadge(
-                  color: isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                  color: badgeColor,
                   fontSize: 7.5,
                 ),
               ),
@@ -790,6 +805,11 @@ class _RatedListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAlbum = review.itemType == 'album';
+    final isEp = review.itemType == 'ep';
+    final badgeColor = isEp
+        ? AppColors.electricPink
+        : (isAlbum ? AppColors.acidLime : AppColors.cyberCyan);
+    final badgeText = isEp ? 'EP' : (isAlbum ? 'LP' : 'TRACK');
     final formattedDate = DateFormat('MMM d, yyyy').format(review.createdAt).toUpperCase();
 
     return InkWell(
@@ -820,19 +840,17 @@ class _RatedListCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                         decoration: BoxDecoration(
-                          color: isAlbum
-                              ? AppColors.acidLime.withValues(alpha: 0.15)
-                              : AppColors.cyberCyan.withValues(alpha: 0.15),
+                          color: badgeColor.withValues(alpha: 0.15),
                           border: Border.all(
-                            color: isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                            color: badgeColor,
                             width: 1,
                           ),
                           borderRadius: BorderRadius.circular(1),
                         ),
                         child: Text(
-                          isAlbum ? 'LP' : 'TRACK',
+                          badgeText,
                           style: AppTypography.monoBadge(
-                            color: isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                            color: badgeColor,
                             fontSize: 7.5,
                           ),
                         ),

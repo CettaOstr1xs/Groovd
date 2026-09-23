@@ -173,6 +173,18 @@ class FirestoreReviewRepository implements ReviewRepository {
   }
 
   @override
+  Future<void> deleteReview(String reviewId) async {
+    await _local.deleteReview(reviewId);
+    try {
+      await _firestore
+          .collection(collectionPath)
+          .doc(reviewId)
+          .delete()
+          .timeout(const Duration(milliseconds: 2500));
+    } catch (_) {}
+  }
+
+  @override
   Future<void> migrateUserReviews({
     required String fromUserId,
     required String toUserId,

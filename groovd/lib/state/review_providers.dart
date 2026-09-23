@@ -108,6 +108,12 @@ class ReviewController {
     ref.read(reviewRefreshProvider.notifier).notifyChanged();
   }
 
+  Future<void> deleteReview(String reviewId) async {
+    final repo = ref.read(reviewRepositoryProvider);
+    await repo.deleteReview(reviewId);
+    ref.read(reviewRefreshProvider.notifier).notifyChanged();
+  }
+
   Future<void> updateUserIdentity(String userId, String newName, String newHandle) async {
     final repo = ref.read(reviewRepositoryProvider);
     await repo.updateAuthorMetadata(userId, newName, newHandle);

@@ -246,7 +246,7 @@ class MusicDetailScreen extends ConsumerWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          item.isAlbum ? 'ALBUM ARCHIVE' : 'TRACK ARCHIVE',
+          item.isEp ? 'EP ARCHIVE' : (item.isAlbum ? 'ALBUM ARCHIVE' : 'TRACK ARCHIVE'),
           style: AppTypography.monoLabel(fontSize: 11),
         ),
         actions: [
@@ -404,11 +404,11 @@ class MusicDetailScreen extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: activeItem.isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                          color: activeItem.typeColor,
                           borderRadius: BorderRadius.circular(2),
                         ),
                         child: Text(
-                          activeItem.isAlbum ? 'LP // ALBUM' : 'SINGLE // TRACK',
+                          activeItem.fullTypeLabel,
                           style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
                         ),
                       ),
@@ -638,7 +638,7 @@ class MusicDetailScreen extends ConsumerWidget {
                       .slideX(begin: 0.05, end: 0, curve: Curves.easeOutCubic);
                 },
               ),
-            ] else if (item.isAlbum && detailAsync.isLoading) ...[
+            ] else if ((item.isAlbum || item.isEp) && detailAsync.isLoading) ...[
               const Divider(),
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 32),
@@ -998,19 +998,17 @@ class _MoreByArtistCard extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                         decoration: BoxDecoration(
-                          color: item.isAlbum
-                              ? AppColors.acidLime.withValues(alpha: 0.15)
-                              : AppColors.cyberCyan.withValues(alpha: 0.15),
+                          color: item.typeColor.withValues(alpha: 0.15),
                           border: Border.all(
-                            color: item.isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                            color: item.typeColor,
                             width: 1,
                           ),
                           borderRadius: BorderRadius.circular(1.5),
                         ),
                         child: Text(
-                          item.isAlbum ? 'LP' : 'TRACK',
+                          item.typeBadgeLabel,
                           style: AppTypography.monoBadge(
-                            color: item.isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                            color: item.typeColor,
                             fontSize: 8,
                           ),
                         ),

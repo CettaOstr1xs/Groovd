@@ -1,4 +1,7 @@
-enum MusicType { album, song }
+import 'package:flutter/material.dart';
+import '../../core/theme/app_colors.dart';
+
+enum MusicType { album, song, ep }
 
 class TrackInfo {
   final String id;
@@ -97,6 +100,36 @@ class MusicItem {
 
   bool get isAlbum => type == MusicType.album;
   bool get isSong => type == MusicType.song;
+  bool get isEp => type == MusicType.ep;
+  bool get isRelease => isAlbum || isEp;
+
+  /// Compact badge text: 'LP', 'EP', or 'TRACK'
+  String get typeBadgeLabel {
+    if (isEp) return 'EP';
+    if (isAlbum) return 'LP';
+    return 'TRACK';
+  }
+
+  /// Compact alternative: 'LP', 'EP', or 'SINGLE'
+  String get typeLabel {
+    if (isEp) return 'EP';
+    if (isAlbum) return 'LP';
+    return 'SINGLE';
+  }
+
+  /// Detailed header badge: 'LP // ALBUM', 'EP // EXTENDED PLAY', 'SINGLE // TRACK'
+  String get fullTypeLabel {
+    if (isEp) return 'EP // EXTENDED PLAY';
+    if (isAlbum) return 'LP // ALBUM';
+    return 'SINGLE // TRACK';
+  }
+
+  /// High-contrast Neo-Brutalist badge color: Acid Lime for LP, Electric Pink for EP, Cyber Cyan for Single
+  Color get typeColor {
+    if (isEp) return AppColors.electricPink;
+    if (isAlbum) return AppColors.acidLime;
+    return AppColors.cyberCyan;
+  }
 
   String get formattedYear {
     if (releaseDate.isEmpty) return '2024';
@@ -111,7 +144,7 @@ class MusicItem {
     final totalSeconds = durationMs ~/ 1000;
     final minutes = totalSeconds ~/ 60;
     final seconds = totalSeconds % 60;
-    if (isAlbum) {
+    if (isAlbum || isEp) {
       final hours = minutes ~/ 60;
       final remainingMins = minutes % 60;
       if (hours > 0) {
@@ -145,9 +178,11 @@ class MusicItem {
       id: map['id'] as String? ?? '',
       name: map['name'] as String? ?? '',
       artist: map['artist'] as String? ?? '',
-      type: (map['type'] == 'album' || map['type'] == MusicType.album.name)
-          ? MusicType.album
-          : MusicType.song,
+      type: (map['type'] == 'ep' || map['type'] == MusicType.ep.name)
+          ? MusicType.ep
+          : (map['type'] == 'album' || map['type'] == MusicType.album.name)
+              ? MusicType.album
+              : MusicType.song,
       coverUrl: map['coverUrl'] as String? ?? '',
       releaseDate: map['releaseDate'] as String? ?? '',
       genres: (map['genres'] as List?)?.map((e) => e.toString()).toList() ?? const [],
@@ -161,6 +196,43 @@ class MusicItem {
           const [],
       popularity: (map['popularity'] as num?)?.toInt() ?? 0,
     );
+  }
+
+  /// Detects whether a release qualifies as an EP (Extended Play).
+  ///
+  /// Criteria:
+  /// 1. The title explicitly indicates it with 'EP' tokens (e.g., '... EP', '... - EP', '... (EP)', '... [EP]').
+  /// 2. Track count is between 3 and 6 tracks (unless total runtime exceeds typical EP limit of ~32 minutes).
+  /// 3. Spotify `album_type` / `album_group` is 'single' or 'album', but the release contains multiple tracks (3-6).
+  static bool isEpRelease({
+    required String name,
+    required String rawAlbumType,
+    required int trackCount,
+    int durationMs = 0,
+  }) {
+    final cleanName = name.trim();
+    final hasEpInTitle = RegExp(r'(^|[\s\(\[\-_/])ep([\s\)\]\-_/]|$)', caseSensitive: false).hasMatch(cleanName);
+
+    // If explicitly titled as EP, it is an EP as long as it's not a massive boxset (> 12 tracks)
+    if (hasEpInTitle && trackCount <= 12) {
+      return true;
+    }
+
+    // Standard EP definition: 3 to 6 tracks (or 4 to 6 tracks)
+    if (trackCount >= 3 && trackCount <= 6) {
+      // If duration is known and is longer than 32 minutes, treat as a concise LP instead
+      if (durationMs > 0 && durationMs > 32 * 60 * 1000) {
+        return false;
+      }
+      return true;
+    }
+
+    // If Spotify classified as 'single' but it has multiple tracks (at least 3), it's an EP
+    if (rawAlbumType == 'single' && trackCount >= 3) {
+      return true;
+    }
+
+    return false;
   }
 
   /// Parses an album from Spotify Web API response.
@@ -186,17 +258,35 @@ class MusicItem {
 
     final externalUrls = json['external_urls'] as Map<String, dynamic>?;
     final spotifyUrl = externalUrls?['spotify'] as String? ?? '';
+    final rawAlbumType = (json['album_type'] as String? ?? json['album_group'] as String? ?? '').toLowerCase().trim();
+    final albumName = json['name'] as String? ?? '';
+    final totalTracks = (json['total_tracks'] as num?)?.toInt() ?? tracksList.length;
+    final totalDurationMs = tracksList.fold<int>(0, (sum, t) => sum + t.durationMs);
+
+    final MusicType resolvedType;
+    if (isEpRelease(
+      name: albumName,
+      rawAlbumType: rawAlbumType,
+      trackCount: totalTracks,
+      durationMs: totalDurationMs,
+    )) {
+      resolvedType = MusicType.ep;
+    } else if (rawAlbumType == 'single' && totalTracks <= 2) {
+      resolvedType = MusicType.song;
+    } else {
+      resolvedType = MusicType.album;
+    }
 
     return MusicItem(
       id: json['id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
+      name: albumName,
       artist: artistName,
-      type: MusicType.album,
+      type: resolvedType,
       coverUrl: cover,
       releaseDate: json['release_date'] as String? ?? '',
       genres: (json['genres'] as List?)?.map((e) => e.toString()).toList() ?? const [],
-      trackCount: (json['total_tracks'] as num?)?.toInt() ?? tracksList.length,
-      durationMs: tracksList.fold<int>(0, (sum, t) => sum + t.durationMs),
+      trackCount: totalTracks,
+      durationMs: totalDurationMs,
       previewUrl: tracksList.isNotEmpty ? tracksList.first.previewUrl : null,
       externalSpotifyUrl: spotifyUrl,
       tracks: tracksList,

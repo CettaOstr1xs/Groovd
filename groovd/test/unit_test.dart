@@ -20,6 +20,7 @@ import 'package:groovd/state/wishlist_provider.dart';
 import 'package:groovd/state/user_lists_provider.dart';
 import 'package:groovd/presentation/screens/review/critique_story_card.dart';
 import 'package:groovd/data/services/spotify_mock_data.dart';
+import 'package:groovd/core/theme/app_colors.dart';
 
 void main() {
   group('Review Model Tests', () {
@@ -1441,6 +1442,312 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getStringList('groovd_user_lists_v1'), isNull);
+    });
+  });
+
+  group('Curated Archive Drag & Drop Tests', () {
+    test('UserListsNotifier.reorderItems reorders items within list and persists', () async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(userListsProvider.notifier);
+      await notifier.createList('My Top 3', description: 'Ranking test');
+
+      final createdList = container.read(userListsProvider).first;
+      const itemA = MusicItem(id: 'a', name: 'Item A', artist: 'Artist A', coverUrl: '', releaseDate: '2024', type: MusicType.album);
+      const itemB = MusicItem(id: 'b', name: 'Item B', artist: 'Artist B', coverUrl: '', releaseDate: '2024', type: MusicType.album);
+      const itemC = MusicItem(id: 'c', name: 'Item C', artist: 'Artist C', coverUrl: '', releaseDate: '2024', type: MusicType.album);
+
+      await notifier.addItemToList(createdList.id, itemA);
+      await notifier.addItemToList(createdList.id, itemB);
+      await notifier.addItemToList(createdList.id, itemC);
+
+      var list = container.read(userListsProvider).first;
+      expect(list.items.map((i) => i.id).toList(), ['a', 'b', 'c']);
+
+      // Move Item B (index 1) to top (index 0)
+      await notifier.reorderItems(list.id, 1, 0);
+      list = container.read(userListsProvider).first;
+      expect(list.items.map((i) => i.id).toList(), ['b', 'a', 'c']);
+
+      // Move Item B (index 0) to end (index 2)
+      await notifier.reorderItems(list.id, 0, 2);
+      list = container.read(userListsProvider).first;
+      expect(list.items.map((i) => i.id).toList(), ['a', 'c', 'b']);
+    });
+  });
+
+  group('Critique Archive Delete Review Tests', () {
+    test('LocalReviewRepository.deleteReview removes review permanently', () async {
+      final repo = LocalReviewRepository();
+      final review = Review(
+        id: 'rev_delete_test_123',
+        musicItemId: 'album_test_del',
+        musicItemName: 'Test Album For Deletion',
+        artistName: 'Test Artist',
+        coverUrl: '',
+        itemType: 'album',
+        userId: 'user_delete_tester',
+        userName: 'Tester',
+        userHandle: '@tester',
+        rating: 8.0,
+        headline: 'Will be deleted',
+        body: 'Testing delete functionality',
+        createdAt: DateTime.now(),
+      );
+
+      await repo.addReview(review);
+      var userReviews = await repo.getUserReviews('user_delete_tester');
+      expect(userReviews.any((r) => r.id == 'rev_delete_test_123'), isTrue);
+
+      await repo.deleteReview('rev_delete_test_123');
+      userReviews = await repo.getUserReviews('user_delete_tester');
+      expect(userReviews.any((r) => r.id == 'rev_delete_test_123'), isFalse);
+    });
+  });
+
+  group('Artist Dossier Singles & EPs and Rated Badge Tests', () {
+    test('MusicItem.fromSpotifyAlbum correctly classifies album_type single as song', () {
+      final singleJson = {
+        'id': 'sp_single_1',
+        'name': 'Burn The Witch',
+        'artists': [{'name': 'Radiohead'}],
+        'images': [{'url': 'https://example.com/single.jpg'}],
+        'release_date': '2016-05-03',
+        'album_type': 'single',
+      };
+
+      final singleItem = MusicItem.fromSpotifyAlbum(singleJson);
+      expect(singleItem.isSong, isTrue);
+      expect(singleItem.isAlbum, isFalse);
+      expect(singleItem.type, MusicType.song);
+
+      final albumJson = {
+        'id': 'sp_album_1',
+        'name': 'A Moon Shaped Pool',
+        'artists': [{'name': 'Radiohead'}],
+        'images': [{'url': 'https://example.com/album.jpg'}],
+        'release_date': '2016-05-08',
+        'album_type': 'album',
+      };
+
+      final albumItem = MusicItem.fromSpotifyAlbum(albumJson);
+      expect(albumItem.isAlbum, isTrue);
+      expect(albumItem.isSong, isFalse);
+      expect(albumItem.type, MusicType.album);
+    });
+
+    test('Artist rated releases badge excludes song reviews from albums', () {
+      const albumRelease = MusicItem(
+        id: 'rel_in_rainbows',
+        name: 'In Rainbows',
+        artist: 'Radiohead',
+        coverUrl: '',
+        releaseDate: '2007',
+        type: MusicType.album,
+      );
+      const singleRelease = MusicItem(
+        id: 'rel_creep_single',
+        name: 'Creep',
+        artist: 'Radiohead',
+        coverUrl: '',
+        releaseDate: '1992',
+        type: MusicType.song,
+      );
+
+      final List<MusicItem> discography = [albumRelease, singleRelease];
+
+      final albumReview = Review(
+        id: 'r_album',
+        musicItemId: 'rel_in_rainbows',
+        musicItemName: 'In Rainbows',
+        artistName: 'Radiohead',
+        coverUrl: '',
+        itemType: 'album',
+        userId: 'u1',
+        userName: 'Critic',
+        userHandle: '@critic',
+        rating: 10.0,
+        headline: '',
+        body: '',
+        createdAt: DateTime.now(),
+      );
+
+      // Track review from an album (NOT an official standalone single release in discography)
+      final trackFromAlbumReview = Review(
+        id: 'r_track',
+        musicItemId: 'track_nude',
+        musicItemName: 'Nude',
+        artistName: 'Radiohead',
+        coverUrl: '',
+        itemType: 'song',
+        userId: 'u1',
+        userName: 'Critic',
+        userHandle: '@critic',
+        rating: 9.5,
+        headline: '',
+        body: '',
+        createdAt: DateTime.now(),
+      );
+
+      // Review of an official standalone single in discography
+      final standaloneSingleReview = Review(
+        id: 'r_single',
+        musicItemId: 'rel_creep_single',
+        musicItemName: 'Creep',
+        artistName: 'Radiohead',
+        coverUrl: '',
+        itemType: 'song',
+        userId: 'u1',
+        userName: 'Critic',
+        userHandle: '@critic',
+        rating: 8.5,
+        headline: '',
+        body: '',
+        createdAt: DateTime.now(),
+      );
+
+      int computeRatedReleases(List<Review> reviews, List<MusicItem> disco) {
+        final ratedReleaseIds = <String>{};
+        for (final r in reviews) {
+          final isSongReview = r.itemType.toLowerCase() == 'song';
+          if (isSongReview) {
+            final matchingSingle = disco.where((d) =>
+              d.isSong && (d.id == r.musicItemId || d.name.trim().toLowerCase() == r.musicItemName.trim().toLowerCase())
+            ).firstOrNull;
+            if (matchingSingle != null) {
+              ratedReleaseIds.add(matchingSingle.id);
+            }
+          } else {
+            final matchingAlbum = disco.where((d) =>
+              d.isAlbum && (d.id == r.musicItemId || d.name.trim().toLowerCase() == r.musicItemName.trim().toLowerCase())
+            ).firstOrNull;
+            if (matchingAlbum != null) {
+              ratedReleaseIds.add(matchingAlbum.id);
+            } else {
+              ratedReleaseIds.add(r.musicItemId.isNotEmpty ? r.musicItemId : r.musicItemName.toLowerCase());
+            }
+          }
+        }
+        return ratedReleaseIds.length;
+      }
+
+      // 1. Only album rated -> 1
+      expect(computeRatedReleases([albumReview], discography), 1);
+
+      // 2. Album + song from album rated -> STILL 1 (song from album is NOT added!)
+      expect(computeRatedReleases([albumReview, trackFromAlbumReview], discography), 1);
+
+      // 3. Album + standalone single release rated -> 2
+      expect(computeRatedReleases([albumReview, standaloneSingleReview], discography), 2);
+
+      // 4. All 3 rated (album + standalone single + track from album) -> 2 (track from album excluded)
+      expect(computeRatedReleases([albumReview, standaloneSingleReview, trackFromAlbumReview], discography), 2);
+    });
+  });
+
+  group('EP Classification & Badge Tests', () {
+    test('isEpRelease correctly identifies EPs by title keyword', () {
+      expect(
+        MusicItem.isEpRelease(name: 'Vroom Vroom EP', rawAlbumType: 'single', trackCount: 4),
+        isTrue,
+      );
+      expect(
+        MusicItem.isEpRelease(name: 'Slowdive - EP', rawAlbumType: 'album', trackCount: 3),
+        isTrue,
+      );
+      expect(
+        MusicItem.isEpRelease(name: 'The Bends (EP)', rawAlbumType: 'album', trackCount: 4),
+        isTrue,
+      );
+      expect(
+        MusicItem.isEpRelease(name: 'Burn The Witch [EP]', rawAlbumType: 'single', trackCount: 2),
+        isTrue,
+      );
+      expect(
+        MusicItem.isEpRelease(name: 'Airbag / How Am I Driving? - EP', rawAlbumType: 'album', trackCount: 7),
+        isTrue,
+      );
+      // Does not falsely match words containing "ep"
+      expect(
+        MusicItem.isEpRelease(name: 'Deep Blue', rawAlbumType: 'album', trackCount: 10),
+        isFalse,
+      );
+      expect(
+        MusicItem.isEpRelease(name: 'Keep It Moving', rawAlbumType: 'single', trackCount: 1),
+        isFalse,
+      );
+    });
+
+    test('isEpRelease identifies EPs by track count even when Spotify says album or single', () {
+      // 6-track release with Spotify album_type 'album'
+      expect(
+        MusicItem.isEpRelease(name: 'Boygenius', rawAlbumType: 'album', trackCount: 6),
+        isTrue,
+      );
+      // 5-track release with Spotify album_type 'single'
+      expect(
+        MusicItem.isEpRelease(name: 'Holding Our Breath', rawAlbumType: 'single', trackCount: 5),
+        isTrue,
+      );
+      // 12-track release is a full LP
+      expect(
+        MusicItem.isEpRelease(name: 'OK Computer', rawAlbumType: 'album', trackCount: 12),
+        isFalse,
+      );
+      // 1-track release is a single
+      expect(
+        MusicItem.isEpRelease(name: 'Not Like Us', rawAlbumType: 'single', trackCount: 1),
+        isFalse,
+      );
+      // 2-track release without EP in title is a single
+      expect(
+        MusicItem.isEpRelease(name: 'Creep', rawAlbumType: 'single', trackCount: 2),
+        isFalse,
+      );
+    });
+
+    test('MusicItem.fromSpotifyAlbum sets MusicType.ep for EPs', () {
+      final epJson = {
+        'id': 'sp_ep_1',
+        'name': 'Vroom Vroom EP',
+        'artists': [{'name': 'Charli XCX'}],
+        'images': [{'url': 'https://example.com/art.jpg'}],
+        'release_date': '2016-02-26',
+        'album_type': 'single',
+        'total_tracks': 4,
+      };
+
+      final epItem = MusicItem.fromSpotifyAlbum(epJson);
+      expect(epItem.type, MusicType.ep);
+      expect(epItem.isEp, isTrue);
+      expect(epItem.isAlbum, isFalse);
+      expect(epItem.isSong, isFalse);
+      expect(epItem.isRelease, isTrue);
+      expect(epItem.typeLabel, 'EP');
+      expect(epItem.typeBadgeLabel, 'EP');
+      expect(epItem.fullTypeLabel, 'EP // EXTENDED PLAY');
+      expect(epItem.typeColor, AppColors.electricPink);
+    });
+
+    test('MusicItem serializes and deserializes MusicType.ep accurately', () {
+      const epItem = MusicItem(
+        id: 'ep_1',
+        name: 'Test EP',
+        artist: 'Test Artist',
+        coverUrl: 'https://example.com/cover.jpg',
+        releaseDate: '2024-01-01',
+        type: MusicType.ep,
+        trackCount: 4,
+      );
+
+      final map = epItem.toMap();
+      expect(map['type'], 'ep');
+
+      final deserialized = MusicItem.fromMap(map);
+      expect(deserialized.type, MusicType.ep);
+      expect(deserialized.isEp, isTrue);
     });
   });
 }

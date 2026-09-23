@@ -256,11 +256,10 @@ class UserListsNotifier extends Notifier<List<UserMusicList>> {
 
     final existing = state[index];
     final updatedItems = List<MusicItem>.from(existing.items);
-    if (newIndex > oldIndex) {
-      newIndex -= 1;
-    }
+    if (oldIndex < 0 || oldIndex >= updatedItems.length) return;
     final item = updatedItems.removeAt(oldIndex);
-    updatedItems.insert(newIndex, item);
+    final targetIndex = newIndex.clamp(0, updatedItems.length);
+    updatedItems.insert(targetIndex, item);
 
     final updated = existing.copyWith(
       items: updatedItems,

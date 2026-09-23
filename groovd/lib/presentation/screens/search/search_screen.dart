@@ -626,11 +626,11 @@ class _SearchItemTile extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                         decoration: BoxDecoration(
-                          color: item.isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                          color: item.typeColor,
                           borderRadius: BorderRadius.circular(2),
                         ),
                         child: Text(
-                          item.isAlbum ? 'LP' : 'SONG',
+                          item.typeLabel,
                           style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 8),
                         ),
                       ),

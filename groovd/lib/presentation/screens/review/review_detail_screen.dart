@@ -58,7 +58,9 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
   }
 
   Future<void> _openEditReview() async {
-    final itemType = _review.itemType == 'song' ? MusicType.song : MusicType.album;
+    final itemType = _review.itemType == 'song'
+        ? MusicType.song
+        : (_review.itemType == 'ep' ? MusicType.ep : MusicType.album);
     MusicItem? item = await ref.read(spotifyRepositoryProvider).getItemById(
           _review.musicItemId,
           type: itemType,
@@ -89,7 +91,9 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
   }
 
   Future<void> _openMusicDetail() async {
-    final itemType = _review.itemType == 'song' ? MusicType.song : MusicType.album;
+    final itemType = _review.itemType == 'song'
+        ? MusicType.song
+        : (_review.itemType == 'ep' ? MusicType.ep : MusicType.album);
     MusicItem? item = await ref.read(spotifyRepositoryProvider).getItemById(
           _review.musicItemId,
           type: itemType,
@@ -111,6 +115,72 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
     }
   }
 
+  Future<void> _confirmDeleteReview() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: AppColors.surfaceElevated,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(2),
+            side: const BorderSide(color: AppColors.vermillion, width: 2),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: AppColors.vermillion, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'DELETE CRITIQUE',
+                  style: AppTypography.displaySmall(color: AppColors.vermillion),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to permanently delete your rating and critique for "${_review.musicItemName.toUpperCase()}"? This action cannot be undone.',
+            style: AppTypography.bodyMedium(color: AppColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(
+                'CANCEL',
+                style: AppTypography.monoBadge(color: AppColors.textPrimary),
+              ),
+            ),
+            BrutalistButton(
+              label: 'DELETE',
+              icon: Icons.delete_forever,
+              backgroundColor: AppColors.vermillion,
+              textColor: AppColors.pureBlack,
+              isSmall: true,
+              onPressed: () => Navigator.of(ctx).pop(true),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true && mounted) {
+      final messenger = ScaffoldMessenger.of(context);
+      final reviewName = _review.musicItemName;
+      await ref.read(reviewControllerProvider).deleteReview(_review.id);
+      if (mounted) {
+        Navigator.of(context).pop();
+        messenger.showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.pureBlack,
+            content: Text(
+              'CRITIQUE DELETED: ${reviewName.toUpperCase()}',
+              style: AppTypography.monoBadge(color: AppColors.vermillion),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('MMMM d, yyyy').format(_review.createdAt);
@@ -125,12 +195,18 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
       appBar: AppBar(
         title: Text('CRITIQUE ARCHIVE', style: AppTypography.displaySmall()),
         actions: [
-          if (isCurrentUser)
+          if (isCurrentUser) ...[
             IconButton(
               icon: const Icon(Icons.edit_outlined, color: AppColors.acidLime, size: 20),
               tooltip: 'Edit Rating & Critique',
               onPressed: _openEditReview,
             ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: AppColors.vermillion, size: 20),
+              tooltip: 'Delete Critique',
+              onPressed: _confirmDeleteReview,
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.share_outlined, color: AppColors.textPrimary, size: 20),
             tooltip: 'Share Critique',
@@ -181,11 +257,15 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: _review.itemType == 'album' ? AppColors.acidLime : AppColors.cyberCyan,
+                                  color: _review.itemType == 'album'
+                                      ? AppColors.acidLime
+                                      : (_review.itemType == 'ep' ? AppColors.electricPink : AppColors.cyberCyan),
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                                 child: Text(
-                                  _review.itemType == 'album' ? 'LP // ALBUM' : 'SINGLE // SONG',
+                                  _review.itemType == 'album'
+                                      ? 'LP // ALBUM'
+                                      : (_review.itemType == 'ep' ? 'EP // EXTENDED PLAY' : 'SINGLE // SONG'),
                                   style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 8),
                                 ),
                               ),
@@ -244,22 +324,6 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
 
             // Giant Score Badge Section
             GiantScoreBadge(score: _review.rating),
-
-            if (isCurrentUser) ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: BrutalistButton(
-                  label: 'EDIT RATING & REVIEW',
-                  icon: Icons.edit_note,
-                  backgroundColor: AppColors.surfaceElevated,
-                  textColor: AppColors.acidLime,
-                  borderColor: AppColors.acidLime.withValues(alpha: 0.6),
-                  isSmall: true,
-                  onPressed: _openEditReview,
-                ),
-              ),
-            ],
 
             const SizedBox(height: 20),
             const Divider(),

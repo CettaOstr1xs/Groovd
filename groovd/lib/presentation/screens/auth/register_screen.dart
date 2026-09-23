@@ -303,7 +303,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   textCapitalization: TextCapitalization.words,
                   style: AppTypography.bodyMedium(color: AppColors.pureWhite),
                   decoration: InputDecoration(
-                    hintText: 'e.g. CETTA // OSTRIV',
+                    hintText: 'Your Display Name',
                     hintStyle: AppTypography.bodyMedium(color: AppColors.textMuted),
                     filled: true,
                     fillColor: AppColors.surfaceElevated,
@@ -347,7 +347,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _handleController,
                   style: AppTypography.bodyMedium(color: AppColors.pureWhite),
                   decoration: InputDecoration(
-                    hintText: 'e.g. @cee_sound',
+                    hintText: '@Your_Handle',
                     hintStyle: AppTypography.bodyMedium(color: AppColors.textMuted),
                     filled: true,
                     fillColor: AppColors.surfaceElevated,

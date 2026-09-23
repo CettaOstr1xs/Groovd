@@ -252,31 +252,18 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
           else
             SliverPadding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final item = list.items[index];
-                    return Dismissible(
-                      key: Key('list_item_${item.id}_$index'),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        color: AppColors.vermillion,
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: const Icon(Icons.delete_outline, color: AppColors.pureBlack),
-                      ),
-                      onDismissed: (_) {
-                        ref.read(userListsProvider.notifier).removeItemFromList(list.id, item.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'REMOVED "${item.name.toUpperCase()}"',
-                              style: AppTypography.monoBadge(color: AppColors.pureBlack),
-                            ),
-                            backgroundColor: AppColors.vermillion,
-                          ),
-                        );
-                      },
+              sliver: SliverReorderableList(
+                itemCount: list.items.length,
+                onReorderItem: (oldIndex, newIndex) {
+                  ref.read(userListsProvider.notifier).reorderItems(list.id, oldIndex, newIndex);
+                },
+                itemBuilder: (context, index) {
+                  final item = list.items[index];
+                  return ReorderableDelayedDragStartListener(
+                    key: ValueKey('list_item_${item.id}_$index'),
+                    index: index,
+                    child: Material(
+                      color: Colors.transparent,
                       child: InkWell(
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
@@ -284,15 +271,24 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                           ),
                         ),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: const BoxDecoration(
                             border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
                           ),
                           child: Row(
                             children: [
-                              // Order number
+                              // Drag handle for instant dragging
+                              ReorderableDragStartListener(
+                                index: index,
+                                child: const Padding(
+                                  padding: EdgeInsets.only(right: 8),
+                                  child: Icon(Icons.drag_indicator, size: 18, color: AppColors.textMuted),
+                                ),
+                              ),
+
+                              // Order number (Rank)
                               SizedBox(
-                                width: 28,
+                                width: 24,
                                 child: Text(
                                   (index + 1).toString().padLeft(2, '0'),
                                   style: AppTypography.monoBadge(
@@ -345,9 +341,9 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                                 child: Text(
-                                  item.isAlbum ? 'LP' : 'SONG',
+                                  item.typeLabel,
                                   style: AppTypography.monoBadge(
-                                    color: item.isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                                    color: item.typeColor,
                                     fontSize: 8,
                                   ),
                                 ),
@@ -357,20 +353,29 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                               // Remove icon button
                               IconButton(
                                 icon: const Icon(Icons.close, size: 16, color: AppColors.textMuted),
+                                tooltip: 'Remove from list',
                                 onPressed: () {
                                   ref
                                       .read(userListsProvider.notifier)
                                       .removeItemFromList(list.id, item.id);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'REMOVED "${item.name.toUpperCase()}"',
+                                        style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                      ),
+                                      backgroundColor: AppColors.vermillion,
+                                    ),
+                                  );
                                 },
                               ),
                             ],
                           ),
                         ),
                       ),
-                    );
-                  },
-                  childCount: list.items.length,
-                ),
+                    ),
+                  );
+                },
               ),
             ),
         ],
@@ -551,7 +556,7 @@ class _AddMusicToListModalState extends ConsumerState<_AddMusicToListModal> {
                               style: AppTypography.bodyLarge(fontWeight: FontWeight.w700),
                             ),
                             subtitle: Text(
-                              '${item.isAlbum ? 'LP' : 'SONG'} • ${item.artist.toUpperCase()}',
+                              '${item.typeLabel} • ${item.artist.toUpperCase()}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: AppTypography.monoLabel(

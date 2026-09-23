@@ -467,7 +467,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('ReviewDetailScreen displays EDIT RATING & REVIEW button for current user and opens edit modal', (WidgetTester tester) async {
+  testWidgets('ReviewDetailScreen displays edit and delete action buttons in AppBar for current user and opens modals', (WidgetTester tester) async {
     final myReview = Review(
       id: 'rev_detail_edit_test',
       musicItemId: 'm_detail_edit',
@@ -498,12 +498,15 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
 
-    // Verify EDIT button appears in appbar or below score badge
-    expect(find.text('EDIT RATING & REVIEW'), findsOneWidget);
-    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+    // Verify bottom button was removed as requested
+    expect(find.text('EDIT RATING & REVIEW'), findsNothing);
 
-    // Tap EDIT RATING & REVIEW button
-    await tester.tap(find.text('EDIT RATING & REVIEW'));
+    // Verify both Edit (pencil) and Delete (trash) icons appear in AppBar actions
+    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+
+    // Tap edit pencil icon in AppBar
+    await tester.tap(find.byIcon(Icons.edit_outlined));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
 
@@ -513,12 +516,29 @@ void main() {
     expect(find.descendant(of: find.byType(WriteReviewModal), matching: find.text('Revolutionary soundscapes and haunting vocals.')), findsOneWidget);
     expect(find.textContaining('UPDATE CRITIQUE'), findsOneWidget);
 
-    // Close the modal
+    // Close the edit modal
     await tester.tap(find.byIcon(Icons.close));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('EDIT YOUR REVIEW'), findsNothing);
+
+    // Tap delete trash icon in AppBar
+    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Verify delete confirmation dialog appears
+    expect(find.text('DELETE CRITIQUE'), findsOneWidget);
+    expect(find.text('CANCEL'), findsOneWidget);
+    expect(find.text('DELETE'), findsOneWidget);
+
+    // Tap cancel
+    await tester.tap(find.text('CANCEL'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('DELETE CRITIQUE'), findsNothing);
   });
 
   testWidgets('MusicDetailScreen shows EDIT YOUR REVIEW button when user has already rated release', (WidgetTester tester) async {

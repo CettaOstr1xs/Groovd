@@ -76,9 +76,11 @@ class SpotifyRepository {
       if (type == MusicType.song || id.startsWith('track_')) {
         final track = await apiService.getTrack(id);
         if (track != null) return track;
-      } else if (type == MusicType.album || id.startsWith('album_')) {
+        return await apiService.getAlbum(id);
+      } else if (type == MusicType.album || type == MusicType.ep || id.startsWith('album_')) {
         final album = await apiService.getAlbum(id);
         if (album != null) return album;
+        return await apiService.getTrack(id);
       } else {
         final album = await apiService.getAlbum(id);
         if (album != null) return album;

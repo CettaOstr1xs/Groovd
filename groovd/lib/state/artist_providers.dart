@@ -67,11 +67,40 @@ final artistCareerStatsProvider = FutureProvider.family<ArtistCareerStats, Strin
   final discography = await ref.watch(artistDiscographyProvider(artistName).future);
   final totalReleases = discography.length;
 
+  // Calculate user rated releases: only count full albums and standalone singles/EP releases.
+  // Individual songs/tracks rated from an album are excluded from this release badge.
+  final ratedReleaseIds = <String>{};
+  for (final r in userArtistReviews) {
+    final isSongReview = r.itemType.toLowerCase() == 'song';
+    if (isSongReview) {
+      // Only count if it corresponds to an official standalone single/EP release in the discography
+      final matchingSingle = discography.where((d) =>
+        d.isSong && (d.id == r.musicItemId || d.name.trim().toLowerCase() == r.musicItemName.trim().toLowerCase())
+      ).firstOrNull;
+
+      if (matchingSingle != null) {
+        ratedReleaseIds.add(matchingSingle.id);
+      }
+    } else {
+      // Album or EP critique/rating
+      final matchingAlbum = discography.where((d) =>
+        (d.isAlbum || d.isEp) && (d.id == r.musicItemId || d.name.trim().toLowerCase() == r.musicItemName.trim().toLowerCase())
+      ).firstOrNull;
+
+      if (matchingAlbum != null) {
+        ratedReleaseIds.add(matchingAlbum.id);
+      } else {
+        ratedReleaseIds.add(r.musicItemId.isNotEmpty ? r.musicItemId : r.musicItemName.toLowerCase());
+      }
+    }
+  }
+  final userRatedCount = ratedReleaseIds.length;
+
   if (artistReviews.isEmpty) {
     return ArtistCareerStats(
       averageScore: 0.0,
       totalCommunityReviews: 0,
-      userRatedCount: userArtistReviews.length,
+      userRatedCount: userRatedCount,
       totalReleasesCount: totalReleases,
     );
   }
@@ -86,7 +115,7 @@ final artistCareerStatsProvider = FutureProvider.family<ArtistCareerStats, Strin
   return ArtistCareerStats(
     averageScore: avg,
     totalCommunityReviews: artistReviews.length,
-    userRatedCount: userArtistReviews.length,
+    userRatedCount: userRatedCount,
     totalReleasesCount: totalReleases,
     communityFavoriteTitle: fav.musicItemName,
     communityFavoriteScore: fav.rating,

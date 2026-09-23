@@ -375,50 +375,75 @@ class SpotifyApiService {
   }
 
   /// Get discography (albums and singles) for an artist.
-  Future<List<MusicItem>> getArtistAlbums(String artistId, {int limit = 10}) async {
+  Future<List<MusicItem>> getArtistAlbums(String artistId, {int limit = 10, String? includeGroups}) async {
     final token = await _getValidToken();
     if (token == null) return [];
 
     // Spotify restricts limit to 10 in Developer Mode; exceeding causes 400 'Invalid limit'
     final safeLimit = limit.clamp(1, 10);
 
-    try {
-      final uri = Uri.parse('https://api.spotify.com/v1/artists/$artistId/albums?include_groups=album,single&limit=$safeLimit');
-      var response = await http.get(
-        uri,
-        headers: {'Authorization': 'Bearer $token'},
-      );
+    Future<List<MusicItem>> fetchGroup(String groups) async {
+      try {
+        final uri = Uri.parse('https://api.spotify.com/v1/artists/$artistId/albums?include_groups=$groups&limit=$safeLimit');
+        var response = await http.get(
+          uri,
+          headers: {'Authorization': 'Bearer $token'},
+        );
 
-      if (response.statusCode == 401) {
-        final freshToken = await _getValidToken(forceRefresh: true);
-        if (freshToken != null) {
-          response = await http.get(uri, headers: {'Authorization': 'Bearer $freshToken'});
-        }
-      }
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final itemsJson = data['items'] as List?;
-        if (itemsJson != null) {
-          final list = <MusicItem>[];
-          final seenTitles = <String>{};
-          for (final a in itemsJson) {
-            final item = MusicItem.fromSpotifyAlbum(a as Map<String, dynamic>);
-            final normTitle = item.name.toLowerCase().trim();
-            if (!seenTitles.contains(normTitle)) {
-              seenTitles.add(normTitle);
-              list.add(item);
-            }
+        if (response.statusCode == 401) {
+          final freshToken = await _getValidToken(forceRefresh: true);
+          if (freshToken != null) {
+            response = await http.get(uri, headers: {'Authorization': 'Bearer $freshToken'});
           }
-          return list;
+        }
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final itemsJson = data['items'] as List?;
+          if (itemsJson != null) {
+            final list = <MusicItem>[];
+            final seenTitles = <String>{};
+            for (final a in itemsJson) {
+              final item = MusicItem.fromSpotifyAlbum(a as Map<String, dynamic>);
+              final normTitle = item.name.toLowerCase().trim();
+              if (!seenTitles.contains(normTitle)) {
+                seenTitles.add(normTitle);
+                list.add(item);
+              }
+            }
+            return list;
+          }
+        }
+        return [];
+      } catch (e) {
+        // ignore: avoid_print
+        print('Spotify GetArtistAlbums Exception: $e');
+        return [];
+      }
+    }
+
+    if (includeGroups != null) {
+      return fetchGroup(includeGroups);
+    }
+
+    // Fetch both albums and singles concurrently so artists with many albums still have their singles loaded
+    final results = await Future.wait([
+      fetchGroup('album'),
+      fetchGroup('single'),
+    ]);
+
+    final combined = <MusicItem>[];
+    final seen = <String>{};
+    for (final list in results) {
+      for (final item in list) {
+        final key = '${item.name.toLowerCase().trim()}_${item.type}';
+        if (!seen.contains(key)) {
+          seen.add(key);
+          combined.add(item);
         }
       }
-      return [];
-    } catch (e) {
-      // ignore: avoid_print
-      print('Spotify GetArtistAlbums Exception: $e');
-      return [];
     }
+    return combined;
   }
 
   /// Search Spotify for an artist by name to resolve their artist ID and details.

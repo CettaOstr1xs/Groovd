@@ -227,11 +227,15 @@ class CritiqueStoryCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: review.itemType == 'album' ? AppColors.acidLime : AppColors.cyberCyan,
+                              color: review.itemType == 'album'
+                                  ? AppColors.acidLime
+                                  : (review.itemType == 'ep' ? AppColors.electricPink : AppColors.cyberCyan),
                               borderRadius: BorderRadius.circular(1.5),
                             ),
                             child: Text(
-                              review.itemType == 'album' ? 'LP // ALBUM' : 'SINGLE // SONG',
+                              review.itemType == 'album'
+                                  ? 'LP // ALBUM'
+                                  : (review.itemType == 'ep' ? 'EP // EXTENDED PLAY' : 'SINGLE // SONG'),
                               style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 8),
                             ),
                           ),

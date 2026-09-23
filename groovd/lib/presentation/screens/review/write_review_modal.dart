@@ -181,7 +181,9 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
             musicItemName: widget.musicItem.name,
             artistName: widget.musicItem.artist,
             coverUrl: widget.musicItem.coverUrl,
-            itemType: widget.musicItem.isAlbum ? 'album' : 'song',
+            itemType: widget.musicItem.isAlbum
+                ? 'album'
+                : (widget.musicItem.isEp ? 'ep' : 'song'),
             userId: userId,
             userName: userName,
             userHandle: userHandle,

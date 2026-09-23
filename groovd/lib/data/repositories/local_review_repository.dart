@@ -124,6 +124,16 @@ class LocalReviewRepository implements ReviewRepository {
   }
 
   @override
+  Future<void> deleteReview(String reviewId) async {
+    await _ensureInitialized();
+    final initialLength = _inMemoryReviews.length;
+    _inMemoryReviews.removeWhere((r) => r.id == reviewId);
+    if (_inMemoryReviews.length != initialLength) {
+      await _persist();
+    }
+  }
+
+  @override
   Future<void> migrateUserReviews({
     required String fromUserId,
     required String toUserId,

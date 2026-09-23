@@ -734,7 +734,7 @@ class _ArtistDetailScreenState extends ConsumerState<ArtistDetailScreen> {
           discographyAsync.maybeWhen(
             data: (items) {
               final albumsCount = items.where((i) => i.isAlbum).length;
-              final singlesCount = items.where((i) => i.isSong).length;
+              final singlesCount = items.where((i) => i.isSong || i.isEp).length;
 
               return SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -758,7 +758,7 @@ class _ArtistDetailScreenState extends ConsumerState<ArtistDetailScreen> {
             data: (items) {
               final filtered = items.where((i) {
                 if (_filter == DiscographyFilter.albums) return i.isAlbum;
-                if (_filter == DiscographyFilter.singles) return i.isSong;
+                if (_filter == DiscographyFilter.singles) return i.isSong || i.isEp;
                 return true;
               }).toList();
 
@@ -878,9 +878,9 @@ class _ArtistDetailScreenState extends ConsumerState<ArtistDetailScreen> {
                     style: AppTypography.monoLabel(fontSize: 9, color: AppColors.textMuted),
                   ),
                   Text(
-                    item.isAlbum ? 'LP' : 'SINGLE',
+                    item.typeLabel,
                     style: AppTypography.monoBadge(
-                      color: item.isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                      color: item.typeColor,
                       fontSize: 7.5,
                     ),
                   ),
@@ -945,11 +945,11 @@ class _ArtistDetailScreenState extends ConsumerState<ArtistDetailScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                             decoration: BoxDecoration(
-                              color: item.isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                              color: item.typeColor,
                               borderRadius: BorderRadius.circular(2),
                             ),
                             child: Text(
-                              item.isAlbum ? 'LP' : 'SINGLE',
+                              item.typeLabel,
                               style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 8),
                             ),
                           ),
