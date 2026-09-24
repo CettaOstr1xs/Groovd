@@ -114,9 +114,9 @@ class ReviewController {
     ref.read(reviewRefreshProvider.notifier).notifyChanged();
   }
 
-  Future<void> updateUserIdentity(String userId, String newName, String newHandle) async {
+  Future<void> updateUserIdentity(String userId, String newName, String newHandle, [String? newAvatarUrl]) async {
     final repo = ref.read(reviewRepositoryProvider);
-    await repo.updateAuthorMetadata(userId, newName, newHandle);
+    await repo.updateAuthorMetadata(userId, newName, newHandle, newAvatarUrl);
     ref.read(reviewRefreshProvider.notifier).notifyChanged();
   }
 
@@ -125,6 +125,7 @@ class ReviewController {
     required String toUserId,
     required String newName,
     required String newHandle,
+    String? newAvatarUrl,
   }) async {
     final repo = ref.read(reviewRepositoryProvider);
     await repo.migrateUserReviews(
@@ -132,6 +133,7 @@ class ReviewController {
       toUserId: toUserId,
       newName: newName,
       newHandle: newHandle,
+      newAvatarUrl: newAvatarUrl,
     );
     ref.read(reviewRefreshProvider.notifier).notifyChanged();
   }

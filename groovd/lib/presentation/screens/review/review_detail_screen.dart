@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,11 +6,13 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/music_item.dart';
 import '../../../data/models/review.dart';
+import '../../../state/auth_providers.dart';
 import '../../../state/music_providers.dart';
 import '../../../state/review_providers.dart';
 import '../../../state/user_profile_provider.dart';
 import '../../widgets/album_art_card.dart';
 import '../../widgets/brutalist_button.dart';
+import '../../widgets/critic_avatar.dart';
 import '../../widgets/giant_score_badge.dart';
 import '../artist/artist_detail_screen.dart';
 import '../detail/music_detail_screen.dart';
@@ -185,10 +186,18 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('MMMM d, yyyy').format(_review.createdAt);
     final profile = ref.watch(userProfileProvider);
-    final isCurrentUser = _review.userId == profile.userId;
+    final authUser = ref.watch(authStateProvider).asData?.value;
+
+    final isCurrentUser = _review.userId == profile.userId ||
+        (authUser != null && _review.userId == authUser.uid) ||
+        (_review.userId == 'user_me') ||
+        (profile.userHandle != '@groovd_me' &&
+            _review.userHandle.isNotEmpty &&
+            _review.userHandle.toLowerCase() == profile.userHandle.toLowerCase());
+
     final authorName = isCurrentUser ? profile.userName : _review.userName;
     final authorHandle = isCurrentUser ? profile.userHandle : _review.userHandle;
-    final hasCustomAvatar = isCurrentUser && profile.avatarPath != null;
+    final avatarToUse = isCurrentUser ? profile.avatarPath : _review.userAvatarUrl;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -332,42 +341,22 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
             // Critic Persona Profile Block
             Row(
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: isCurrentUser && hasCustomAvatar
-                        ? AppColors.pureBlack
-                        : AppColors.acidLime,
-                    border: Border.all(color: AppColors.pureBlack, width: 2.0),
-                    borderRadius: BorderRadius.circular(2),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: AppColors.pureBlack,
-                        offset: Offset(2, 2),
-                        blurRadius: 0,
-                      ),
-                    ],
-                  ),
-                  alignment: Alignment.center,
-                  child: hasCustomAvatar
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(1),
-                          child: Image.file(
-                            File(profile.avatarPath!),
-                            width: 44,
-                            height: 44,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Text(
-                              authorName.isNotEmpty ? authorName[0].toUpperCase() : 'C',
-                              style: AppTypography.displaySmall(fontSize: 18, color: AppColors.pureBlack),
-                            ),
-                          ),
-                        )
-                      : Text(
-                          authorName.isNotEmpty ? authorName[0].toUpperCase() : 'C',
-                          style: AppTypography.displaySmall(fontSize: 18, color: AppColors.pureBlack),
-                        ),
+                CriticAvatar(
+                  avatarPath: avatarToUse,
+                  fallbackInitial: authorName,
+                  size: 44,
+                  borderColor: AppColors.pureBlack,
+                  borderWidth: 2.0,
+                  fallbackBgColor: isCurrentUser ? AppColors.acidLime : AppColors.surfaceElevated,
+                  fallbackTextColor: isCurrentUser ? AppColors.pureBlack : AppColors.textPrimary,
+                  borderRadius: 2,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.pureBlack,
+                      offset: Offset(2, 2),
+                      blurRadius: 0,
+                    ),
+                  ],
                 ),
                 const SizedBox(width: 14),
                 Expanded(

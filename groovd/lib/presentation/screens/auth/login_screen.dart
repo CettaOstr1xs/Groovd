@@ -45,12 +45,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _syncUserState(dynamic user) async {
     if (user == null) return;
     try {
-      await ref.read(reviewRepositoryProvider).migrateUserReviews(
-        fromUserId: 'user_me',
-        toUserId: user.uid,
-        newName: (user.displayName ?? 'CRITIC').toUpperCase(),
-        newHandle: '@${(user.displayName ?? 'critic').toLowerCase().replaceAll(RegExp(r'\s+'), '_')}',
-      );
       await ref.read(userProfileProvider.notifier).syncWithFirebaseUser(user);
       await ref.read(wishlistProvider.notifier).syncForUser(user.uid);
       await ref.read(dossierTopPicksProvider.notifier).syncForUser(user.uid);

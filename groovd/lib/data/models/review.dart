@@ -8,6 +8,7 @@ class Review {
   final String userId;
   final String userName;
   final String userHandle;
+  final String? userAvatarUrl;
   final double rating; // 1.0 to 10.0
   final String headline;
   final String body;
@@ -25,6 +26,7 @@ class Review {
     required this.userId,
     required this.userName,
     required this.userHandle,
+    this.userAvatarUrl,
     required this.rating,
     required this.headline,
     required this.body,
@@ -75,6 +77,8 @@ class Review {
     String? userId,
     String? userName,
     String? userHandle,
+    String? userAvatarUrl,
+    bool clearAvatar = false,
     double? rating,
     String? headline,
     String? body,
@@ -92,6 +96,7 @@ class Review {
       userId: userId ?? this.userId,
       userName: userName ?? this.userName,
       userHandle: userHandle ?? this.userHandle,
+      userAvatarUrl: clearAvatar ? null : (userAvatarUrl ?? this.userAvatarUrl),
       rating: rating ?? this.rating,
       headline: headline ?? this.headline,
       body: body ?? this.body,
@@ -112,6 +117,7 @@ class Review {
       'userId': userId,
       'userName': userName,
       'userHandle': userHandle,
+      'userAvatarUrl': userAvatarUrl,
       'rating': rating,
       'headline': headline,
       'body': body,
@@ -132,6 +138,7 @@ class Review {
       userId: map['userId'] as String? ?? '',
       userName: map['userName'] as String? ?? 'ANONYMOUS CRITIC',
       userHandle: map['userHandle'] as String? ?? '@groover',
+      userAvatarUrl: map['userAvatarUrl'] as String?,
       rating: (map['rating'] as num?)?.toDouble() ?? 5.0,
       headline: map['headline'] as String? ?? '',
       body: map['body'] as String? ?? '',

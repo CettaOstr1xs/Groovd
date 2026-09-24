@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:groovd/core/theme/app_colors.dart';
@@ -8,6 +7,7 @@ import 'package:groovd/presentation/screens/search/search_screen.dart';
 import 'package:groovd/presentation/screens/profile/profile_screen.dart';
 import 'package:groovd/state/settings_provider.dart';
 import 'package:groovd/state/user_profile_provider.dart';
+import '../widgets/critic_avatar.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
@@ -128,7 +128,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     String? avatarPath,
   }) {
     final isSelected = _currentIndex == index;
-    final hasCustomAvatar = avatarPath != null && File(avatarPath).existsSync();
+    final hasCustomAvatar = avatarPath != null && avatarPath.trim().isNotEmpty;
 
     return Expanded(
       child: InkWell(
@@ -148,29 +148,13 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutBack,
                 child: hasCustomAvatar
-                    ? Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: AppColors.pureBlack,
-                          border: Border.all(
-                            color: isSelected ? AppColors.acidLime : AppColors.borderBold,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(1),
-                          child: Image.file(
-                            File(avatarPath),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                              isSelected ? activeIcon : icon,
-                              color: isSelected ? AppColors.acidLime : AppColors.textMuted,
-                              size: 18,
-                            ),
-                          ),
-                        ),
+                    ? CriticAvatar(
+                        avatarPath: avatarPath,
+                        fallbackInitial: 'C',
+                        size: 20,
+                        borderWidth: 1.5,
+                        borderColor: isSelected ? AppColors.acidLime : AppColors.borderBold,
+                        borderRadius: 2,
                       )
                     : Icon(
                         isSelected ? activeIcon : icon,

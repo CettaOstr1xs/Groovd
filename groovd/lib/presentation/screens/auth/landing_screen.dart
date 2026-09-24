@@ -351,13 +351,6 @@ class _LandingScreenState extends ConsumerState<LandingScreen> with SingleTicker
       if (credential != null && mounted) {
         final user = credential.user;
         if (user != null) {
-          final repo = ref.read(reviewRepositoryProvider);
-          await repo.migrateUserReviews(
-            fromUserId: 'user_me',
-            toUserId: user.uid,
-            newName: (user.displayName ?? 'CRITIC').toUpperCase(),
-            newHandle: '@${(user.displayName ?? 'critic').toLowerCase().replaceAll(RegExp(r'\s+'), '_')}',
-          );
           await ref.read(userProfileProvider.notifier).syncWithFirebaseUser(user);
           await ref.read(wishlistProvider.notifier).syncForUser(user.uid);
           await ref.read(dossierTopPicksProvider.notifier).syncForUser(user.uid);

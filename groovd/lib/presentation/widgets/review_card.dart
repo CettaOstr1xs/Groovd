@@ -1,10 +1,11 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/review.dart';
+import 'package:groovd/presentation/widgets/critic_avatar.dart';
+import 'package:groovd/state/auth_providers.dart';
 import 'package:groovd/state/user_profile_provider.dart';
 
 class ReviewCard extends ConsumerWidget {
@@ -32,10 +33,18 @@ class ReviewCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userProfileProvider);
-    final isCurrentUser = review.userId == profile.userId;
+    final authUser = ref.watch(authStateProvider).asData?.value;
+
+    final isCurrentUser = review.userId == profile.userId ||
+        (authUser != null && review.userId == authUser.uid) ||
+        (review.userId == 'user_me') ||
+        (profile.userHandle != '@groovd_me' &&
+            review.userHandle.isNotEmpty &&
+            review.userHandle.toLowerCase() == profile.userHandle.toLowerCase());
+
     final authorName = isCurrentUser ? profile.userName : review.userName;
     final authorHandle = isCurrentUser ? profile.userHandle : review.userHandle;
-    final hasCustomAvatar = isCurrentUser && profile.avatarPath != null;
+    final avatarToUse = isCurrentUser ? profile.avatarPath : review.userAvatarUrl;
 
     return InkWell(
       onTap: onTap,
@@ -52,44 +61,15 @@ class ReviewCard extends ConsumerWidget {
             // Author & Time header
             Row(
               children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: isCurrentUser && hasCustomAvatar
-                        ? AppColors.pureBlack
-                        : (isCurrentUser ? AppColors.acidLime : AppColors.surfaceElevated),
-                    border: Border.all(
-                      color: isCurrentUser ? AppColors.acidLime : AppColors.borderBold,
-                      width: 1.5,
-                    ),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                  alignment: Alignment.center,
-                  child: hasCustomAvatar
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(1),
-                          child: Image.file(
-                            File(profile.avatarPath!),
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Text(
-                              authorName.isNotEmpty ? authorName[0].toUpperCase() : 'C',
-                              style: AppTypography.monoBadge(
-                                color: isCurrentUser ? AppColors.pureBlack : AppColors.textPrimary,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                        )
-                      : Text(
-                          authorName.isNotEmpty ? authorName[0].toUpperCase() : 'C',
-                          style: AppTypography.monoBadge(
-                            color: isCurrentUser ? AppColors.pureBlack : AppColors.textPrimary,
-                            fontSize: 11,
-                          ),
-                        ),
+                CriticAvatar(
+                  avatarPath: avatarToUse,
+                  fallbackInitial: authorName,
+                  size: 28,
+                  borderColor: isCurrentUser ? AppColors.acidLime : AppColors.borderBold,
+                  fallbackBgColor: isCurrentUser ? AppColors.acidLime : AppColors.surfaceElevated,
+                  fallbackTextColor: isCurrentUser ? AppColors.pureBlack : AppColors.textPrimary,
+                  borderWidth: 1.5,
+                  borderRadius: 2,
                 ),
                 const SizedBox(width: 10),
                 Expanded(

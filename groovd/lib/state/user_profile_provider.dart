@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_providers.dart';
+import 'review_providers.dart';
 
 class UserProfile {
   final String userId;
@@ -70,6 +71,7 @@ class UserProfile {
 }
 
 class UserProfileNotifier extends Notifier<UserProfile> {
+  static const String _userIdKey = 'groovd_user_id_v1';
   static const String _avatarKey = 'groovd_user_avatar_path_v1';
   static const String _backdropKey = 'groovd_user_backdrop_path_v1';
   static const String _nameKey = 'groovd_user_name_v1';
@@ -97,6 +99,7 @@ class UserProfileNotifier extends Notifier<UserProfile> {
   Future<void> _loadFromPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final savedUserId = prefs.getString(_userIdKey);
       final savedAvatar = prefs.getString(_avatarKey);
       final savedBackdrop = prefs.getString(_backdropKey);
       final savedName = prefs.getString(_nameKey);
@@ -128,6 +131,7 @@ class UserProfileNotifier extends Notifier<UserProfile> {
       }
 
       state = state.copyWith(
+        userId: savedUserId ?? state.userId,
         userName: savedName ?? state.userName,
         userHandle: savedHandle ?? state.userHandle,
         bio: savedBio ?? state.bio,
@@ -140,6 +144,8 @@ class UserProfileNotifier extends Notifier<UserProfile> {
   Future<void> _persist() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_userIdKey, state.userId);
+
       if (state.avatarPath != null) {
         await prefs.setString(_avatarKey, state.avatarPath!);
       } else {
@@ -199,6 +205,17 @@ class UserProfileNotifier extends Notifier<UserProfile> {
 
       state = state.copyWith(avatarPath: croppedImagePath);
       await _persist();
+
+      try {
+        await ref.read(reviewRepositoryProvider).updateAuthorMetadata(
+          state.userId,
+          state.userName,
+          state.userHandle,
+          state.avatarPath,
+        );
+        ref.read(reviewRefreshProvider.notifier).notifyChanged();
+      } catch (_) {}
+
       return true;
     } catch (_) {
       return false;
@@ -236,6 +253,16 @@ class UserProfileNotifier extends Notifier<UserProfile> {
 
     state = state.copyWith(clearAvatar: true);
     await _persist();
+
+    try {
+      await ref.read(reviewRepositoryProvider).updateAuthorMetadata(
+        state.userId,
+        state.userName,
+        state.userHandle,
+        null,
+      );
+      ref.read(reviewRefreshProvider.notifier).notifyChanged();
+    } catch (_) {}
   }
 
   /// Picks a new background photo (Patron backdrop) from gallery and saves it to local storage.
@@ -309,6 +336,16 @@ class UserProfileNotifier extends Notifier<UserProfile> {
       userHandle: cleanHandle,
     );
     await _persist();
+
+    try {
+      await ref.read(reviewRepositoryProvider).updateAuthorMetadata(
+        state.userId,
+        state.userName,
+        state.userHandle,
+        state.avatarPath,
+      );
+      ref.read(reviewRefreshProvider.notifier).notifyChanged();
+    } catch (_) {}
   }
 
   /// Syncs user profile state with authenticated Firebase User & Firestore.
@@ -329,11 +366,32 @@ class UserProfileNotifier extends Notifier<UserProfile> {
         state = state.copyWith(
           userId: user.uid,
           userName: (user.displayName ?? state.userName).toUpperCase(),
+          avatarPath: user.photoURL ?? state.avatarPath,
         );
       }
       await _persist();
+
+      // Automatically migrate guest reviews and synchronize all authored reviews to match current profile
+      try {
+        final reviewRepo = ref.read(reviewRepositoryProvider);
+        await reviewRepo.migrateUserReviews(
+          fromUserId: 'user_me',
+          toUserId: user.uid,
+          newName: state.userName,
+          newHandle: state.userHandle,
+          newAvatarUrl: state.avatarPath,
+        );
+        await reviewRepo.updateAuthorMetadata(
+          user.uid,
+          state.userName,
+          state.userHandle,
+          state.avatarPath,
+        );
+        ref.read(reviewRefreshProvider.notifier).notifyChanged();
+      } catch (_) {}
     } catch (_) {
       state = state.copyWith(userId: user.uid);
+      await _persist();
     }
   }
 
@@ -345,6 +403,7 @@ class UserProfileNotifier extends Notifier<UserProfile> {
     );
     try {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_userIdKey);
       await prefs.remove(_avatarKey);
       await prefs.remove(_backdropKey);
       await prefs.setString(_nameKey, state.userName);

@@ -10,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/review.dart';
 import '../../../state/user_profile_provider.dart';
+import '../../../state/auth_providers.dart';
 import '../../widgets/brutalist_button.dart';
 import 'critique_story_card.dart';
 
@@ -188,8 +189,25 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal> {
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(userProfileProvider);
-    final isCurrentUser = widget.review.userId == profile.userId;
-    final customAvatarPath = isCurrentUser ? profile.avatarPath : null;
+    final authUser = ref.watch(authStateProvider).asData?.value;
+    final isCurrentUser = widget.review.userId == profile.userId ||
+        (authUser != null && widget.review.userId == authUser.uid) ||
+        widget.review.userId == 'user_me' ||
+        (profile.userHandle != '@groovd_me' &&
+            widget.review.userHandle.isNotEmpty &&
+            widget.review.userHandle.toLowerCase() == profile.userHandle.toLowerCase());
+
+    final customAvatarPath = isCurrentUser
+        ? (profile.avatarPath ?? widget.review.userAvatarUrl)
+        : widget.review.userAvatarUrl;
+
+    final displayReview = isCurrentUser
+        ? widget.review.copyWith(
+            userName: profile.userName,
+            userHandle: profile.userHandle,
+            userAvatarUrl: customAvatarPath,
+          )
+        : widget.review;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.92,
@@ -260,7 +278,7 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal> {
                         child: RepaintBoundary(
                           key: _repaintKey,
                           child: CritiqueStoryCard(
-                            review: widget.review,
+                            review: displayReview,
                             theme: _currentTheme,
                             layout: _currentLayout,
                             avatarPath: customAvatarPath,

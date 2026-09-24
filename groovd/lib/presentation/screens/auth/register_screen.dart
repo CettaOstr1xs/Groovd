@@ -65,15 +65,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _syncUserState(dynamic user, {String? customName, String? customHandle}) async {
     if (user == null) return;
     try {
-      final name = customName ?? (user.displayName ?? 'CRITIC').toUpperCase();
-      final handle = customHandle ?? '@${(user.displayName ?? 'critic').toLowerCase().replaceAll(RegExp(r'\s+'), '_')}';
-      await ref.read(reviewRepositoryProvider).migrateUserReviews(
-        fromUserId: 'user_me',
-        toUserId: user.uid,
-        newName: name,
-        newHandle: handle,
-      );
       await ref.read(userProfileProvider.notifier).syncWithFirebaseUser(user);
+      if (customName != null || customHandle != null) {
+        final current = ref.read(userProfileProvider);
+        await ref.read(userProfileProvider.notifier).updateCriticIdentity(
+          name: customName ?? current.userName,
+          handle: customHandle ?? current.userHandle,
+        );
+      }
       await ref.read(wishlistProvider.notifier).syncForUser(user.uid);
       await ref.read(dossierTopPicksProvider.notifier).syncForUser(user.uid);
       await ref.read(userListsProvider.notifier).syncForUser(user.uid);

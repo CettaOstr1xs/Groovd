@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/review.dart';
 import '../../widgets/album_art_card.dart';
+import '../../widgets/critic_avatar.dart';
 
 enum StoryTheme {
   darkMatrix,
@@ -390,39 +390,17 @@ class CritiqueStoryCard extends StatelessWidget {
                     // Critic Signature Row
                     Row(
                       children: [
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: avatarPath != null ? Colors.black : _accentColor,
-                            border: Border.all(color: Colors.black, width: 1.5),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                          alignment: Alignment.center,
-                          child: (avatarPath != null && File(avatarPath!).existsSync())
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(1),
-                                  child: Image.file(
-                                    File(avatarPath!),
-                                    width: 28,
-                                    height: 28,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => Text(
-                                      review.userName.isNotEmpty ? review.userName[0].toUpperCase() : 'C',
-                                      style: AppTypography.displaySmall(
-                                        fontSize: 13,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : Text(
-                                  review.userName.isNotEmpty ? review.userName[0].toUpperCase() : 'C',
-                                  style: AppTypography.displaySmall(
-                                    fontSize: 13,
-                                    color: Colors.black,
-                                  ),
-                                ),
+                        CriticAvatar(
+                          avatarPath: (avatarPath != null && avatarPath!.isNotEmpty)
+                              ? avatarPath
+                              : review.userAvatarUrl,
+                          fallbackInitial: review.userName,
+                          size: 28,
+                          borderRadius: 2,
+                          borderWidth: 1.5,
+                          borderColor: Colors.black,
+                          fallbackBgColor: _accentColor,
+                          fallbackTextColor: Colors.black,
                         ),
                         const SizedBox(width: 10),
                         Expanded(

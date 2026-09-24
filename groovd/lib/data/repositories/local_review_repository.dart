@@ -106,7 +106,7 @@ class LocalReviewRepository implements ReviewRepository {
   }
 
   @override
-  Future<void> updateAuthorMetadata(String userId, String newName, String newHandle) async {
+  Future<void> updateAuthorMetadata(String userId, String newName, String newHandle, [String? newAvatarUrl]) async {
     await _ensureInitialized();
     bool changed = false;
     for (int i = 0; i < _inMemoryReviews.length; i++) {
@@ -114,6 +114,7 @@ class LocalReviewRepository implements ReviewRepository {
         _inMemoryReviews[i] = _inMemoryReviews[i].copyWith(
           userName: newName,
           userHandle: newHandle,
+          userAvatarUrl: newAvatarUrl ?? _inMemoryReviews[i].userAvatarUrl,
         );
         changed = true;
       }
@@ -139,6 +140,7 @@ class LocalReviewRepository implements ReviewRepository {
     required String toUserId,
     required String newName,
     required String newHandle,
+    String? newAvatarUrl,
   }) async {
     await _ensureInitialized();
     bool changed = false;
@@ -148,6 +150,7 @@ class LocalReviewRepository implements ReviewRepository {
           userId: toUserId,
           userName: newName,
           userHandle: newHandle,
+          userAvatarUrl: newAvatarUrl ?? _inMemoryReviews[i].userAvatarUrl,
         );
         changed = true;
       }

@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,9 +6,11 @@ import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/models/review.dart';
+import 'package:groovd/presentation/widgets/brutalist_button.dart';
+import 'package:groovd/presentation/widgets/critic_avatar.dart';
+import 'package:groovd/state/auth_providers.dart';
 import 'package:groovd/state/review_providers.dart';
 import 'package:groovd/state/user_profile_provider.dart';
-import 'package:groovd/presentation/widgets/brutalist_button.dart';
 
 class WriteReviewModal extends ConsumerStatefulWidget {
   final MusicItem musicItem;
@@ -161,9 +162,11 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
     setState(() => _isSubmitting = true);
 
     final profile = ref.read(userProfileProvider);
-    final userId = profile.userId;
+    final authUser = ref.read(authStateProvider).asData?.value;
+    final userId = authUser?.uid ?? profile.userId;
     final userName = profile.userName;
     final userHandle = profile.userHandle;
+    final userAvatarUrl = profile.avatarPath;
 
     final isEditing = widget.existingReview != null;
     final reviewToSave = isEditing
@@ -174,6 +177,7 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
             tags: _selectedTags,
             userName: userName,
             userHandle: userHandle,
+            userAvatarUrl: userAvatarUrl,
           )
         : Review(
             id: 'rev_${DateTime.now().millisecondsSinceEpoch}',
@@ -187,6 +191,7 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
             userId: userId,
             userName: userName,
             userHandle: userHandle,
+            userAvatarUrl: userAvatarUrl,
             rating: _rating,
             headline: _headlineController.text.trim(),
             body: _bodyController.text.trim(),
@@ -321,33 +326,15 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: profile.avatarPath != null ? AppColors.pureBlack : AppColors.acidLime,
-                      border: Border.all(color: AppColors.acidLime, width: 1.0),
-                      borderRadius: BorderRadius.circular(1.5),
-                    ),
-                    alignment: Alignment.center,
-                    child: profile.avatarPath != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(1),
-                            child: Image.file(
-                              File(profile.avatarPath!),
-                              width: 22,
-                              height: 22,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Text(
-                                profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
-                                style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 10),
-                              ),
-                            ),
-                          )
-                        : Text(
-                            profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
-                            style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 10),
-                          ),
+                  CriticAvatar(
+                    avatarPath: profile.avatarPath,
+                    fallbackInitial: profile.userName,
+                    size: 22,
+                    borderWidth: 1.0,
+                    borderRadius: 1.5,
+                    borderColor: AppColors.acidLime,
+                    fallbackBgColor: AppColors.acidLime,
+                    fallbackTextColor: AppColors.pureBlack,
                   ),
                   const SizedBox(width: 8),
                   Text(

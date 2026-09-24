@@ -155,8 +155,8 @@ class FirestoreReviewRepository implements ReviewRepository {
   }
 
   @override
-  Future<void> updateAuthorMetadata(String userId, String newName, String newHandle) async {
-    await _local.updateAuthorMetadata(userId, newName, newHandle);
+  Future<void> updateAuthorMetadata(String userId, String newName, String newHandle, [String? newAvatarUrl]) async {
+    await _local.updateAuthorMetadata(userId, newName, newHandle, newAvatarUrl);
     try {
       final userReviews = await _firestore
           .collection(collectionPath)
@@ -164,10 +164,14 @@ class FirestoreReviewRepository implements ReviewRepository {
           .get()
           .timeout(const Duration(milliseconds: 2500));
       for (final doc in userReviews.docs) {
-        await doc.reference.update({
+        final updateData = <String, dynamic>{
           'userName': newName,
           'userHandle': newHandle,
-        }).timeout(const Duration(milliseconds: 1500));
+        };
+        if (newAvatarUrl != null) {
+          updateData['userAvatarUrl'] = newAvatarUrl;
+        }
+        await doc.reference.update(updateData).timeout(const Duration(milliseconds: 1500));
       }
     } catch (_) {}
   }
@@ -190,12 +194,14 @@ class FirestoreReviewRepository implements ReviewRepository {
     required String toUserId,
     required String newName,
     required String newHandle,
+    String? newAvatarUrl,
   }) async {
     await _local.migrateUserReviews(
       fromUserId: fromUserId,
       toUserId: toUserId,
       newName: newName,
       newHandle: newHandle,
+      newAvatarUrl: newAvatarUrl,
     );
     try {
       final snapshot = await _firestore
@@ -204,11 +210,15 @@ class FirestoreReviewRepository implements ReviewRepository {
           .get()
           .timeout(const Duration(milliseconds: 3000));
       for (final doc in snapshot.docs) {
-        await doc.reference.update({
+        final updateData = <String, dynamic>{
           'userId': toUserId,
           'userName': newName,
           'userHandle': newHandle,
-        }).timeout(const Duration(milliseconds: 1500));
+        };
+        if (newAvatarUrl != null) {
+          updateData['userAvatarUrl'] = newAvatarUrl;
+        }
+        await doc.reference.update(updateData).timeout(const Duration(milliseconds: 1500));
       }
     } catch (_) {}
   }
