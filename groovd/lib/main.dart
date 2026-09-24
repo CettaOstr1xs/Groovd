@@ -8,6 +8,7 @@ import 'core/theme/brutalist_theme.dart';
 import 'firebase_options.dart';
 import 'presentation/navigation/main_navigation_screen.dart';
 import 'presentation/screens/auth/landing_screen.dart';
+import 'presentation/screens/splash/splash_screen.dart';
 import 'state/auth_providers.dart';
 import 'state/onboarding_provider.dart';
 
@@ -31,7 +32,7 @@ void main() async {
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF0C0C0E),
+      systemNavigationBarColor: Color(0xFF080808),
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
@@ -44,7 +45,14 @@ void main() async {
 }
 
 class GroovdApp extends StatelessWidget {
-  const GroovdApp({super.key});
+  final bool showSplash;
+  final Duration? splashDuration;
+
+  const GroovdApp({
+    super.key,
+    this.showSplash = true,
+    this.splashDuration,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +60,12 @@ class GroovdApp extends StatelessWidget {
       title: 'Groovd // Music Critique',
       debugShowCheckedModeBanner: false,
       theme: BrutalistTheme.darkTheme,
-      home: const AppStartupGate(),
+      home: showSplash
+          ? SplashScreen(
+              duration: splashDuration ?? const Duration(milliseconds: 1900),
+              nextScreen: const AppStartupGate(),
+            )
+          : const AppStartupGate(),
     );
   }
 }

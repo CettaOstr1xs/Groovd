@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:groovd/main.dart';
+import 'package:groovd/presentation/screens/splash/splash_screen.dart';
 import 'package:groovd/presentation/screens/profile/logged_reviews_screen.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/presentation/screens/review/write_review_modal.dart';
@@ -36,6 +37,38 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  testWidgets('SplashScreen renders GROOVD, animates acid-lime block, and transitions to startup gate', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: GroovdApp(
+          showSplash: true,
+          splashDuration: Duration(milliseconds: 1000),
+        ),
+      ),
+    );
+
+    // Initial frame
+    await tester.pump();
+    expect(find.byType(SplashScreen), findsOneWidget);
+
+    // Advance to when text and acid-lime block are active
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('GROOVD'), findsOneWidget);
+    expect(find.text('THE MUSIC CRITIC’S NOTEBOOK'), findsOneWidget);
+
+    // Advance past completion duration and fade transition
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // Should have transitioned to LandingScreen
+    expect(find.text('CREATE CRITIC DOSSIER'), findsOneWidget);
+  });
+
   testWidgets('Groovd app renders landing screen for first-time guests and allows guest entry into main navigation', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1.0;
@@ -44,7 +77,7 @@ void main() {
 
     await tester.pumpWidget(
       const ProviderScope(
-        child: GroovdApp(),
+        child: GroovdApp(showSplash: false),
       ),
     );
 
@@ -82,7 +115,7 @@ void main() {
         overrides: [
           onboardingProvider.overrideWith(_CompletedOnboardingNotifier.new),
         ],
-        child: const GroovdApp(),
+        child: const GroovdApp(showSplash: false),
       ),
     );
 
