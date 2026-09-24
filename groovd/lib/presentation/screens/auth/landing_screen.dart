@@ -20,6 +20,7 @@ import 'package:groovd/state/wishlist_provider.dart';
 class _AlbumCoverSpec {
   final String title;
   final String artist;
+  final String assetPath;
   final String coverUrl;
   final String? score;
   final Color fallbackColor;
@@ -27,19 +28,65 @@ class _AlbumCoverSpec {
   const _AlbumCoverSpec({
     required this.title,
     required this.artist,
+    required this.assetPath,
     required this.coverUrl,
     this.score,
     required this.fallbackColor,
   });
 }
 
-/// 8 continuous tilted tracks filled with 100% verified, live Spotify CDN album covers.
+/// Asset paths for all verified album covers bundled inside the app for instant, zero-delay rendering.
+const List<String> kLandingCoverAssetPaths = [
+  'assets/covers/blonde.jpg',
+  'assets/covers/to_pimp_a_butterfly.jpg',
+  'assets/covers/brat.jpg',
+  'assets/covers/in_rainbows.jpg',
+  'assets/covers/random_access_memories.jpg',
+  'assets/covers/igor.jpg',
+  'assets/covers/hit_me_hard_and_soft.jpg',
+  'assets/covers/the_dark_side_of_the_moon.jpg',
+  'assets/covers/currents.jpg',
+  'assets/covers/ok_computer.jpg',
+  'assets/covers/abbey_road.jpg',
+  'assets/covers/after_hours.jpg',
+  'assets/covers/nevermind.jpg',
+  'assets/covers/rumours.jpg',
+  'assets/covers/kid_a.jpg',
+  'assets/covers/short_n_sweet.jpg',
+  'assets/covers/am.jpg',
+  'assets/covers/lover.jpg',
+  'assets/covers/damn.jpg',
+  'assets/covers/melodrama.jpg',
+  'assets/covers/sos.jpg',
+  'assets/covers/vespertine.jpg',
+  'assets/covers/gemini_rights.jpg',
+  'assets/covers/good_kid_maad_city.jpg',
+  'assets/covers/channel_orange.jpg',
+  'assets/covers/born_to_die.jpg',
+  'assets/covers/the_bends.jpg',
+  'assets/covers/is_this_it.jpg',
+  'assets/covers/pure_heroine.jpg',
+  'assets/covers/discovery.jpg',
+  'assets/covers/flower_boy.jpg',
+  'assets/covers/wwafawdwg.jpg',
+  'assets/covers/wish_you_were_here.jpg',
+  'assets/covers/lonerism.jpg',
+  'assets/covers/starboy.jpg',
+  'assets/covers/in_utero.jpg',
+  'assets/covers/ctrl.jpg',
+  'assets/covers/punisher.jpg',
+  'assets/covers/unknown_pleasures.jpg',
+];
+
+/// 8 continuous tilted tracks filled with bundled, local album cover assets for instant zero-delay display.
+/// Each line contains 6 curated albums: 4 original favorites + 2 brand-new unique additions (total 48 albums).
 final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
-  // Track 0 (Left -> Right)
+  // Track 0 (Left -> Right) - 6 Albums (+ Good Kid M.A.A.D City, Channel Orange)
   const [
     _AlbumCoverSpec(
       title: 'BLONDE',
       artist: 'FRANK OCEAN',
+      assetPath: 'assets/covers/blonde.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273c5649add07ed3720be9d5526',
       score: '10.0',
       fallbackColor: Color(0xFF556B2F),
@@ -47,6 +94,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'TO PIMP A BUTTERFLY',
       artist: 'KENDRICK LAMAR',
+      assetPath: 'assets/covers/to_pimp_a_butterfly.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273cdb645498cd3d8a2db4d05e1',
       score: '10.0',
       fallbackColor: Color(0xFF2C3E50),
@@ -54,6 +102,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'BRAT',
       artist: 'CHARLI XCX',
+      assetPath: 'assets/covers/brat.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273f88b43d15fd14e9525338b59',
       score: '9.2',
       fallbackColor: Color(0xFF8ACE00),
@@ -61,17 +110,35 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'IN RAINBOWS',
       artist: 'RADIOHEAD',
+      assetPath: 'assets/covers/in_rainbows.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273de3c04b5fc750b68899b20a9',
       score: '9.8',
       fallbackColor: Color(0xFFB71C1C),
     ),
+    _AlbumCoverSpec(
+      title: 'GOOD KID, M.A.A.D CITY',
+      artist: 'KENDRICK LAMAR',
+      assetPath: 'assets/covers/good_kid_maad_city.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/b5be27644d505bad7bdb516fe4165475/500x500-000000-80-0-0.jpg',
+      score: '10.0',
+      fallbackColor: Color(0xFF9E9E9E),
+    ),
+    _AlbumCoverSpec(
+      title: 'CHANNEL ORANGE',
+      artist: 'FRANK OCEAN',
+      assetPath: 'assets/covers/channel_orange.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/d5e89d10e0129cf63c180907297f6424/500x500-000000-80-0-0.jpg',
+      score: '9.8',
+      fallbackColor: Color(0xFFE65100),
+    ),
   ],
 
-  // Track 1 (Right -> Left)
+  // Track 1 (Right -> Left) - 6 Albums (+ Born To Die, The Bends)
   const [
     _AlbumCoverSpec(
       title: 'RANDOM ACCESS MEMORIES',
       artist: 'DAFT PUNK',
+      assetPath: 'assets/covers/random_access_memories.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b2739b9b36b0e22870b9f542d937',
       score: '9.6',
       fallbackColor: Color(0xFF212121),
@@ -79,6 +146,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'IGOR',
       artist: 'TYLER, THE CREATOR',
+      assetPath: 'assets/covers/igor.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b27330a635de2bb0caa4e26f6abb',
       score: '9.4',
       fallbackColor: Color(0xFFE91E63),
@@ -86,6 +154,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'HIT ME HARD AND SOFT',
       artist: 'BILLIE EILISH',
+      assetPath: 'assets/covers/hit_me_hard_and_soft.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b27371d62ea7ea8a5be92d3c1f62',
       score: '9.1',
       fallbackColor: Color(0xFF0D47A1),
@@ -93,17 +162,35 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'THE DARK SIDE OF THE MOON',
       artist: 'PINK FLOYD',
+      assetPath: 'assets/covers/the_dark_side_of_the_moon.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273db216ca805faf5fe35df4ee6',
       score: '10.0',
       fallbackColor: Color(0xFF1B1B1B),
     ),
+    _AlbumCoverSpec(
+      title: 'BORN TO DIE',
+      artist: 'LANA DEL REY',
+      assetPath: 'assets/covers/born_to_die.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/61665a396e987c2b5d44443efdb4c19a/500x500-000000-80-0-0.jpg',
+      score: '9.0',
+      fallbackColor: Color(0xFF37474F),
+    ),
+    _AlbumCoverSpec(
+      title: 'THE BENDS',
+      artist: 'RADIOHEAD',
+      assetPath: 'assets/covers/the_bends.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/b27f4da7e415b3c5836a0d0df13bc89f/500x500-000000-80-0-0.jpg',
+      score: '9.5',
+      fallbackColor: Color(0xFFB71C1C),
+    ),
   ],
 
-  // Track 2 (Left -> Right)
+  // Track 2 (Left -> Right) - 6 Albums (+ Is This It, Pure Heroine)
   const [
     _AlbumCoverSpec(
       title: 'CURRENTS',
       artist: 'TAME IMPALA',
+      assetPath: 'assets/covers/currents.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b2739e1cfc756886ac782e363d79',
       score: '9.3',
       fallbackColor: Color(0xFF4A148C),
@@ -111,6 +198,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'OK COMPUTER',
       artist: 'RADIOHEAD',
+      assetPath: 'assets/covers/ok_computer.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273c8b444df094279e70d0ed856',
       score: '10.0',
       fallbackColor: Color(0xFF455A64),
@@ -118,6 +206,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'ABBEY ROAD',
       artist: 'THE BEATLES',
+      assetPath: 'assets/covers/abbey_road.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273dc30583ba717007b00cceb25',
       score: '10.0',
       fallbackColor: Color(0xFF3E2723),
@@ -125,17 +214,35 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'AFTER HOURS',
       artist: 'THE WEEKND',
+      assetPath: 'assets/covers/after_hours.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36',
       score: '9.1',
       fallbackColor: Color(0xFF880E4F),
     ),
+    _AlbumCoverSpec(
+      title: 'IS THIS IT',
+      artist: 'THE STROKES',
+      assetPath: 'assets/covers/is_this_it.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/8410292ef43cbfd3763f0d57e4dfcb68/500x500-000000-80-0-0.jpg',
+      score: '9.7',
+      fallbackColor: Color(0xFF212121),
+    ),
+    _AlbumCoverSpec(
+      title: 'PURE HEROINE',
+      artist: 'LORDE',
+      assetPath: 'assets/covers/pure_heroine.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/5fc8a52936e788ee5ae2a4c1737be2e6/500x500-000000-80-0-0.jpg',
+      score: '9.4',
+      fallbackColor: Color(0xFF212121),
+    ),
   ],
 
-  // Track 3 (Right -> Left)
+  // Track 3 (Right -> Left) - 6 Albums (+ Discovery, Flower Boy)
   const [
     _AlbumCoverSpec(
       title: 'NEVERMIND',
       artist: 'NIRVANA',
+      assetPath: 'assets/covers/nevermind.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273fbc71c99f9c1296c56dd51b6',
       score: '9.9',
       fallbackColor: Color(0xFF0277BD),
@@ -143,6 +250,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'RUMOURS',
       artist: 'FLEETWOOD MAC',
+      assetPath: 'assets/covers/rumours.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273e52a59a28efa4773dd2bfe1b',
       score: '9.9',
       fallbackColor: Color(0xFF4E342E),
@@ -150,6 +258,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'KID A',
       artist: 'RADIOHEAD',
+      assetPath: 'assets/covers/kid_a.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b2736c7112082b63beefffe40151',
       score: '9.8',
       fallbackColor: Color(0xFF263238),
@@ -157,17 +266,35 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'SHORT N\' SWEET',
       artist: 'SABRINA CARPENTER',
+      assetPath: 'assets/covers/short_n_sweet.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273fd8d7a8d96871e791cb1f626',
       score: '8.8',
       fallbackColor: Color(0xFF1E88E5),
     ),
+    _AlbumCoverSpec(
+      title: 'DISCOVERY',
+      artist: 'DAFT PUNK',
+      assetPath: 'assets/covers/discovery.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/3be8952402ff6078696c7017684df62e/500x500-000000-80-0-0.jpg',
+      score: '9.9',
+      fallbackColor: Color(0xFF1565C0),
+    ),
+    _AlbumCoverSpec(
+      title: 'FLOWER BOY',
+      artist: 'TYLER, THE CREATOR',
+      assetPath: 'assets/covers/flower_boy.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/ebaa07119ff3360bfa7c7d41334c9f13/500x500-000000-80-0-0.jpg',
+      score: '9.3',
+      fallbackColor: Color(0xFFF57F17),
+    ),
   ],
 
-  // Track 4 (Left -> Right)
+  // Track 4 (Left -> Right) - 6 Albums (+ When We All Fall Asleep..., Wish You Were Here)
   const [
     _AlbumCoverSpec(
       title: 'AM',
       artist: 'ARCTIC MONKEYS',
+      assetPath: 'assets/covers/am.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b2734ae1c4c5c45aabe565499163',
       score: '9.0',
       fallbackColor: Color(0xFF212121),
@@ -175,6 +302,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'LOVER',
       artist: 'TAYLOR SWIFT',
+      assetPath: 'assets/covers/lover.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273e787cffec20aa2a396a61647',
       score: '8.9',
       fallbackColor: Color(0xFFF48FB1),
@@ -182,6 +310,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'DAMN.',
       artist: 'KENDRICK LAMAR',
+      assetPath: 'assets/covers/damn.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b2738b52c6b9bc4e43d873869699',
       score: '9.7',
       fallbackColor: Color(0xFFB71C1C),
@@ -189,17 +318,35 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'MELODRAMA',
       artist: 'LORDE',
+      assetPath: 'assets/covers/melodrama.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273f8553e18a11209d4becd0336',
       score: '9.5',
       fallbackColor: Color(0xFF1565C0),
     ),
+    _AlbumCoverSpec(
+      title: 'WHEN WE ALL FALL ASLEEP...',
+      artist: 'BILLIE EILISH',
+      assetPath: 'assets/covers/wwafawdwg.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/a4639908cfd09d311915ea0842e47c0d/500x500-000000-80-0-0.jpg',
+      score: '9.2',
+      fallbackColor: Color(0xFFE0E0E0),
+    ),
+    _AlbumCoverSpec(
+      title: 'WISH YOU WERE HERE',
+      artist: 'PINK FLOYD',
+      assetPath: 'assets/covers/wish_you_were_here.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/f0dc8d312674e7978d38ca587b1c3e1e/500x500-000000-80-0-0.jpg',
+      score: '10.0',
+      fallbackColor: Color(0xFF455A64),
+    ),
   ],
 
-  // Track 5 (Right -> Left)
+  // Track 5 (Right -> Left) - 6 Albums (+ Lonerism, Starboy)
   const [
     _AlbumCoverSpec(
       title: 'SOS',
       artist: 'SZA',
+      assetPath: 'assets/covers/sos.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273bc18bdade69ec5ef0bb25b17',
       score: '9.2',
       fallbackColor: Color(0xFF0277BD),
@@ -207,6 +354,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'VESPERTINE',
       artist: 'BJÖRK',
+      assetPath: 'assets/covers/vespertine.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b2735c081511ab5779f399233349',
       score: '9.8',
       fallbackColor: Color(0xFF37474F),
@@ -214,6 +362,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'BLONDE',
       artist: 'FRANK OCEAN',
+      assetPath: 'assets/covers/blonde.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273c5649add07ed3720be9d5526',
       score: '10.0',
       fallbackColor: Color(0xFF556B2F),
@@ -221,17 +370,35 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'IN RAINBOWS',
       artist: 'RADIOHEAD',
+      assetPath: 'assets/covers/in_rainbows.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273de3c04b5fc750b68899b20a9',
       score: '9.8',
       fallbackColor: Color(0xFFB71C1C),
     ),
+    _AlbumCoverSpec(
+      title: 'LONERISM',
+      artist: 'TAME IMPALA',
+      assetPath: 'assets/covers/lonerism.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/9079fef0ce51e2b5e1a3bc8917e8c3ae/500x500-000000-80-0-0.jpg',
+      score: '9.6',
+      fallbackColor: Color(0xFF2E7D32),
+    ),
+    _AlbumCoverSpec(
+      title: 'STARBOY',
+      artist: 'THE WEEKND',
+      assetPath: 'assets/covers/starboy.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/b41c6183e8b15d65421abf08d0df627c/500x500-000000-80-0-0.jpg',
+      score: '8.9',
+      fallbackColor: Color(0xFFC2185B),
+    ),
   ],
 
-  // Track 6 (Left -> Right)
+  // Track 6 (Left -> Right) - 6 Albums (+ In Utero, Ctrl)
   const [
     _AlbumCoverSpec(
       title: 'TO PIMP A BUTTERFLY',
       artist: 'KENDRICK LAMAR',
+      assetPath: 'assets/covers/to_pimp_a_butterfly.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273cdb645498cd3d8a2db4d05e1',
       score: '10.0',
       fallbackColor: Color(0xFF2C3E50),
@@ -239,6 +406,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'RANDOM ACCESS MEMORIES',
       artist: 'DAFT PUNK',
+      assetPath: 'assets/covers/random_access_memories.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b2739b9b36b0e22870b9f542d937',
       score: '9.6',
       fallbackColor: Color(0xFF212121),
@@ -246,6 +414,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'BRAT',
       artist: 'CHARLI XCX',
+      assetPath: 'assets/covers/brat.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273f88b43d15fd14e9525338b59',
       score: '9.2',
       fallbackColor: Color(0xFF8ACE00),
@@ -253,17 +422,35 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'CURRENTS',
       artist: 'TAME IMPALA',
+      assetPath: 'assets/covers/currents.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b2739e1cfc756886ac782e363d79',
       score: '9.3',
       fallbackColor: Color(0xFF4A148C),
     ),
+    _AlbumCoverSpec(
+      title: 'IN UTERO',
+      artist: 'NIRVANA',
+      assetPath: 'assets/covers/in_utero.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/b1e2a5639b7bf26639d6b9efcdcf9b4a/500x500-000000-80-0-0.jpg',
+      score: '9.7',
+      fallbackColor: Color(0xFFFBC02D),
+    ),
+    _AlbumCoverSpec(
+      title: 'CTRL',
+      artist: 'SZA',
+      assetPath: 'assets/covers/ctrl.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/5f6ab58f869a8bfd09b695bc37c0eb89/500x500-000000-80-0-0.jpg',
+      score: '9.5',
+      fallbackColor: Color(0xFF33691E),
+    ),
   ],
 
-  // Track 7 (Right -> Left)
+  // Track 7 (Right -> Left) - 6 Albums (+ Punisher, Unknown Pleasures)
   const [
     _AlbumCoverSpec(
       title: 'OK COMPUTER',
       artist: 'RADIOHEAD',
+      assetPath: 'assets/covers/ok_computer.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273c8b444df094279e70d0ed856',
       score: '10.0',
       fallbackColor: Color(0xFF455A64),
@@ -271,6 +458,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'ABBEY ROAD',
       artist: 'THE BEATLES',
+      assetPath: 'assets/covers/abbey_road.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273dc30583ba717007b00cceb25',
       score: '10.0',
       fallbackColor: Color(0xFF3E2723),
@@ -278,6 +466,7 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'KID A',
       artist: 'RADIOHEAD',
+      assetPath: 'assets/covers/kid_a.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b2736c7112082b63beefffe40151',
       score: '9.8',
       fallbackColor: Color(0xFF263238),
@@ -285,9 +474,26 @@ final List<List<_AlbumCoverSpec>> _kAlbumTracks = [
     _AlbumCoverSpec(
       title: 'SHORT N\' SWEET',
       artist: 'SABRINA CARPENTER',
+      assetPath: 'assets/covers/short_n_sweet.jpg',
       coverUrl: 'https://i.scdn.co/image/ab67616d0000b273fd8d7a8d96871e791cb1f626',
       score: '8.8',
       fallbackColor: Color(0xFF1E88E5),
+    ),
+    _AlbumCoverSpec(
+      title: 'PUNISHER',
+      artist: 'PHOEBE BRIDGERS',
+      assetPath: 'assets/covers/punisher.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/9079fef0ce51e2b5e1a3bc8917e8c3ae/500x500-000000-80-0-0.jpg',
+      score: '9.6',
+      fallbackColor: Color(0xFF1A237E),
+    ),
+    _AlbumCoverSpec(
+      title: 'UNKNOWN PLEASURES',
+      artist: 'JOY DIVISION',
+      assetPath: 'assets/covers/unknown_pleasures.jpg',
+      coverUrl: 'https://cdn-images.dzcdn.net/images/cover/f4b14d2e8b28a2a9bb415cfcd30282b0/500x500-000000-80-0-0.jpg',
+      score: '9.8',
+      fallbackColor: Color(0xFF000000),
     ),
   ],
 ];
@@ -317,7 +523,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> with SingleTicker
     super.initState();
     _marqueeController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 28),
+      duration: const Duration(seconds: 50),
     )..repeat();
   }
 
@@ -325,10 +531,8 @@ class _LandingScreenState extends ConsumerState<LandingScreen> with SingleTicker
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Warm up image cache so covers appear immediately upon entrance
-    for (final track in _kAlbumTracks) {
-      for (final spec in track) {
-        precacheImage(CachedNetworkImageProvider(spec.coverUrl), context);
-      }
+    for (final path in kLandingCoverAssetPaths) {
+      precacheImage(AssetImage(path), context);
     }
   }
 
@@ -909,18 +1113,22 @@ class _AlbumCoverTile extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Network Cover Image with Fallback and Zero Fade Delay for Instant Rendering
-          CachedNetworkImage(
-            imageUrl: spec.coverUrl,
+          // Local Bundled Cover Image with Network Fallback for Instant Zero-Delay Rendering
+          Image.asset(
+            spec.assetPath,
             fit: BoxFit.cover,
-            fadeInDuration: Duration.zero,
-            fadeOutDuration: Duration.zero,
-            memCacheWidth: 250,
-            memCacheHeight: 250,
-            maxWidthDiskCache: 400,
-            maxHeightDiskCache: 400,
-            placeholder: (_, _) => _buildFallbackTile(),
-            errorWidget: (_, _, _) => _buildFallbackTile(),
+            errorBuilder: (_, _, _) => CachedNetworkImage(
+              imageUrl: spec.coverUrl,
+              fit: BoxFit.cover,
+              fadeInDuration: Duration.zero,
+              fadeOutDuration: Duration.zero,
+              memCacheWidth: 250,
+              memCacheHeight: 250,
+              maxWidthDiskCache: 400,
+              maxHeightDiskCache: 400,
+              placeholder: (_, _) => _buildFallbackTile(),
+              errorWidget: (_, _, _) => _buildFallbackTile(),
+            ),
           ),
 
           // Glossy Vinyl Sleeve Gradient Sheen

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../auth/landing_screen.dart' show kLandingCoverAssetPaths;
 
 /// Fullscreen animated launch screen inspired by brutalist aesthetics & modern streaming apps.
 /// Features a choreographed reveal of the "GROOVD" title followed by the signature
@@ -44,6 +45,16 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _grooveOpacity;
 
   bool _navigated = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Pre-warm landing screen cover assets during the splash animation
+    // so when landing screen opens, every album cover is already decoded in GPU memory
+    for (final path in kLandingCoverAssetPaths) {
+      precacheImage(AssetImage(path), context);
+    }
+  }
 
   @override
   void initState() {
