@@ -329,12 +329,7 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
               ),
             ),
 
-            const SizedBox(height: 20),
-
-            // Giant Score Badge Section
-            GiantScoreBadge(score: _review.rating),
-
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 16),
 
@@ -399,7 +394,15 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
               ],
             ),
 
-            const SizedBox(height: 22),
+            const SizedBox(height: 14),
+
+            // Redesigned Critic / Personal Score Section (Positioned directly below the profile picture)
+            ScoreVerdictBar(
+              score: _review.rating,
+              label: isCurrentUser ? 'PERSONAL SCORE' : 'CRITIC SCORE',
+            ),
+
+            const SizedBox(height: 20),
 
             // Headline
             if (_review.headline.isNotEmpty) ...[

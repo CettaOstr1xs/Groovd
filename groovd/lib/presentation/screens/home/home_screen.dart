@@ -67,9 +67,22 @@ class HomeScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        'GROOVD',
-                        style: AppTypography.displayMassive(),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            'GROOVD',
+                            style: AppTypography.displayMassive(),
+                          ),
+                          Container(
+                            width: 8.5,
+                            height: 8.5,
+                            margin: const EdgeInsets.only(left: 4),
+                            color: AppColors.acidLime,
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(

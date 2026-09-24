@@ -1497,8 +1497,8 @@ class ProfileScreen extends ConsumerWidget {
                           clipBehavior: Clip.none,
                           children: [
                             Container(
-                              width: 64,
-                              height: 64,
+                              width: 71,
+                              height: 71,
                               decoration: BoxDecoration(
                                 color: AppColors.acidLime,
                                 border: Border.all(color: AppColors.pureBlack, width: 2.0),
@@ -1517,30 +1517,30 @@ class ProfileScreen extends ConsumerWidget {
                                       child: (profile.avatarPath!.startsWith('http://') || profile.avatarPath!.startsWith('https://'))
                                           ? Image.network(
                                               profile.avatarPath!,
-                                              width: 64,
-                                              height: 64,
+                                              width: 71,
+                                              height: 71,
                                               fit: BoxFit.cover,
                                               errorBuilder: (ctx, err, stack) => Center(
                                                 child: Text(
                                                   'YOU',
                                                   style: AppTypography.monoBadge(
                                                     color: AppColors.pureBlack,
-                                                    fontSize: 14,
+                                                    fontSize: 15,
                                                   ),
                                                 ),
                                               ),
                                             )
                                           : Image.file(
                                               File(profile.avatarPath!),
-                                              width: 64,
-                                              height: 64,
+                                              width: 71,
+                                              height: 71,
                                               fit: BoxFit.cover,
                                               errorBuilder: (ctx, err, stack) => Center(
                                                 child: Text(
                                                   'YOU',
                                                   style: AppTypography.monoBadge(
                                                     color: AppColors.pureBlack,
-                                                    fontSize: 14,
+                                                    fontSize: 15,
                                                   ),
                                                 ),
                                               ),
@@ -1551,7 +1551,7 @@ class ProfileScreen extends ConsumerWidget {
                                         'YOU',
                                         style: AppTypography.monoBadge(
                                           color: AppColors.pureBlack,
-                                          fontSize: 14,
+                                          fontSize: 15,
                                         ),
                                       ),
                                     ),
