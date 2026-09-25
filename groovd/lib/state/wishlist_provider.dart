@@ -290,3 +290,29 @@ final isInWishlistProvider = Provider.family<bool, String>((ref, musicItemId) {
 final wishlistCountProvider = Provider<int>((ref) {
   return ref.watch(wishlistProvider).length;
 });
+
+/// Fetches another critic's wishlist from Cloud Firestore
+final userWishlistProvider =
+    FutureProvider.family<List<WishlistItem>, String>((ref, userId) async {
+  try {
+    if (Firebase.apps.isEmpty) return const [];
+    final firestore = FirebaseFirestore.instance;
+    final snapshot = await firestore
+        .collection('users')
+        .doc(userId)
+        .collection('wishlist')
+        .get()
+        .timeout(const Duration(milliseconds: 3000));
+
+    final items = <WishlistItem>[];
+    for (final doc in snapshot.docs) {
+      try {
+        items.add(WishlistItem.fromMap(doc.data()));
+      } catch (_) {}
+    }
+    items.sort((a, b) => b.addedAt.compareTo(a.addedAt));
+    return items;
+  } catch (_) {
+    return const [];
+  }
+});

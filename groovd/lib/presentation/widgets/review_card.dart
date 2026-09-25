@@ -13,6 +13,8 @@ class ReviewCard extends ConsumerWidget {
   final bool showItemHeader;
   final VoidCallback? onLike;
   final VoidCallback? onTap;
+  final int? maxBodyLines;
+  final int? maxHeadlineLines;
 
   const ReviewCard({
     super.key,
@@ -20,6 +22,8 @@ class ReviewCard extends ConsumerWidget {
     this.showItemHeader = true,
     this.onLike,
     this.onTap,
+    this.maxBodyLines,
+    this.maxHeadlineLines,
   });
 
   Color get _scoreColor {
@@ -163,6 +167,8 @@ class ReviewCard extends ConsumerWidget {
               const SizedBox(height: 12),
               Text(
                 review.headline.toUpperCase(),
+                maxLines: maxHeadlineLines,
+                overflow: maxHeadlineLines != null ? TextOverflow.ellipsis : null,
                 style: AppTypography.headline(),
               ),
             ],
@@ -171,7 +177,11 @@ class ReviewCard extends ConsumerWidget {
             if (review.body.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                review.body,
+                maxBodyLines != null
+                    ? review.body.trim().replaceAll(RegExp(r'\n{2,}'), '\n')
+                    : review.body,
+                maxLines: maxBodyLines,
+                overflow: maxBodyLines != null ? TextOverflow.ellipsis : null,
                 style: AppTypography.bodyMedium(color: AppColors.textSecondary),
               ),
             ],

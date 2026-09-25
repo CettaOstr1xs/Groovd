@@ -20,7 +20,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:groovd/state/wishlist_provider.dart';
 import 'package:groovd/state/user_lists_provider.dart';
 import 'package:groovd/presentation/screens/review/critique_story_card.dart';
-import 'package:groovd/data/services/spotify_mock_data.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/data/models/friend_profile.dart';
 import 'package:groovd/data/repositories/friends_repository.dart';
@@ -185,8 +184,6 @@ void main() {
   group('LocalReviewRepository Tests', () {
     test('Calculates average score and review counts correctly', () async {
       final repo = LocalReviewRepository();
-      final initialReviews = await repo.getRecentReviews();
-      expect(initialReviews.isNotEmpty, true);
 
       // Add a new review
       final testReview = Review(
@@ -1036,7 +1033,21 @@ void main() {
     });
 
     test('CritiqueStoryCard initializes with centered artwork top layout', () {
-      final review = SpotifyMockData.seedReviews.first;
+      final review = Review(
+        id: 'test_rev_story_top',
+        musicItemId: 'm1',
+        musicItemName: 'Sample Album',
+        artistName: 'Sample Artist',
+        coverUrl: '',
+        itemType: 'album',
+        userId: 'u1',
+        userName: 'Tester',
+        userHandle: '@tester',
+        rating: 9.0,
+        headline: 'Good',
+        body: 'Nice',
+        createdAt: DateTime.now(),
+      );
       final card = CritiqueStoryCard(
         review: review,
         layout: StoryLayout.posterCard,
@@ -1085,7 +1096,21 @@ void main() {
     });
 
     test('CritiqueStoryCard constructor accepts custom avatarPath', () {
-      final review = SpotifyMockData.seedReviews.first;
+      final review = Review(
+        id: 'test_rev_avatar',
+        musicItemId: 'm2',
+        musicItemName: 'Sample Album 2',
+        artistName: 'Sample Artist 2',
+        coverUrl: '',
+        itemType: 'album',
+        userId: 'u2',
+        userName: 'Tester 2',
+        userHandle: '@tester2',
+        rating: 9.5,
+        headline: 'Great',
+        body: 'Awesome',
+        createdAt: DateTime.now(),
+      );
       final card = CritiqueStoryCard(
         review: review,
         avatarPath: '/custom/avatar/path.jpg',

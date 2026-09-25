@@ -52,6 +52,18 @@ class FriendProfile {
     return '$followersCount';
   }
 
+  String get formattedFollowing {
+    if (followingCount >= 1000000) {
+      final millions = (followingCount / 1000000).toStringAsFixed(1);
+      return '${millions.endsWith('.0') ? millions.substring(0, millions.length - 2) : millions}M';
+    }
+    if (followingCount >= 1000) {
+      final thousands = (followingCount / 1000).toStringAsFixed(1);
+      return '${thousands.endsWith('.0') ? thousands.substring(0, thousands.length - 2) : thousands}K';
+    }
+    return '$followingCount';
+  }
+
   FriendProfile copyWith({
     String? userId,
     String? userName,

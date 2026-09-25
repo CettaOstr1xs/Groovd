@@ -15,7 +15,42 @@ enum _WishlistFilter { all, albums, songs }
 enum _WishlistSort { recent, title, artist }
 
 class WishlistScreen extends ConsumerStatefulWidget {
-  const WishlistScreen({super.key});
+  final String? targetUserId;
+  final String? targetUserName;
+
+  const WishlistScreen({
+    super.key,
+    this.targetUserId,
+    this.targetUserName,
+  });
+
+  static Route<T> route<T>({String? targetUserId, String? targetUserName}) {
+    return PageRouteBuilder<T>(
+      pageBuilder: (context, animation, secondaryAnimation) => WishlistScreen(
+        targetUserId: targetUserId,
+        targetUserName: targetUserName,
+      ),
+      transitionDuration: const Duration(milliseconds: 320),
+      reverseTransitionDuration: const Duration(milliseconds: 260),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.06, 0),
+            end: Offset.zero,
+          ).animate(curved),
+          child: FadeTransition(
+            opacity: curved,
+            child: child,
+          ),
+        );
+      },
+    );
+  }
 
   @override
   ConsumerState<WishlistScreen> createState() => _WishlistScreenState();
@@ -113,27 +148,47 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userId = ref.watch(currentUserIdProvider);
-    final userReviewsAsync = ref.watch(userReviewsProvider(userId));
-    final userReviews = userReviewsAsync.asData?.value ?? [];
-    if (userReviews.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(wishlistProvider.notifier).removeReviewedItems(userReviews);
-      });
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final isMe = widget.targetUserId == null || widget.targetUserId == currentUserId;
+
+    if (isMe) {
+      final userReviewsAsync = ref.watch(userReviewsProvider(currentUserId));
+      final userReviews = userReviewsAsync.asData?.value ?? [];
+      if (userReviews.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(wishlistProvider.notifier).removeReviewedItems(userReviews);
+        });
+      }
     }
 
-    final allWishlistItems = ref.watch(wishlistProvider);
+    final List<WishlistItem> allWishlistItems;
+    final bool isLoading;
+    if (isMe) {
+      allWishlistItems = ref.watch(wishlistProvider);
+      isLoading = false;
+    } else {
+      final friendWishlistAsync = ref.watch(userWishlistProvider(widget.targetUserId!));
+      allWishlistItems = friendWishlistAsync.asData?.value ?? [];
+      isLoading = friendWishlistAsync.isLoading;
+    }
+
     final displayedItems = _applyFiltersAndSort(allWishlistItems);
 
     final albumCount = allWishlistItems.where((i) => i.musicItem.isAlbum).length;
     final songCount = allWishlistItems.where((i) => i.musicItem.isSong).length;
+
+    final headerTitle = isMe
+        ? 'CRITIC WANTLIST'
+        : (widget.targetUserName != null
+            ? '${widget.targetUserName}\'S WANTLIST'
+            : 'WANTLIST');
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Row(
           children: [
-            Text('CRITIC WANTLIST', style: AppTypography.displaySmall()),
+            Text(headerTitle, style: AppTypography.displaySmall()),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -150,7 +205,7 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
           ],
         ),
         actions: [
-          if (allWishlistItems.isNotEmpty)
+          if (isMe && allWishlistItems.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.delete_sweep_outlined, color: AppColors.textSecondary, size: 22),
               tooltip: 'Clear Wantlist',
@@ -158,201 +213,208 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
             ),
         ],
       ),
-      body: Column(
-        children: [
-          // Filter & Search Header Controls
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            decoration: const BoxDecoration(
-              color: AppColors.surfaceElevated,
-              border: Border(bottom: BorderSide(color: AppColors.border, width: 1.5)),
-            ),
-            child: Column(
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.acidLime),
+            )
+          : Column(
               children: [
-                // Search field within wishlist
+                // Filter & Search Header Controls
                 Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceCard,
-                    border: Border.all(color: AppColors.border),
-                    borderRadius: BorderRadius.circular(2),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  decoration: const BoxDecoration(
+                    color: AppColors.surfaceElevated,
+                    border: Border(bottom: BorderSide(color: AppColors.border, width: 1.5)),
                   ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (val) => setState(() => _searchQuery = val),
-                    style: AppTypography.bodySmall(color: AppColors.textPrimary),
-                    decoration: InputDecoration(
-                      hintText: 'SEARCH IN WANTLIST...',
-                      hintStyle: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 10),
-                      prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textSecondary),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, size: 16, color: AppColors.textSecondary),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Filters and Sort row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Segmented Filter Pills
-                    Row(
-                      children: [
-                        _FilterPill(
-                          label: 'ALL (${allWishlistItems.length})',
-                          isSelected: _filter == _WishlistFilter.all,
-                          accentColor: AppColors.textPrimary,
-                          onTap: () => setState(() => _filter = _WishlistFilter.all),
-                        ),
-                        const SizedBox(width: 6),
-                        _FilterPill(
-                          label: 'LPS ($albumCount)',
-                          isSelected: _filter == _WishlistFilter.albums,
-                          accentColor: AppColors.acidLime,
-                          onTap: () => setState(() => _filter = _WishlistFilter.albums),
-                        ),
-                        const SizedBox(width: 6),
-                        _FilterPill(
-                          label: 'SONGS ($songCount)',
-                          isSelected: _filter == _WishlistFilter.songs,
-                          accentColor: AppColors.cyberCyan,
-                          onTap: () => setState(() => _filter = _WishlistFilter.songs),
-                        ),
-                      ],
-                    ),
-
-                    // Sort dropdown/button
-                    PopupMenuButton<_WishlistSort>(
-                      tooltip: 'Sort Options',
-                      color: AppColors.surfaceElevated,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(2),
-                        side: const BorderSide(color: AppColors.border),
-                      ),
-                      onSelected: (sort) => setState(() => _sort = sort),
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          value: _WishlistSort.recent,
-                          child: Text(
-                            'RECENTLY ADDED',
-                            style: AppTypography.monoLabel(
-                              color: _sort == _WishlistSort.recent ? AppColors.acidLime : AppColors.textPrimary,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: _WishlistSort.title,
-                          child: Text(
-                            'TITLE (A-Z)',
-                            style: AppTypography.monoLabel(
-                              color: _sort == _WishlistSort.title ? AppColors.acidLime : AppColors.textPrimary,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: _WishlistSort.artist,
-                          child: Text(
-                            'ARTIST (A-Z)',
-                            style: AppTypography.monoLabel(
-                              color: _sort == _WishlistSort.artist ? AppColors.acidLime : AppColors.textPrimary,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                      ],
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  child: Column(
+                    children: [
+                      // Search field within wishlist
+                      Container(
+                        height: 40,
                         decoration: BoxDecoration(
                           color: AppColors.surfaceCard,
                           border: Border.all(color: AppColors.border),
                           borderRadius: BorderRadius.circular(2),
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.sort, size: 14, color: AppColors.textSecondary),
-                            const SizedBox(width: 4),
-                            Text(
-                              _sort == _WishlistSort.recent
-                                  ? 'RECENT'
-                                  : _sort == _WishlistSort.title
-                                      ? 'TITLE'
-                                      : 'ARTIST',
-                              style: AppTypography.monoBadge(color: AppColors.textPrimary, fontSize: 8),
-                            ),
-                          ],
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (val) => setState(() => _searchQuery = val),
+                          style: AppTypography.bodySmall(color: AppColors.textPrimary),
+                          decoration: InputDecoration(
+                            hintText: 'SEARCH IN WANTLIST...',
+                            hintStyle: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 10),
+                            prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textSecondary),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 16, color: AppColors.textSecondary),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _searchQuery = '');
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+
+                      // Filters and Sort row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Segmented Filter Pills
+                          Row(
+                            children: [
+                              _FilterPill(
+                                label: 'ALL (${allWishlistItems.length})',
+                                isSelected: _filter == _WishlistFilter.all,
+                                accentColor: AppColors.textPrimary,
+                                onTap: () => setState(() => _filter = _WishlistFilter.all),
+                              ),
+                              const SizedBox(width: 6),
+                              _FilterPill(
+                                label: 'LPS ($albumCount)',
+                                isSelected: _filter == _WishlistFilter.albums,
+                                accentColor: AppColors.acidLime,
+                                onTap: () => setState(() => _filter = _WishlistFilter.albums),
+                              ),
+                              const SizedBox(width: 6),
+                              _FilterPill(
+                                label: 'SONGS ($songCount)',
+                                isSelected: _filter == _WishlistFilter.songs,
+                                accentColor: AppColors.cyberCyan,
+                                onTap: () => setState(() => _filter = _WishlistFilter.songs),
+                              ),
+                            ],
+                          ),
+
+                          // Sort dropdown/button
+                          PopupMenuButton<_WishlistSort>(
+                            tooltip: 'Sort Options',
+                            color: AppColors.surfaceElevated,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(2),
+                              side: const BorderSide(color: AppColors.border),
+                            ),
+                            onSelected: (sort) => setState(() => _sort = sort),
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: _WishlistSort.recent,
+                                child: Text(
+                                  'RECENTLY ADDED',
+                                  style: AppTypography.monoLabel(
+                                    color: _sort == _WishlistSort.recent ? AppColors.acidLime : AppColors.textPrimary,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: _WishlistSort.title,
+                                child: Text(
+                                  'TITLE (A-Z)',
+                                  style: AppTypography.monoLabel(
+                                    color: _sort == _WishlistSort.title ? AppColors.acidLime : AppColors.textPrimary,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: _WishlistSort.artist,
+                                child: Text(
+                                  'ARTIST (A-Z)',
+                                  style: AppTypography.monoLabel(
+                                    color: _sort == _WishlistSort.artist ? AppColors.acidLime : AppColors.textPrimary,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceCard,
+                                border: Border.all(color: AppColors.border),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.sort, size: 14, color: AppColors.textSecondary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _sort == _WishlistSort.recent
+                                        ? 'RECENT'
+                                        : _sort == _WishlistSort.title
+                                            ? 'TITLE'
+                                            : 'ARTIST',
+                                    style: AppTypography.monoBadge(color: AppColors.textPrimary, fontSize: 8),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Main List or Empty State
+                Expanded(
+                  child: displayedItems.isEmpty
+                      ? _EmptyWishlistView(
+                          hasFilter: allWishlistItems.isNotEmpty,
+                          isMe: isMe,
+                          onResetSearch: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = '';
+                              _filter = _WishlistFilter.all;
+                            });
+                          },
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          itemCount: displayedItems.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final item = displayedItems[index];
+                            return _WishlistCard(
+                              wishlistItem: item,
+                              onRemove: isMe
+                                  ? () {
+                                      HapticFeedback.lightImpact();
+                                      final removed = item;
+                                      ref.read(wishlistProvider.notifier).removeItem(item.musicItem.id);
+                                      ScaffoldMessenger.of(context).clearSnackBars();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: AppColors.surfaceElevated,
+                                          content: Text(
+                                            'REMOVED "${removed.musicItem.name.toUpperCase()}"',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: AppTypography.monoLabel(color: AppColors.textPrimary, fontSize: 11),
+                                          ),
+                                          action: SnackBarAction(
+                                            label: 'UNDO',
+                                            textColor: AppColors.acidLime,
+                                            onPressed: () {
+                                              ref.read(wishlistProvider.notifier).addItem(removed.musicItem);
+                                            },
+                                          ),
+                                          duration: const Duration(seconds: 3),
+                                        ),
+                                      );
+                                    }
+                                  : null,
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
-          ),
-
-          // Main List or Empty State
-          Expanded(
-            child: displayedItems.isEmpty
-                ? _EmptyWishlistView(
-                    hasFilter: allWishlistItems.isNotEmpty,
-                    onResetSearch: () {
-                      _searchController.clear();
-                      setState(() {
-                        _searchQuery = '';
-                        _filter = _WishlistFilter.all;
-                      });
-                    },
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    itemCount: displayedItems.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final item = displayedItems[index];
-                      return _WishlistCard(
-                        wishlistItem: item,
-                        onRemove: () {
-                          HapticFeedback.lightImpact();
-                          final removed = item;
-                          ref.read(wishlistProvider.notifier).removeItem(item.musicItem.id);
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              backgroundColor: AppColors.surfaceElevated,
-                              content: Text(
-                                'REMOVED "${removed.musicItem.name.toUpperCase()}"',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.monoLabel(color: AppColors.textPrimary, fontSize: 11),
-                              ),
-                              action: SnackBarAction(
-                                label: 'UNDO',
-                                textColor: AppColors.acidLime,
-                                onPressed: () {
-                                  ref.read(wishlistProvider.notifier).addItem(removed.musicItem);
-                                },
-                              ),
-                              duration: const Duration(seconds: 3),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -399,11 +461,11 @@ class _FilterPill extends StatelessWidget {
 
 class _WishlistCard extends StatelessWidget {
   final WishlistItem wishlistItem;
-  final VoidCallback onRemove;
+  final VoidCallback? onRemove;
 
   const _WishlistCard({
     required this.wishlistItem,
-    required this.onRemove,
+    this.onRemove,
   });
 
   @override
@@ -538,16 +600,17 @@ class _WishlistCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const Spacer(),
-
-                        // Remove from Wishlist
-                        IconButton(
-                          icon: const Icon(Icons.bookmark_remove_outlined, size: 18, color: AppColors.textMuted),
-                          tooltip: 'Remove from wantlist',
-                          constraints: const BoxConstraints(),
-                          padding: const EdgeInsets.all(4),
-                          onPressed: onRemove,
-                        ),
+                        if (onRemove != null) ...[
+                          const Spacer(),
+                          // Remove from Wishlist
+                          IconButton(
+                            icon: const Icon(Icons.bookmark_remove_outlined, size: 18, color: AppColors.textMuted),
+                            tooltip: 'Remove from wantlist',
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(4),
+                            onPressed: onRemove,
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -563,10 +626,12 @@ class _WishlistCard extends StatelessWidget {
 
 class _EmptyWishlistView extends StatelessWidget {
   final bool hasFilter;
+  final bool isMe;
   final VoidCallback onResetSearch;
 
   const _EmptyWishlistView({
     required this.hasFilter,
+    this.isMe = true,
     required this.onResetSearch,
   });
 
@@ -600,7 +665,9 @@ class _EmptyWishlistView extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              hasFilter ? 'NO MATCHING RELEASES FOUND' : 'CRITIC WANTLIST IS EMPTY',
+              hasFilter
+                  ? 'NO MATCHING RELEASES FOUND'
+                  : (isMe ? 'CRITIC WANTLIST IS EMPTY' : 'WANTLIST IS EMPTY'),
               textAlign: TextAlign.center,
               style: AppTypography.displaySmall(fontSize: 15),
             ),
@@ -608,7 +675,9 @@ class _EmptyWishlistView extends StatelessWidget {
             Text(
               hasFilter
                   ? 'Try changing your search keywords or switching filter categories.'
-                  : 'Bookmark albums and tracks while exploring the catalog to build your backlog queue of music to critique.',
+                  : (isMe
+                      ? 'Bookmark albums and tracks while exploring the catalog to build your backlog queue of music to critique.'
+                      : 'This critic has not queued any releases to their wantlist yet.'),
               textAlign: TextAlign.center,
               style: AppTypography.bodySmall(color: AppColors.textSecondary),
             ),
@@ -624,10 +693,11 @@ class _EmptyWishlistView extends StatelessWidget {
               )
             else
               BrutalistButton(
-                label: 'DISCOVER MUSIC',
-                icon: Icons.search,
-                backgroundColor: AppColors.acidLime,
-                textColor: AppColors.pureBlack,
+                label: isMe ? 'DISCOVER MUSIC' : 'GO BACK',
+                icon: isMe ? Icons.search : Icons.arrow_back,
+                backgroundColor: isMe ? AppColors.acidLime : AppColors.surfaceElevated,
+                textColor: isMe ? AppColors.pureBlack : AppColors.textPrimary,
+                borderColor: AppColors.border,
                 onPressed: () => Navigator.of(context).pop(),
               ),
           ],

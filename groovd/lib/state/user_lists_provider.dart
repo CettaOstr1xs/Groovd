@@ -290,3 +290,29 @@ final listByIdProvider = Provider.family<UserMusicList?, String>((ref, listId) {
     return null;
   }
 });
+
+/// Fetches another critic's curated lists from Cloud Firestore
+final userCuratedListsProvider =
+    FutureProvider.family<List<UserMusicList>, String>((ref, userId) async {
+  try {
+    if (Firebase.apps.isEmpty) return const [];
+    final firestore = FirebaseFirestore.instance;
+    final snapshot = await firestore
+        .collection('users')
+        .doc(userId)
+        .collection('lists')
+        .get()
+        .timeout(const Duration(milliseconds: 3000));
+
+    final lists = <UserMusicList>[];
+    for (final doc in snapshot.docs) {
+      try {
+        lists.add(UserMusicList.fromMap(doc.data()));
+      } catch (_) {}
+    }
+    lists.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return lists;
+  } catch (_) {
+    return const [];
+  }
+});

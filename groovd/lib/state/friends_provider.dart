@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/friend_profile.dart';
 import '../data/models/review.dart';
@@ -16,7 +18,14 @@ class FollowingListNotifier extends AsyncNotifier<List<FriendProfile>> {
   String get _currentUserId {
     final authUser = ref.read(authStateProvider).asData?.value;
     if (authUser != null) return authUser.uid;
-    return ref.read(userProfileProvider).userId;
+    try {
+      if (Firebase.apps.isNotEmpty && FirebaseAuth.instance.currentUser != null) {
+        return FirebaseAuth.instance.currentUser!.uid;
+      }
+    } catch (_) {}
+    final profileUid = ref.read(userProfileProvider).userId;
+    if (profileUid.isNotEmpty) return profileUid;
+    return 'user_me';
   }
 
   @override
@@ -39,25 +48,54 @@ class FollowingListNotifier extends AsyncNotifier<List<FriendProfile>> {
   Future<void> followCritic(FriendProfile critic) async {
     final repo = ref.read(friendsRepositoryProvider);
     final uid = _currentUserId;
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
+    final currentList = state.value ?? [];
+
+    // Optimistically update immediately for snappy 0ms UI response
+    final updatedCritic = critic.copyWith(
+      isFollowing: true,
+      followersCount: critic.followersCount + 1,
+    );
+    final optimisticList = [
+      updatedCritic,
+      ...currentList.where((c) => c.userId != critic.userId),
+    ];
+    state = AsyncValue.data(optimisticList);
+
+    try {
       final updated = await repo.followCritic(uid, critic);
+      state = AsyncValue.data(updated);
       ref.invalidate(friendsFeedProvider);
       ref.invalidate(suggestedCriticsProvider);
-      return updated;
-    });
+      ref.invalidate(friendProfileProvider(critic.userId));
+      ref.invalidate(userFollowersCountProvider(critic.userId));
+      ref.invalidate(currentUserFollowerIdsProvider);
+    } catch (_) {
+      // Revert on failure
+      state = AsyncValue.data(currentList);
+    }
   }
 
   Future<void> unfollowCritic(String friendId) async {
     final repo = ref.read(friendsRepositoryProvider);
     final uid = _currentUserId;
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
+    final currentList = state.value ?? [];
+
+    // Optimistically update immediately
+    final optimisticList = currentList.where((c) => c.userId != friendId).toList();
+    state = AsyncValue.data(optimisticList);
+
+    try {
       final updated = await repo.unfollowCritic(uid, friendId);
+      state = AsyncValue.data(updated);
       ref.invalidate(friendsFeedProvider);
       ref.invalidate(suggestedCriticsProvider);
-      return updated;
-    });
+      ref.invalidate(friendProfileProvider(friendId));
+      ref.invalidate(userFollowersCountProvider(friendId));
+      ref.invalidate(currentUserFollowerIdsProvider);
+    } catch (_) {
+      // Revert on failure
+      state = AsyncValue.data(currentList);
+    }
   }
 
   Future<void> toggleFollow(FriendProfile critic) async {
@@ -83,6 +121,28 @@ final isFollowingProvider = Provider.family<bool, String>((ref, friendId) {
     data: (list) => list.any((f) => f.userId == friendId),
     orElse: () => false,
   );
+});
+
+/// Real-time stream of follower IDs for the currently active user.
+final currentUserFollowerIdsProvider = StreamProvider<Set<String>>((ref) {
+  final currentUserId = ref.watch(currentUserIdProvider);
+  if (Firebase.apps.isEmpty || currentUserId.isEmpty || currentUserId == 'user_me') {
+    return Stream.value(<String>{});
+  }
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(currentUserId)
+      .collection('followers')
+      .snapshots()
+      .map((snap) => snap.docs.map((d) => d.id).toSet())
+      .handleError((_) => <String>{});
+});
+
+/// Provider checking whether a specific critic already follows the current user.
+final isFollowerOfCurrentUserProvider = Provider.family<bool, String>((ref, friendId) {
+  final followersAsync = ref.watch(currentUserFollowerIdsProvider);
+  final followers = followersAsync.value ?? <String>{};
+  return followers.contains(friendId);
 });
 
 /// Social activity feed of all reviews from followed friends.
@@ -147,4 +207,19 @@ final friendReviewsProvider =
   final list = userReviews.where((r) => !r.id.startsWith('seed_')).toList();
   list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   return list;
+});
+
+/// Real-time stream of follower count for any user from Cloud Firestore
+final userFollowersCountProvider =
+    StreamProvider.family<int, String>((ref, userId) {
+  if (Firebase.apps.isEmpty || userId.isEmpty || userId == 'user_me') {
+    return Stream.value(0);
+  }
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(userId)
+      .collection('followers')
+      .snapshots()
+      .map((snap) => snap.docs.length)
+      .handleError((_) => 0);
 });

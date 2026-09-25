@@ -6,16 +6,27 @@ import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/user_music_list.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
+import 'package:groovd/state/review_providers.dart';
 import 'package:groovd/state/user_lists_provider.dart';
 import 'create_edit_list_modal.dart';
 import 'list_detail_screen.dart';
 
 class UserListsScreen extends ConsumerWidget {
-  const UserListsScreen({super.key});
+  final String? targetUserId;
+  final String? targetUserName;
 
-  static Route<void> route() {
+  const UserListsScreen({
+    super.key,
+    this.targetUserId,
+    this.targetUserName,
+  });
+
+  static Route<void> route({String? targetUserId, String? targetUserName}) {
     return PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) => const UserListsScreen(),
+      pageBuilder: (context, animation, secondaryAnimation) => UserListsScreen(
+        targetUserId: targetUserId,
+        targetUserName: targetUserName,
+      ),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
         return FadeTransition(
@@ -39,148 +50,181 @@ class UserListsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lists = ref.watch(userListsProvider);
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final isMe = targetUserId == null || targetUserId == currentUserId;
+
+    final List<UserMusicList> lists;
+    final bool isLoading;
+    if (isMe) {
+      lists = ref.watch(userListsProvider);
+      isLoading = false;
+    } else {
+      final friendListsAsync = ref.watch(userCuratedListsProvider(targetUserId!));
+      lists = friendListsAsync.asData?.value ?? [];
+      isLoading = friendListsAsync.isLoading;
+    }
+
+    final headerTitle = isMe
+        ? 'CURATED LISTS'
+        : (targetUserName != null ? "$targetUserName'S LISTS" : 'CURATED LISTS');
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('CURATED LISTS', style: AppTypography.displaySmall()),
+        title: Text(headerTitle, style: AppTypography.displaySmall()),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: AppColors.cyberCyan),
-            tooltip: 'Create New List',
-            onPressed: () => _openCreateModal(context),
-          ),
+          if (isMe)
+            IconButton(
+              icon: const Icon(Icons.add, color: AppColors.cyberCyan),
+              tooltip: 'Create New List',
+              onPressed: () => _openCreateModal(context),
+            ),
         ],
       ),
-      body: CustomScrollView(
-        slivers: [
-          // Header Action Banner
-          SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceElevated,
-                border: Border(bottom: BorderSide(color: AppColors.border, width: 1.5)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'EDITORIAL COLLECTIONS',
-                        style: AppTypography.monoLabel(fontSize: 10, color: AppColors.cyberCyan),
-                      ),
-                      Text(
-                        '${lists.length} ${lists.length == 1 ? 'ARCHIVE' : 'ARCHIVES'}',
-                        style: AppTypography.monoBadge(color: AppColors.textMuted, fontSize: 10),
-                      ),
-                    ],
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.cyberCyan))
+          : CustomScrollView(
+              slivers: [
+                // Header Action Banner
+                SliverToBoxAdapter(
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      color: AppColors.surfaceElevated,
+                      border: Border(bottom: BorderSide(color: AppColors.border, width: 1.5)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'EDITORIAL COLLECTIONS',
+                              style: AppTypography.monoLabel(fontSize: 10, color: AppColors.cyberCyan),
+                            ),
+                            Text(
+                              '${lists.length} ${lists.length == 1 ? 'ARCHIVE' : 'ARCHIVES'}',
+                              style: AppTypography.monoBadge(color: AppColors.textMuted, fontSize: 10),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          isMe
+                              ? 'PERSONAL CANONS & THEMATIC LISTS'
+                              : "${targetUserName ?? 'CRITIC'}'S EDITORIAL ARCHIVES",
+                          style: AppTypography.displayMedium(fontSize: 20),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          isMe
+                              ? 'Group your favorite albums, deep cuts, and genre discoveries into custom editorial lists.'
+                              : 'Explore custom editorial collections, track rankings, and personal canons assembled by this critic.',
+                          style: AppTypography.bodySmall(color: AppColors.textSecondary),
+                        ),
+                        if (isMe) ...[
+                          const SizedBox(height: 16),
+                          BrutalistButton(
+                            label: '+ CREATE NEW LIST',
+                            icon: Icons.add,
+                            isFullWidth: true,
+                            backgroundColor: AppColors.cyberCyan,
+                            textColor: AppColors.pureBlack,
+                            borderColor: AppColors.pureBlack,
+                            onPressed: () => _openCreateModal(context),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'PERSONAL CANONS & THEMATIC LISTS',
-                    style: AppTypography.displayMedium(fontSize: 20),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Group your favorite albums, deep cuts, and genre discoveries into custom editorial lists.',
-                    style: AppTypography.bodySmall(color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 16),
-                  BrutalistButton(
-                    label: '+ CREATE NEW LIST',
-                    icon: Icons.add,
-                    isFullWidth: true,
-                    backgroundColor: AppColors.cyberCyan,
-                    textColor: AppColors.pureBlack,
-                    borderColor: AppColors.pureBlack,
-                    onPressed: () => _openCreateModal(context),
-                  ),
-                ],
-              ),
-            ),
-          ),
+                ),
 
-          // Lists view or Empty state
-          if (lists.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceElevated,
-                          border: Border.all(color: AppColors.border),
-                          borderRadius: BorderRadius.circular(2),
+                // Lists view or Empty state
+                if (lists.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceElevated,
+                                border: Border.all(color: AppColors.border),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                              child: const Icon(
+                                Icons.queue_music_outlined,
+                                size: 48,
+                                color: AppColors.cyberCyan,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              isMe ? 'NO CURATED LISTS YET' : 'NO LISTS PUBLISHED YET',
+                              style: AppTypography.displaySmall(),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              isMe
+                                  ? 'Create your first custom list to assemble your top picks, genre rotations, or desert-island albums.'
+                                  : 'This critic has not assembled any custom curated lists yet.',
+                              style: AppTypography.bodyMedium(color: AppColors.textSecondary),
+                              textAlign: TextAlign.center,
+                            ),
+                            if (isMe) ...[
+                              const SizedBox(height: 20),
+                              BrutalistButton(
+                                label: 'START YOUR FIRST ARCHIVE',
+                                isSmall: true,
+                                backgroundColor: AppColors.cyberCyan,
+                                textColor: AppColors.pureBlack,
+                                borderColor: AppColors.pureBlack,
+                                onPressed: () => _openCreateModal(context),
+                              ),
+                            ],
+                          ],
                         ),
-                        child: const Icon(
-                          Icons.queue_music_outlined,
-                          size: 48,
-                          color: AppColors.cyberCyan,
-                        ),
                       ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'NO CURATED LISTS YET',
-                        style: AppTypography.displaySmall(),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.all(20),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final list = lists[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _ListSummaryCard(list: list, isReadOnly: !isMe)
+                                .animate()
+                                .fadeIn(duration: 250.ms, delay: (index * 40).ms)
+                                .slideY(begin: 0.05, end: 0, curve: Curves.easeOutCubic),
+                          );
+                        },
+                        childCount: lists.length,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Create your first custom list to assemble your top picks, genre rotations, or desert-island albums.',
-                        style: AppTypography.bodyMedium(color: AppColors.textSecondary),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 20),
-                      BrutalistButton(
-                        label: 'START YOUR FIRST ARCHIVE',
-                        isSmall: true,
-                        backgroundColor: AppColors.cyberCyan,
-                        textColor: AppColors.pureBlack,
-                        borderColor: AppColors.pureBlack,
-                        onPressed: () => _openCreateModal(context),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.all(20),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final list = lists[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _ListSummaryCard(list: list)
-                          .animate()
-                          .fadeIn(duration: 250.ms, delay: (index * 40).ms)
-                          .slideY(begin: 0.05, end: 0, curve: Curves.easeOutCubic),
-                    );
-                  },
-                  childCount: lists.length,
-                ),
-              ),
+              ],
             ),
-        ],
-      ),
     );
   }
 }
 
 class _ListSummaryCard extends ConsumerWidget {
   final UserMusicList list;
+  final bool isReadOnly;
 
-  const _ListSummaryCard({required this.list});
+  const _ListSummaryCard({
+    required this.list,
+    this.isReadOnly = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -189,7 +233,11 @@ class _ListSummaryCard extends ConsumerWidget {
     return InkWell(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => ListDetailScreen(listId: list.id),
+          builder: (_) => ListDetailScreen(
+            listId: list.id,
+            initialList: list,
+            isReadOnly: isReadOnly,
+          ),
         ),
       ),
       borderRadius: BorderRadius.circular(2),
@@ -237,38 +285,39 @@ class _ListSummaryCard extends ConsumerWidget {
                         ),
                       ),
                       const Spacer(),
-                      PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_horiz, size: 18, color: AppColors.textMuted),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 140),
-                        color: AppColors.surface,
-                        onSelected: (val) {
-                          if (val == 'edit') {
-                            CreateEditListModal.show(context, existingList: list);
-                          } else if (val == 'delete') {
-                            ref.read(userListsProvider.notifier).deleteList(list.id);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'LIST DELETED',
-                                  style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                      if (!isReadOnly)
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_horiz, size: 18, color: AppColors.textMuted),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 140),
+                          color: AppColors.surface,
+                          onSelected: (val) {
+                            if (val == 'edit') {
+                              CreateEditListModal.show(context, existingList: list);
+                            } else if (val == 'delete') {
+                              ref.read(userListsProvider.notifier).deleteList(list.id);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'LIST DELETED',
+                                    style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                  ),
+                                  backgroundColor: AppColors.vermillion,
                                 ),
-                                backgroundColor: AppColors.vermillion,
-                              ),
-                            );
-                          }
-                        },
-                        itemBuilder: (_) => [
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: Text('EDIT DETAILS'),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Text('DELETE LIST', style: TextStyle(color: AppColors.vermillion)),
-                          ),
-                        ],
-                      ),
+                              );
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Text('EDIT DETAILS'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Text('DELETE LIST', style: TextStyle(color: AppColors.vermillion)),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                   const SizedBox(height: 6),

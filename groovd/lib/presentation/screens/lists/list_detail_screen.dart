@@ -14,8 +14,15 @@ import 'create_edit_list_modal.dart';
 
 class ListDetailScreen extends ConsumerStatefulWidget {
   final String listId;
+  final UserMusicList? initialList;
+  final bool isReadOnly;
 
-  const ListDetailScreen({super.key, required this.listId});
+  const ListDetailScreen({
+    super.key,
+    required this.listId,
+    this.initialList,
+    this.isReadOnly = false,
+  });
 
   @override
   ConsumerState<ListDetailScreen> createState() => _ListDetailScreenState();
@@ -112,7 +119,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final list = ref.watch(listByIdProvider(widget.listId));
+    final list = widget.initialList ?? ref.watch(listByIdProvider(widget.listId));
 
     if (list == null) {
       return Scaffold(
@@ -132,16 +139,18 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
             tooltip: 'Share List',
             onPressed: () => _shareList(list),
           ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, color: AppColors.textPrimary),
-            tooltip: 'Edit List',
-            onPressed: () => CreateEditListModal.show(context, existingList: list),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppColors.vermillion),
-            tooltip: 'Delete List',
-            onPressed: () => _confirmDeleteList(context, list),
-          ),
+          if (!widget.isReadOnly) ...[
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: AppColors.textPrimary),
+              tooltip: 'Edit List',
+              onPressed: () => CreateEditListModal.show(context, existingList: list),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: AppColors.vermillion),
+              tooltip: 'Delete List',
+              onPressed: () => _confirmDeleteList(context, list),
+            ),
+          ],
         ],
       ),
       body: CustomScrollView(
@@ -196,18 +205,19 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                     ),
                   ],
 
-                  const SizedBox(height: 16),
-
-                  // Add Item Action Button
-                  BrutalistButton(
-                    label: '+ ADD ALBUM / SONG',
-                    icon: Icons.add,
-                    isFullWidth: true,
-                    backgroundColor: AppColors.acidLime,
-                    textColor: AppColors.pureBlack,
-                    borderColor: AppColors.pureBlack,
-                    onPressed: () => _showAddMusicModal(context, list),
-                  ),
+                  if (!widget.isReadOnly) ...[
+                    const SizedBox(height: 16),
+                    // Add Item Action Button
+                    BrutalistButton(
+                      label: '+ ADD ALBUM / SONG',
+                      icon: Icons.add,
+                      isFullWidth: true,
+                      backgroundColor: AppColors.acidLime,
+                      textColor: AppColors.pureBlack,
+                      borderColor: AppColors.pureBlack,
+                      onPressed: () => _showAddMusicModal(context, list),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -231,21 +241,119 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Search and add albums or tracks to begin crafting your curated sonic collection.',
+                        widget.isReadOnly
+                            ? 'This curated collection does not contain any releases yet.'
+                            : 'Search and add albums or tracks to begin crafting your curated sonic collection.',
                         style: AppTypography.bodyMedium(color: AppColors.textSecondary),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 20),
-                      BrutalistButton(
-                        label: '+ SEARCH RELEASES',
-                        isSmall: true,
-                        backgroundColor: AppColors.surfaceElevated,
-                        textColor: AppColors.cyberCyan,
-                        borderColor: AppColors.cyberCyan,
-                        onPressed: () => _showAddMusicModal(context, list),
-                      ),
+                      if (!widget.isReadOnly) ...[
+                        const SizedBox(height: 20),
+                        BrutalistButton(
+                          label: '+ SEARCH RELEASES',
+                          isSmall: true,
+                          backgroundColor: AppColors.surfaceElevated,
+                          textColor: AppColors.cyberCyan,
+                          borderColor: AppColors.cyberCyan,
+                          onPressed: () => _showAddMusicModal(context, list),
+                        ),
+                      ],
                     ],
                   ),
+                ),
+              ),
+            )
+          else if (widget.isReadOnly)
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final item = list.items[index];
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => MusicDetailScreen(item: item),
+                          ),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: const BoxDecoration(
+                            border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+                          ),
+                          child: Row(
+                            children: [
+                              // Order number (Rank)
+                              SizedBox(
+                                width: 24,
+                                child: Text(
+                                  (index + 1).toString().padLeft(2, '0'),
+                                  style: AppTypography.monoBadge(
+                                    color: AppColors.textMuted,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+
+                              // Artwork
+                              AlbumArtCard(
+                                imageUrl: item.coverUrl,
+                                size: 48,
+                                heroTag: 'list_${list.id}_item_${item.id}_$index',
+                              ),
+                              const SizedBox(width: 14),
+
+                              // Title & Artist
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.name.toUpperCase(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTypography.bodyLarge(fontWeight: FontWeight.w700),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      item.artist.toUpperCase(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTypography.monoLabel(
+                                        fontSize: 10,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Format badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: item.isAlbum ? AppColors.surfaceCard : AppColors.surfaceElevated,
+                                  border: Border.all(color: AppColors.border),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                                child: Text(
+                                  item.typeLabel,
+                                  style: AppTypography.monoBadge(
+                                    color: item.typeColor,
+                                    fontSize: 8,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  childCount: list.items.length,
                 ),
               ),
             )

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/review.dart';
-import '../services/spotify_mock_data.dart';
 import 'review_repository.dart';
 
 class LocalReviewRepository implements ReviewRepository {
@@ -12,23 +11,48 @@ class LocalReviewRepository implements ReviewRepository {
   Future<void> _ensureInitialized() async {
     if (_initialized) return;
 
-    // Pre-populate with initial seed reviews
-    _inMemoryReviews.addAll(SpotifyMockData.seedReviews);
-
+    // Real user reviews only - no mock reviews
     try {
       final prefs = await SharedPreferences.getInstance();
       final storedJson = prefs.getStringList(_storageKey);
+      bool needsPruning = false;
       if (storedJson != null && storedJson.isNotEmpty) {
         for (final item in storedJson) {
           try {
             final map = jsonDecode(item) as Map<String, dynamic>;
             final review = Review.fromMap(map);
+            final isMock = review.id.startsWith('rev_1') ||
+                review.id.startsWith('rev_2') ||
+                review.id.startsWith('rev_3') ||
+                review.id.startsWith('rev_4') ||
+                review.id.startsWith('rev_5') ||
+                review.id.startsWith('seed_') ||
+                review.userId.startsWith('critic_') ||
+                review.userName.toUpperCase() == 'ARCHIVE_99' ||
+                review.userName.toUpperCase() == 'VEX // VINYL' ||
+                review.userName.toUpperCase() == 'NEO_RAVER' ||
+                review.userName.toUpperCase() == 'SONIC_JOURNAL' ||
+                review.userName.toUpperCase() == 'HEADPHONE_LUST' ||
+                review.userHandle.toLowerCase() == '@archive_99' ||
+                review.userHandle.toLowerCase() == '@vexvinyl' ||
+                review.userHandle.toLowerCase() == '@neoraver' ||
+                review.userHandle.toLowerCase() == '@sonicjournal' ||
+                review.userHandle.toLowerCase() == '@audiophile_zero';
+
+            if (isMock) {
+              needsPruning = true;
+              continue;
+            }
+
             // Avoid duplicates
             if (!_inMemoryReviews.any((r) => r.id == review.id)) {
               _inMemoryReviews.insert(0, review);
             }
           } catch (_) {}
         }
+      }
+      if (needsPruning) {
+        await _persist();
       }
     } catch (_) {}
 
@@ -39,7 +63,6 @@ class LocalReviewRepository implements ReviewRepository {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userReviews = _inMemoryReviews
-          .where((r) => !SpotifyMockData.seedReviews.any((s) => s.id == r.id))
           .map((r) => jsonEncode(r.toMap()))
           .toList();
       await prefs.setStringList(_storageKey, userReviews);

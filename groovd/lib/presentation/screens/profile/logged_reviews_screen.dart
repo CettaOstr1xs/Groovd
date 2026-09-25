@@ -13,12 +13,23 @@ enum _LoggedReviewsFilter { all, albums, songs }
 enum _LoggedReviewsSort { newest, oldest, highestScore, lowestScore }
 
 class LoggedReviewsScreen extends ConsumerStatefulWidget {
-  const LoggedReviewsScreen({super.key});
+  final String? targetUserId;
+  final String? targetUserName;
+
+  const LoggedReviewsScreen({
+    super.key,
+    this.targetUserId,
+    this.targetUserName,
+  });
 
   /// Custom neo-brutalist smooth slide and fade route transition
-  static Route<T> route<T>() {
+  static Route<T> route<T>({String? targetUserId, String? targetUserName}) {
     return PageRouteBuilder<T>(
-      pageBuilder: (context, animation, secondaryAnimation) => const LoggedReviewsScreen(),
+      pageBuilder: (context, animation, secondaryAnimation) =>
+          LoggedReviewsScreen(
+        targetUserId: targetUserId,
+        targetUserName: targetUserName,
+      ),
       transitionDuration: const Duration(milliseconds: 320),
       reverseTransitionDuration: const Duration(milliseconds: 260),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -133,15 +144,22 @@ class _LoggedReviewsScreenState extends ConsumerState<LoggedReviewsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final userId = ref.watch(currentUserIdProvider);
-    final reviewsAsync = ref.watch(userReviewsProvider(userId));
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final isMe = widget.targetUserId == null || widget.targetUserId == currentUserId;
+    final effectiveUserId = widget.targetUserId ?? currentUserId;
+    final reviewsAsync = ref.watch(userReviewsProvider(effectiveUserId));
+    final headerTitle = isMe
+        ? 'MY LOGGED REVIEWS'
+        : (widget.targetUserName != null
+            ? '${widget.targetUserName}\'S CRITIQUES'
+            : 'CRITIQUES');
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Row(
           children: [
-            Text('MY LOGGED REVIEWS', style: AppTypography.displaySmall()),
+            Text(headerTitle, style: AppTypography.displaySmall()),
             const SizedBox(width: 8),
             reviewsAsync.when(
               data: (reviews) {
@@ -167,8 +185,15 @@ class _LoggedReviewsScreenState extends ConsumerState<LoggedReviewsScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.grid_view, size: 20, color: AppColors.acidLime),
-            tooltip: 'All Rated Releases',
-            onPressed: () => Navigator.of(context).push(AllRatedReleasesScreen.route()),
+            tooltip: isMe
+                ? 'All Rated Releases'
+                : '${widget.targetUserName ?? "Critic"}\'s Rated Releases',
+            onPressed: () => Navigator.of(context).push(
+              AllRatedReleasesScreen.route(
+                targetUserId: widget.targetUserId,
+                targetUserName: widget.targetUserName,
+              ),
+            ),
           ),
         ],
       ),
@@ -211,20 +236,22 @@ class _LoggedReviewsScreenState extends ConsumerState<LoggedReviewsScreen>
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'NO WRITTEN CRITIQUES YET',
+                        isMe ? 'NO WRITTEN CRITIQUES YET' : 'NO WRITTEN CRITIQUES',
                         textAlign: TextAlign.center,
                         style: AppTypography.displaySmall(fontSize: 16),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'When you write detailed commentary and log critiques for albums or tracks, they will be archived here.',
+                        isMe
+                            ? 'When you write detailed commentary and log critiques for albums or tracks, they will be archived here.'
+                            : 'This critic has not published any written critiques yet.',
                         textAlign: TextAlign.center,
                         style: AppTypography.bodySmall(color: AppColors.textSecondary),
                       ),
                       const SizedBox(height: 24),
                       BrutalistButton(
-                        label: 'DISCOVER MUSIC',
-                        icon: Icons.search,
+                        label: isMe ? 'DISCOVER MUSIC' : 'GO BACK',
+                        icon: isMe ? Icons.search : Icons.arrow_back,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],

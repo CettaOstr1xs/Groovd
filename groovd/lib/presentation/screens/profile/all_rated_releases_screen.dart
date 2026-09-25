@@ -15,17 +15,29 @@ enum _RatedViewMode { grid, list }
 
 class AllRatedReleasesScreen extends ConsumerStatefulWidget {
   final RatedFilter initialFilter;
+  final String? targetUserId;
+  final String? targetUserName;
 
   const AllRatedReleasesScreen({
     super.key,
     this.initialFilter = RatedFilter.all,
+    this.targetUserId,
+    this.targetUserName,
   });
 
   /// Custom neo-brutalist smooth slide and fade route transition
-  static Route<T> route<T>({RatedFilter initialFilter = RatedFilter.all}) {
+  static Route<T> route<T>({
+    RatedFilter initialFilter = RatedFilter.all,
+    String? targetUserId,
+    String? targetUserName,
+  }) {
     return PageRouteBuilder<T>(
       pageBuilder: (context, animation, secondaryAnimation) =>
-          AllRatedReleasesScreen(initialFilter: initialFilter),
+          AllRatedReleasesScreen(
+        initialFilter: initialFilter,
+        targetUserId: targetUserId,
+        targetUserName: targetUserName,
+      ),
       transitionDuration: const Duration(milliseconds: 320),
       reverseTransitionDuration: const Duration(milliseconds: 260),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -154,15 +166,22 @@ class _AllRatedReleasesScreenState extends ConsumerState<AllRatedReleasesScreen>
 
   @override
   Widget build(BuildContext context) {
-    final userId = ref.watch(currentUserIdProvider);
-    final reviewsAsync = ref.watch(userReviewsProvider(userId));
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final isMe = widget.targetUserId == null || widget.targetUserId == currentUserId;
+    final effectiveUserId = widget.targetUserId ?? currentUserId;
+    final reviewsAsync = ref.watch(userReviewsProvider(effectiveUserId));
+    final headerTitle = isMe
+        ? 'ALL RATED RELEASES'
+        : (widget.targetUserName != null
+            ? '${widget.targetUserName}\'S RATED'
+            : 'RATED RELEASES');
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Row(
           children: [
-            Text('ALL RATED RELEASES', style: AppTypography.displaySmall()),
+            Text(headerTitle, style: AppTypography.displaySmall()),
             const SizedBox(width: 8),
             reviewsAsync.when(
               data: (reviews) => Container(
@@ -223,20 +242,22 @@ class _AllRatedReleasesScreenState extends ConsumerState<AllRatedReleasesScreen>
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'NO RELEASES RATED YET',
+                        isMe ? 'NO RELEASES RATED YET' : 'NO RELEASES RATED',
                         textAlign: TextAlign.center,
                         style: AppTypography.displaySmall(fontSize: 16),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Whenever you score an album or single, it will automatically populate your comprehensive music archive here.',
+                        isMe
+                            ? 'Whenever you score an album or single, it will automatically populate your comprehensive music archive here.'
+                            : 'This critic has not rated any releases yet.',
                         textAlign: TextAlign.center,
                         style: AppTypography.bodySmall(color: AppColors.textSecondary),
                       ),
                       const SizedBox(height: 24),
                       BrutalistButton(
-                        label: 'DISCOVER MUSIC',
-                        icon: Icons.search,
+                        label: isMe ? 'DISCOVER MUSIC' : 'GO BACK',
+                        icon: isMe ? Icons.search : Icons.arrow_back,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],

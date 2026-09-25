@@ -23,6 +23,7 @@ import 'package:groovd/presentation/screens/auth/login_screen.dart';
 import 'package:groovd/presentation/screens/auth/register_screen.dart';
 import 'package:groovd/presentation/screens/search/search_screen.dart';
 import 'package:groovd/presentation/navigation/main_navigation_screen.dart';
+import 'package:groovd/presentation/widgets/critic_followers_stats_row.dart';
 import 'package:groovd/presentation/screens/friends/friends_screen.dart';
 import 'package:groovd/presentation/screens/friends/friend_profile_screen.dart';
 import 'package:groovd/data/models/friend_profile.dart';
@@ -380,7 +381,21 @@ void main() {
   });
 
   testWidgets('ReviewDetailScreen share button launches Instagram Story designer modal', (WidgetTester tester) async {
-    final review = SpotifyMockData.seedReviews.first;
+    final review = Review(
+      id: 'test_rev_share',
+      musicItemId: 'album_brat',
+      musicItemName: 'BRAT',
+      artistName: 'CHARLI XCX',
+      coverUrl: '',
+      itemType: 'album',
+      userId: 'test_critic_id',
+      userName: 'TEST_CRITIC',
+      userHandle: '@testcritic',
+      rating: 9.3,
+      headline: 'Unapologetic club pop masterpiece.',
+      body: 'BRAT proves dance music does not have to compromise emotional depth.',
+      createdAt: DateTime.now(),
+    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -1254,6 +1269,187 @@ void main() {
 
     expect(find.text('✓ FOLLOWING'), findsWidgets);
   });
+
+  testWidgets('FriendProfileScreen allows navigation to wantlist, curated lists, all rated, and critiques', (WidgetTester tester) async {
+    const testFriend = FriendProfile(
+      userId: 'friend_test_456',
+      userName: 'ALEX_CRITIC',
+      userHandle: '@alexcritic',
+      bio: 'Deep cuts only.',
+      isFollowing: true,
+      reviewsCount: 42,
+      followersCount: 1500,
+      followingCount: 300,
+      wantlistCount: 8,
+      listsCount: 3,
+    );
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: FriendProfileScreen(initialProfile: testFriend),
+        ),
+      ),
+    );
+
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // 1. Curated Lists shortcut banner
+    final listsBanner = find.text('CURATED LISTS // ARCHIVE');
+    expect(listsBanner, findsOneWidget);
+    await tester.ensureVisible(listsBanner);
+    await tester.tap(listsBanner);
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text("ALEX_CRITIC'S LISTS"), findsOneWidget);
+    Navigator.of(tester.element(find.text("ALEX_CRITIC'S LISTS"))).pop();
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // 2. Wantlist shortcut banner
+    final wantlistBanner = find.text('CRITIC WANTLIST // QUEUE');
+    expect(wantlistBanner, findsOneWidget);
+    await tester.ensureVisible(wantlistBanner);
+    await tester.tap(wantlistBanner);
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text("ALEX_CRITIC'S WANTLIST"), findsOneWidget);
+    Navigator.of(tester.element(find.text("ALEX_CRITIC'S WANTLIST"))).pop();
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // 3. Stat box tap (LOGGED) -> All Rated Releases
+    final loggedBox = find.text('LOGGED');
+    expect(loggedBox, findsOneWidget);
+    await tester.ensureVisible(loggedBox);
+    await tester.tap(loggedBox);
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text("ALEX_CRITIC'S RATED"), findsOneWidget);
+    Navigator.of(tester.element(find.text("ALEX_CRITIC'S RATED"))).pop();
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // 4. Critiques section header tap -> Logged Reviews Screen
+    final critiquesHeader = find.text("CRITIC'S LOGGED REVIEWS");
+    expect(critiquesHeader, findsOneWidget);
+    await tester.ensureVisible(critiquesHeader);
+    await tester.tap(critiquesHeader);
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text("ALEX_CRITIC'S CRITIQUES"), findsOneWidget);
+  });
+
+  testWidgets('CriticFollowersStatsRow formats numbers and handles tap callbacks', (WidgetTester tester) async {
+    expect(CriticFollowersStatsRow.formatCount(0), '0');
+    expect(CriticFollowersStatsRow.formatCount(42), '42');
+    expect(CriticFollowersStatsRow.formatCount(1200), '1.2K');
+    expect(CriticFollowersStatsRow.formatCount(1000), '1K');
+    expect(CriticFollowersStatsRow.formatCount(2500000), '2.5M');
+
+    bool followersTapped = false;
+    bool followingTapped = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CriticFollowersStatsRow(
+            followersCount: 1500,
+            followingCount: 300,
+            onFollowersTap: () => followersTapped = true,
+            onFollowingTap: () => followingTapped = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('1.5K'), findsOneWidget);
+    expect(find.text('FOLLOWERS'), findsOneWidget);
+    expect(find.text('300'), findsOneWidget);
+    expect(find.text('FOLLOWING'), findsOneWidget);
+
+    await tester.tap(find.text('FOLLOWERS'));
+    await tester.pump();
+    expect(followersTapped, isTrue);
+
+    await tester.tap(find.text('FOLLOWING'));
+    await tester.pump();
+    expect(followingTapped, isTrue);
+  });
+
+  testWidgets('FriendProfileScreen renders followers and following counters below bio', (WidgetTester tester) async {
+    const friend = FriendProfile(
+      userId: 'test_friend_123',
+      userName: 'NOVA_SOUND',
+      userHandle: '@novasound',
+      bio: 'Analog beats and synth waves.',
+      followersCount: 1800,
+      followingCount: 420,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          friendReviewsProvider(friend.userId).overrideWith((ref) => Future.value([])),
+        ],
+        child: const MaterialApp(
+          home: FriendProfileScreen(initialProfile: friend),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    // Verify bio is rendered
+    expect(find.text('Analog beats and synth waves.'), findsOneWidget);
+
+    // Verify followers & following counters are rendered
+    expect(find.text('1.8K'), findsOneWidget);
+    expect(find.text('FOLLOWERS'), findsOneWidget);
+    expect(find.text('420'), findsOneWidget);
+    expect(find.text('FOLLOWING'), findsOneWidget);
+  });
+
+  testWidgets('FriendProfileScreen renders FOLLOW BACK and FOLLOWS YOU when friend follows current user', (WidgetTester tester) async {
+    const friend = FriendProfile(
+      userId: 'follower_user_99',
+      userName: 'CEMETHEUS',
+      userHandle: '@grunge_free',
+      bio: 'Deep cuts and raw grunge.',
+      followersCount: 15,
+      followingCount: 30,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          friendReviewsProvider(friend.userId).overrideWith((ref) => Future.value([])),
+          currentUserFollowerIdsProvider.overrideWith((ref) => Stream.value({'follower_user_99'})),
+        ],
+        child: const MaterialApp(
+          home: FriendProfileScreen(initialProfile: friend),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    // Verify FOLLOWS YOU badge is shown
+    expect(find.text('FOLLOWS YOU'), findsOneWidget);
+
+    // Verify + FOLLOW BACK button is rendered in both AppBar and Header
+    expect(find.text('+ FOLLOW BACK'), findsNWidgets(2));
+  });
 }
+
 
 

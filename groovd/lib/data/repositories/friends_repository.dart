@@ -146,7 +146,36 @@ class FriendsRepository {
       } catch (_) {}
     }
 
+    // Filter out any stale mock users or guest placeholders
+    following.removeWhere((f) => _isGuestTestAccount(f.userId, f.userName, f.userHandle));
+
     return following;
+  }
+
+  bool _isGuestTestAccount(String uid, String name, String handle) {
+    if (uid == 'user_me') return true;
+    final cleanHandle = handle.toLowerCase().replaceAll('@', '').trim();
+    final cleanName = name.trim().toUpperCase();
+
+    // Remove any hardcoded/mock tastemaker profiles
+    final isMockCritic = uid.startsWith('critic_') ||
+        cleanName == 'ARCHIVE_99' ||
+        cleanName == 'VEX // VINYL' ||
+        cleanName == 'NEO_RAVER' ||
+        cleanName == 'SONIC_JOURNAL' ||
+        cleanName == 'HEADPHONE_LUST' ||
+        cleanHandle == 'archive_99' ||
+        cleanHandle == 'vexvinyl' ||
+        cleanHandle == 'neoraver' ||
+        cleanHandle == 'sonicjournal' ||
+        cleanHandle == 'audiophile_zero';
+    if (isMockCritic) return true;
+
+    // Filter unconfigured guest account
+    if (cleanHandle == 'groovd_me' && (cleanName == 'CRITIC // YOU' || cleanName.contains('CRITIC // YOU') || cleanName.isEmpty)) {
+      return true;
+    }
+    return false;
   }
 
   /// Search real critics from Cloud Firestore users collection.
@@ -177,6 +206,8 @@ class FriendsRepository {
           final handle = data['userHandle'] as String? ?? '';
           final bio = data['bio'] as String? ?? '';
 
+          if (_isGuestTestAccount(uid, name, handle)) continue;
+
           if (name.toLowerCase().contains(clean) ||
               handle.toLowerCase().replaceAll('@', '').contains(clean) ||
               bio.toLowerCase().contains(clean)) {
@@ -198,6 +229,7 @@ class FriendsRepository {
     // Also search offline cached following
     for (final f in following) {
       if (!seenIds.contains(f.userId) && f.userId != currentUserId) {
+        if (_isGuestTestAccount(f.userId, f.userName, f.userHandle)) continue;
         if (f.userName.toLowerCase().contains(clean) ||
             f.userHandle.toLowerCase().replaceAll('@', '').contains(clean) ||
             f.bio.toLowerCase().contains(clean)) {
@@ -233,6 +265,9 @@ class FriendsRepository {
           final data = doc.data();
           final name = data['userName'] as String? ?? '';
           final handle = data['userHandle'] as String? ?? '';
+
+          // Filter out guest/test accounts
+          if (_isGuestTestAccount(uid, name, handle)) continue;
 
           // Only suggest users who have a name or handle configured
           if (name.isNotEmpty || handle.isNotEmpty) {

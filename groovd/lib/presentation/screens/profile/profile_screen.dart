@@ -12,6 +12,7 @@ import 'package:groovd/presentation/screens/auth/landing_screen.dart';
 import 'package:groovd/presentation/screens/auth/login_screen.dart';
 import 'package:groovd/presentation/screens/auth/register_screen.dart';
 import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
+import 'package:groovd/presentation/screens/friends/friends_screen.dart';
 import 'package:groovd/presentation/screens/lists/user_lists_screen.dart';
 import 'package:groovd/presentation/screens/profile/adjust_avatar_screen.dart';
 import 'package:groovd/presentation/screens/profile/all_rated_releases_screen.dart';
@@ -20,9 +21,11 @@ import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
 import 'package:groovd/presentation/screens/wishlist/wishlist_screen.dart';
 import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
+import 'package:groovd/presentation/widgets/critic_followers_stats_row.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/state/auth_providers.dart';
 import 'package:groovd/state/dossier_top_picks_provider.dart';
+import 'package:groovd/state/friends_provider.dart';
 import 'package:groovd/state/music_providers.dart';
 import 'package:groovd/state/onboarding_provider.dart';
 import 'package:groovd/state/review_providers.dart';
@@ -814,7 +817,9 @@ class ProfileScreen extends ConsumerWidget {
                                       await onboardingNotifier.resetOnboarding();
                                     } catch (_) {}
 
-                                    ref.invalidate(userReviewsProvider);
+                                    try {
+                                      ref.invalidate(userReviewsProvider);
+                                    } catch (_) {}
                                     reviewRefreshNotifier.notifyChanged();
 
                                     navigator.pushAndRemoveUntil(
@@ -1396,6 +1401,10 @@ class ProfileScreen extends ConsumerWidget {
     final userHandle = profile.userHandle;
     final userReviewsAsync = ref.watch(userReviewsProvider(userId));
     final topPicks = ref.watch(resolvedTopPicksProvider);
+    final followersCount =
+        ref.watch(userFollowersCountProvider(profile.userId)).value ?? 0;
+    final followingList = ref.watch(followingListProvider).value ?? [];
+    final followingCount = followingList.length;
 
     userReviewsAsync.whenData((reviews) {
       if (reviews.isNotEmpty) {
@@ -1672,7 +1681,23 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ),
 
+                  const SizedBox(height: 10),
 
+                  // Followers & Following Counters
+                  CriticFollowersStatsRow(
+                    followersCount: followersCount,
+                    followingCount: followingCount,
+                    onFollowersTap: () {
+                      Navigator.of(context).push(
+                        FriendsScreen.route(initialTabIndex: 1),
+                      );
+                    },
+                    onFollowingTap: () {
+                      Navigator.of(context).push(
+                        FriendsScreen.route(initialTabIndex: 1),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -1960,7 +1985,7 @@ class ProfileScreen extends ConsumerWidget {
                   );
                 }
 
-                return _ReviewStackDeck(reviews: writtenReviews);
+                return _ReviewStackDeck(reviews: writtenReviews.take(10).toList());
               },
               loading: () => const Padding(
                 padding: EdgeInsets.all(32),
@@ -2978,6 +3003,8 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
                         return ReviewCard(
                           review: activeReview,
                           showItemHeader: true,
+                          maxHeadlineLines: 2,
+                          maxBodyLines: 3,
                           onLike: () {
                             ref.read(reviewControllerProvider).likeReview(activeReview.id);
                           },

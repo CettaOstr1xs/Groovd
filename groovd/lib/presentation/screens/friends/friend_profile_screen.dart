@@ -9,12 +9,19 @@ import 'package:groovd/data/models/friend_profile.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
+import 'package:groovd/presentation/screens/lists/user_lists_screen.dart';
+import 'package:groovd/presentation/screens/profile/all_rated_releases_screen.dart';
+import 'package:groovd/presentation/screens/profile/logged_reviews_screen.dart';
 import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
+import 'package:groovd/presentation/screens/wishlist/wishlist_screen.dart';
 import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
+import 'package:groovd/presentation/widgets/critic_followers_stats_row.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/state/friends_provider.dart';
 import 'package:groovd/state/review_providers.dart';
+import 'package:groovd/state/user_lists_provider.dart';
+import 'package:groovd/state/wishlist_provider.dart';
 
 class FriendProfileScreen extends ConsumerWidget {
   final FriendProfile initialProfile;
@@ -35,8 +42,32 @@ class FriendProfileScreen extends ConsumerWidget {
     final profileAsync = ref.watch(friendProfileProvider(initialProfile.userId));
     final profile = profileAsync.value ?? initialProfile;
     final isFollowing = ref.watch(isFollowingProvider(profile.userId));
+    final followsYou = ref.watch(isFollowerOfCurrentUserProvider(profile.userId));
+    final followLabel = isFollowing
+        ? '✓ FOLLOWING'
+        : (followsYou ? '+ FOLLOW BACK' : '+ FOLLOW');
+    final headerFollowLabel = isFollowing
+        ? '✓ FOLLOWING'
+        : (followsYou ? '+ FOLLOW BACK' : '+ FOLLOW CRITIC');
+    final liveFollowers = ref.watch(userFollowersCountProvider(profile.userId)).value;
+    final followersCount = liveFollowers != null && liveFollowers > 0
+        ? liveFollowers
+        : (profile.followersCount +
+                (isFollowing && !profile.isFollowing
+                    ? 1
+                    : (!isFollowing && profile.isFollowing ? -1 : 0)))
+            .clamp(0, 9999999);
+    final followingCount = profile.followingCount;
     final reviewsAsync = ref.watch(friendReviewsProvider(profile.userId));
     final reviews = reviewsAsync.asData?.value ?? [];
+
+    final friendWishlistAsync = ref.watch(userWishlistProvider(profile.userId));
+    final friendListsAsync = ref.watch(userCuratedListsProvider(profile.userId));
+
+    final liveWantlistCount =
+        friendWishlistAsync.asData?.value.length ?? profile.wantlistCount;
+    final liveListsCount =
+        friendListsAsync.asData?.value.length ?? profile.listsCount;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -49,10 +80,30 @@ class FriendProfileScreen extends ConsumerWidget {
         ),
         title: Text('CRITIC DOSSIER', style: AppTypography.displaySmall()),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.queue_music_outlined, color: AppColors.cyberCyan),
+            tooltip: 'Curated Lists',
+            onPressed: () => Navigator.of(context).push(
+              UserListsScreen.route(
+                targetUserId: profile.userId,
+                targetUserName: profile.userName.toUpperCase(),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.bookmark_outline, color: AppColors.textPrimary),
+            tooltip: 'Wantlist // Wishlist',
+            onPressed: () => Navigator.of(context).push(
+              WishlistScreen.route(
+                targetUserId: profile.userId,
+                targetUserName: profile.userName.toUpperCase(),
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 14),
             child: BrutalistButton(
-              label: isFollowing ? '✓ FOLLOWING' : '+ FOLLOW',
+              label: followLabel,
               isSmall: true,
               backgroundColor: isFollowing ? AppColors.surfaceElevated : AppColors.acidLime,
               textColor: isFollowing ? AppColors.acidLime : AppColors.pureBlack,
@@ -212,16 +263,43 @@ class FriendProfileScreen extends ConsumerWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              profile.formattedHandle,
-                              style: AppTypography.monoLabel(
-                                color: AppColors.textSecondary,
-                                fontSize: 11,
-                              ),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    profile.formattedHandle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.monoLabel(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                                if (followsYou) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surfaceElevated,
+                                      border: Border.all(color: AppColors.acidLime.withValues(alpha: 0.7), width: 0.8),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                    child: Text(
+                                      'FOLLOWS YOU',
+                                      style: AppTypography.monoLabel(
+                                        fontSize: 8,
+                                        color: AppColors.acidLime,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                             const SizedBox(height: 8),
                             BrutalistButton(
-                              label: isFollowing ? '✓ FOLLOWING' : '+ FOLLOW CRITIC',
+                              label: headerFollowLabel,
                               isSmall: true,
                               backgroundColor:
                                   isFollowing ? AppColors.surfaceElevated : AppColors.acidLime,
@@ -264,6 +342,14 @@ class FriendProfileScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
+
+                  const SizedBox(height: 10),
+
+                  // Followers & Following Counters
+                  CriticFollowersStatsRow(
+                    followersCount: followersCount,
+                    followingCount: followingCount,
+                  ),
                 ],
               ),
             ),
@@ -282,10 +368,19 @@ class FriendProfileScreen extends ConsumerWidget {
                   child: Row(
                     children: [
                       Expanded(
-                        child: _StatBox(
-                          label: 'LOGGED',
-                          value: '$totalLogged',
-                          accentColor: AppColors.textPrimary,
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(
+                            AllRatedReleasesScreen.route(
+                              targetUserId: profile.userId,
+                              targetUserName: profile.userName.toUpperCase(),
+                            ),
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                          child: _StatBox(
+                            label: 'LOGGED',
+                            value: '$totalLogged',
+                            accentColor: AppColors.textPrimary,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -298,10 +393,20 @@ class FriendProfileScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: _StatBox(
-                          label: 'PERFECT 10s',
-                          value: '$perfectTens',
-                          accentColor: AppColors.electricPink,
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(
+                            AllRatedReleasesScreen.route(
+                              targetUserId: profile.userId,
+                              targetUserName: profile.userName.toUpperCase(),
+                              initialFilter: RatedFilter.perfect10s,
+                            ),
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                          child: _StatBox(
+                            label: 'PERFECT 10s',
+                            value: '$perfectTens',
+                            accentColor: AppColors.electricPink,
+                          ),
                         ),
                       ),
                     ],
@@ -373,41 +478,57 @@ class FriendProfileScreen extends ConsumerWidget {
             // Section: RECENT ACTIVITY (Chronological Timeline of Scored Releases)
             _RecentActivitySection(
               reviews: reviews,
+              userId: profile.userId,
+              userName: profile.userName.toUpperCase(),
             ),
 
             const SizedBox(height: 24),
             const Divider(),
 
-            // Logged Written Reviews Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'CRITIC\'S LOGGED REVIEWS',
-                    style: AppTypography.displaySmall(),
-                  ),
-                  reviewsAsync.when(
-                    data: (r) {
-                      final count = r.where((review) => review.hasWrittenReview).length;
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '$count CRITIQUES',
-                            style: AppTypography.monoLabel(
-                              fontSize: 10,
+            // Logged Written Reviews Header & Navigation
+            InkWell(
+              onTap: () => Navigator.of(context).push(
+                LoggedReviewsScreen.route(
+                  targetUserId: profile.userId,
+                  targetUserName: profile.userName.toUpperCase(),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'CRITIC\'S LOGGED REVIEWS',
+                      style: AppTypography.displaySmall(),
+                    ),
+                    reviewsAsync.when(
+                      data: (r) {
+                        final count = r.where((review) => review.hasWrittenReview).length;
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '$count CRITIQUES',
+                              style: AppTypography.monoLabel(
+                                fontSize: 10,
+                                color: AppColors.acidLime,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.chevron_right,
+                              size: 16,
                               color: AppColors.acidLime,
                             ),
-                          ),
-                        ],
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (err, stack) => const SizedBox.shrink(),
-                  ),
-                ],
+                          ],
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (err, stack) => const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -451,7 +572,7 @@ class FriendProfileScreen extends ConsumerWidget {
                   );
                 }
 
-                return _ReviewStackDeck(reviews: writtenReviews);
+                return _ReviewStackDeck(reviews: writtenReviews.take(10).toList());
               },
               loading: () => const Padding(
                 padding: EdgeInsets.all(32),
@@ -471,7 +592,13 @@ class FriendProfileScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: _WishlistShortcutBanner(
-                count: profile.wantlistCount,
+                count: liveWantlistCount,
+                onTap: () => Navigator.of(context).push(
+                  WishlistScreen.route(
+                    targetUserId: profile.userId,
+                    targetUserName: profile.userName.toUpperCase(),
+                  ),
+                ),
               ),
             ),
 
@@ -481,7 +608,13 @@ class FriendProfileScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: _ListsShortcutBanner(
-                count: profile.listsCount,
+                count: liveListsCount,
+                onTap: () => Navigator.of(context).push(
+                  UserListsScreen.route(
+                    targetUserId: profile.userId,
+                    targetUserName: profile.userName.toUpperCase(),
+                  ),
+                ),
               ),
             ),
 
@@ -768,8 +901,14 @@ class _StatBox extends StatelessWidget {
 
 class _RecentActivitySection extends StatelessWidget {
   final List<Review> reviews;
+  final String userId;
+  final String userName;
 
-  const _RecentActivitySection({required this.reviews});
+  const _RecentActivitySection({
+    required this.reviews,
+    required this.userId,
+    required this.userName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -799,21 +938,32 @@ class _RecentActivitySection extends StatelessWidget {
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated,
-                  border: Border.all(color: AppColors.acidLime.withValues(alpha: 0.6)),
-                  borderRadius: BorderRadius.circular(2),
+              InkWell(
+                onTap: () => Navigator.of(context).push(
+                  AllRatedReleasesScreen.route(
+                    targetUserId: userId,
+                    targetUserName: userName,
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'ALL ${reviews.length} RATED',
-                      style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 8),
-                    ),
-                  ],
+                borderRadius: BorderRadius.circular(2),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceElevated,
+                    border: Border.all(color: AppColors.acidLime.withValues(alpha: 0.6)),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'ALL ${reviews.length} RATED',
+                        style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 8),
+                      ),
+                      const SizedBox(width: 3),
+                      const Icon(Icons.chevron_right, size: 12, color: AppColors.acidLime),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -984,7 +1134,7 @@ class _ReviewStackDeck extends StatefulWidget {
 
 class _ReviewStackDeckState extends State<_ReviewStackDeck> {
   int _currentIndex = 0;
-  Timer? _autoCycleTimer;
+  Timer? _timer;
   bool _isHolding = false;
 
   @override
@@ -993,27 +1143,54 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
     _startTimer();
   }
 
+  @override
+  void didUpdateWidget(covariant _ReviewStackDeck oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.reviews.length != oldWidget.reviews.length) {
+      if (_currentIndex >= widget.reviews.length) {
+        _currentIndex = 0;
+      }
+      _startTimer();
+    }
+  }
+
   void _startTimer() {
-    _autoCycleTimer?.cancel();
-    if (widget.reviews.length > 1) {
-      _autoCycleTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-        if (!_isHolding && mounted) {
-          setState(() {
-            _currentIndex = (_currentIndex + 1) % widget.reviews.length;
-          });
-        }
-      });
+    _timer?.cancel();
+    if (widget.reviews.length <= 1) return;
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!_isHolding && mounted) {
+        setState(() {
+          _currentIndex = (_currentIndex + 1) % widget.reviews.length;
+        });
+      }
+    });
+  }
+
+  void _pauseTimer() {
+    if (!_isHolding) {
+      setState(() => _isHolding = true);
+    }
+  }
+
+  void _resumeTimer() {
+    if (_isHolding) {
+      setState(() => _isHolding = false);
     }
   }
 
   @override
   void dispose() {
-    _autoCycleTimer?.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
-  void _pauseTimer() => setState(() => _isHolding = true);
-  void _resumeTimer() => setState(() => _isHolding = false);
+  void _openDetail(Review review) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ReviewDetailScreen(review: review),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1056,13 +1233,8 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: _isHolding
-                            ? AppColors.electricPink.withValues(alpha: 0.15)
-                            : AppColors.surface,
-                        border: Border.all(
-                          color:
-                              _isHolding ? AppColors.electricPink : AppColors.borderSubtle,
-                        ),
+                        color: _isHolding ? AppColors.electricPink.withValues(alpha: 0.15) : AppColors.surface,
+                        border: Border.all(color: _isHolding ? AppColors.electricPink : AppColors.borderSubtle),
                         borderRadius: BorderRadius.circular(2),
                       ),
                       child: Row(
@@ -1094,21 +1266,21 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
                       onTap: () {
                         HapticFeedback.selectionClick();
                         setState(() {
-                          _currentIndex = (_currentIndex - 1 + widget.reviews.length) %
-                              widget.reviews.length;
+                          _currentIndex = (_currentIndex - 1 + widget.reviews.length) % widget.reviews.length;
                         });
                       },
+                      borderRadius: BorderRadius.circular(2),
                       child: Container(
-                        padding: const EdgeInsets.all(5),
+                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceElevated,
                           border: Border.all(color: AppColors.border),
                           borderRadius: BorderRadius.circular(2),
                         ),
-                        child: const Icon(Icons.arrow_back, size: 14, color: AppColors.textPrimary),
+                        child: const Icon(Icons.chevron_left, size: 14, color: AppColors.textPrimary),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     InkWell(
                       onTap: () {
                         HapticFeedback.selectionClick();
@@ -1116,15 +1288,15 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
                           _currentIndex = (_currentIndex + 1) % widget.reviews.length;
                         });
                       },
+                      borderRadius: BorderRadius.circular(2),
                       child: Container(
-                        padding: const EdgeInsets.all(5),
+                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceElevated,
                           border: Border.all(color: AppColors.border),
                           borderRadius: BorderRadius.circular(2),
                         ),
-                        child: const Icon(Icons.arrow_forward,
-                            size: 14, color: AppColors.textPrimary),
+                        child: const Icon(Icons.chevron_right, size: 14, color: AppColors.textPrimary),
                       ),
                     ),
                   ],
@@ -1132,29 +1304,28 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        // Visual Stack Deck View
+
+        const SizedBox(height: 10),
+
+        // Stacked Card Pile Container with Acid Lime Illusion Behind Front Card
         Padding(
-          padding: EdgeInsets.fromLTRB(20, 0, 20 + totalExtraX, totalExtraY),
+          padding: EdgeInsets.fromLTRB(20, 0, 20 + totalExtraX, totalExtraY + 12),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              if (hasMultiple)
+              // 3 illusion backdrop card layers stacked underneath with acid-lime neon borders
+              if (stackDepth > 0)
                 for (int i = stackDepth; i >= 1; i--)
-                  Positioned(
+                  Positioned.fill(
                     top: i * stepY,
                     left: i * stepX,
-                    right: -i * stepX,
-                    bottom: -i * stepY,
+                    right: -(i * stepX),
+                    bottom: -(i * stepY),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: i == 1
-                            ? AppColors.surfaceElevated
-                            : (i == 2
-                                ? const Color(0xFF141414)
-                                : const Color(0xFF0F0F0F)),
+                        color: AppColors.surfaceElevated,
                         border: Border.all(
-                          color: i == 1 ? AppColors.border : AppColors.borderSubtle,
+                          color: AppColors.acidLime.withValues(alpha: (1.0 - (i - 1) * 0.22).clamp(0.45, 1.0)),
                           width: 1.5,
                         ),
                         borderRadius: BorderRadius.circular(2),
@@ -1169,30 +1340,45 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
                     ),
                   ),
 
-              // Front Top Active Review Card
+              // Front Top Active Review Card with Line Limits
               GestureDetector(
                 onTapDown: (_) => _pauseTimer(),
                 onTapUp: (_) => _resumeTimer(),
                 onTapCancel: () => _resumeTimer(),
                 onLongPressStart: (_) => _pauseTimer(),
                 onLongPressEnd: (_) => _resumeTimer(),
-                child: Consumer(
-                  builder: (context, ref, _) {
-                    return ReviewCard(
-                      review: activeReview,
-                      showItemHeader: true,
-                      onLike: () {
-                        ref.read(reviewControllerProvider).likeReview(activeReview.id);
-                      },
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ReviewDetailScreen(review: activeReview),
-                          ),
-                        );
-                      },
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 380),
+                  transitionBuilder: (child, animation) {
+                    final slideIn = Tween<Offset>(
+                      begin: const Offset(0.04, 0.03),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: slideIn,
+                        child: child,
+                      ),
                     );
                   },
+                  child: KeyedSubtree(
+                    key: ValueKey<String>('${activeReview.id}_$_currentIndex'),
+                    child: Consumer(
+                      builder: (context, ref, _) {
+                        return ReviewCard(
+                          review: activeReview,
+                          showItemHeader: true,
+                          maxHeadlineLines: 2,
+                          maxBodyLines: 3,
+                          onLike: () {
+                            ref.read(reviewControllerProvider).likeReview(activeReview.id);
+                          },
+                          onTap: () => _openDetail(activeReview),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -1205,71 +1391,84 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
 
 class _WishlistShortcutBanner extends StatelessWidget {
   final int count;
+  final VoidCallback onTap;
 
   const _WishlistShortcutBanner({
     required this.count,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        border: Border.all(color: AppColors.acidLime, width: 1.5),
-        borderRadius: BorderRadius.circular(2),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.pureBlack,
-            offset: Offset(3, 3),
-            blurRadius: 0,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.acidLime,
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: const Icon(
-              Icons.bookmark_outline,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(2),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceElevated,
+          border: Border.all(color: AppColors.acidLime, width: 1.5),
+          borderRadius: BorderRadius.circular(2),
+          boxShadow: const [
+            BoxShadow(
               color: AppColors.pureBlack,
-              size: 20,
+              offset: Offset(3, 3),
+              blurRadius: 0,
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'CRITIC WANTLIST // QUEUE',
-                  style: AppTypography.displaySmall(fontSize: 13),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'ALBUMS & TRACKS QUEUED TO SPIN',
-                  style: AppTypography.monoLabel(color: AppColors.textSecondary, fontSize: 9),
-                ),
-              ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.acidLime,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: const Icon(
+                Icons.bookmark_outline,
+                color: AppColors.pureBlack,
+                size: 20,
+              ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceCard,
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(2),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'CRITIC WANTLIST // QUEUE',
+                    style: AppTypography.displaySmall(fontSize: 13),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'ALBUMS & TRACKS QUEUED TO SPIN',
+                    style: AppTypography.monoLabel(color: AppColors.textSecondary, fontSize: 9),
+                  ),
+                ],
+              ),
             ),
-            child: Text(
-              '$count QUEUED',
-              style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 9),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCard,
+                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$count QUEUED',
+                    style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 9),
+                  ),
+                  const SizedBox(width: 3),
+                  const Icon(Icons.chevron_right, size: 12, color: AppColors.acidLime),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1277,71 +1476,84 @@ class _WishlistShortcutBanner extends StatelessWidget {
 
 class _ListsShortcutBanner extends StatelessWidget {
   final int count;
+  final VoidCallback onTap;
 
   const _ListsShortcutBanner({
     required this.count,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        border: Border.all(color: AppColors.cyberCyan, width: 1.5),
-        borderRadius: BorderRadius.circular(2),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.pureBlack,
-            offset: Offset(3, 3),
-            blurRadius: 0,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.cyberCyan,
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: const Icon(
-              Icons.queue_music_outlined,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(2),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceElevated,
+          border: Border.all(color: AppColors.cyberCyan, width: 1.5),
+          borderRadius: BorderRadius.circular(2),
+          boxShadow: const [
+            BoxShadow(
               color: AppColors.pureBlack,
-              size: 20,
+              offset: Offset(3, 3),
+              blurRadius: 0,
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'CURATED LISTS // ARCHIVE',
-                  style: AppTypography.displaySmall(fontSize: 13),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'CUSTOM COLLECTION PLAYLISTS',
-                  style: AppTypography.monoLabel(color: AppColors.textSecondary, fontSize: 9),
-                ),
-              ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.cyberCyan,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: const Icon(
+                Icons.queue_music_outlined,
+                color: AppColors.pureBlack,
+                size: 20,
+              ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceCard,
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(2),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'CURATED LISTS // ARCHIVE',
+                    style: AppTypography.displaySmall(fontSize: 13),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'CUSTOM COLLECTION PLAYLISTS',
+                    style: AppTypography.monoLabel(color: AppColors.textSecondary, fontSize: 9),
+                  ),
+                ],
+              ),
             ),
-            child: Text(
-              '$count LISTS',
-              style: AppTypography.monoBadge(color: AppColors.cyberCyan, fontSize: 9),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCard,
+                border: Border.all(color: AppColors.border),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$count LISTS',
+                    style: AppTypography.monoBadge(color: AppColors.cyberCyan, fontSize: 9),
+                  ),
+                  const SizedBox(width: 3),
+                  const Icon(Icons.chevron_right, size: 12, color: AppColors.cyberCyan),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

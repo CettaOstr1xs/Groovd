@@ -11,7 +11,14 @@ import 'package:groovd/presentation/widgets/review_card.dart';
 import 'friend_profile_screen.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
-  const FriendsScreen({super.key});
+  final int initialTabIndex;
+  const FriendsScreen({super.key, this.initialTabIndex = 0});
+
+  static Route route({int initialTabIndex = 0}) {
+    return MaterialPageRoute(
+      builder: (_) => FriendsScreen(initialTabIndex: initialTabIndex),
+    );
+  }
 
   @override
   ConsumerState<FriendsScreen> createState() => _FriendsScreenState();
@@ -25,7 +32,11 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 2),
+    );
   }
 
   @override
@@ -435,6 +446,11 @@ class _CriticListTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isFollowing = ref.watch(isFollowingProvider(critic.userId));
+    final followsYou = ref.watch(isFollowerOfCurrentUserProvider(critic.userId));
+
+    final followLabel = isFollowing
+        ? '✓ FOLLOWING'
+        : (followsYou ? '+ FOLLOW BACK' : '+ FOLLOW');
 
     return InkWell(
       onTap: onTap,
@@ -470,9 +486,36 @@ class _CriticListTile extends ConsumerWidget {
                     style: AppTypography.headline(fontSize: 13),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    critic.formattedHandle,
-                    style: AppTypography.monoLabel(fontSize: 10, color: AppColors.cyberCyan),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          critic.formattedHandle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.monoLabel(fontSize: 10, color: AppColors.cyberCyan),
+                        ),
+                      ),
+                      if (followsYou) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceElevated,
+                            border: Border.all(color: AppColors.acidLime.withValues(alpha: 0.6), width: 0.8),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: Text(
+                            'FOLLOWS YOU',
+                            style: AppTypography.monoLabel(
+                              fontSize: 7.5,
+                              color: AppColors.acidLime,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   if (critic.bio.isNotEmpty) ...[
                     const SizedBox(height: 4),
@@ -488,7 +531,7 @@ class _CriticListTile extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             BrutalistButton(
-              label: isFollowing ? 'FOLLOWING' : '+ FOLLOW',
+              label: followLabel,
               isSmall: true,
               backgroundColor: isFollowing ? AppColors.surfaceElevated : AppColors.acidLime,
               textColor: isFollowing ? AppColors.acidLime : AppColors.pureBlack,
