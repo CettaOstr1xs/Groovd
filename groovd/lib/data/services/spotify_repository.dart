@@ -1,25 +1,33 @@
 import '../models/artist.dart';
 import '../models/music_item.dart';
+import 'deezer_api_service.dart';
 import 'spotify_api_service.dart';
 import 'spotify_mock_data.dart';
 import 'wikipedia_api_service.dart';
 
 class SpotifyRepository {
-  final SpotifyApiService apiService;
+  final SpotifyApiService? apiService;
+  final DeezerApiService deezerService;
   final WikipediaApiService wikipediaService;
+  final bool enableLiveCatalog;
 
   SpotifyRepository({
-    required this.apiService,
+    this.apiService,
+    DeezerApiService? deezerService,
     WikipediaApiService? wikipediaService,
-  }) : wikipediaService = wikipediaService ?? WikipediaApiService();
+    bool? enableLiveCatalog,
+  })  : deezerService = deezerService ?? DeezerApiService(),
+        wikipediaService = wikipediaService ?? WikipediaApiService(),
+        enableLiveCatalog = enableLiveCatalog ??
+            (apiService == null || apiService.isConfigured || deezerService != null);
 
-  bool get isLiveMode => apiService.isConfigured;
+  bool get isLiveMode => enableLiveCatalog;
 
   Future<List<MusicItem>> getTrendingAlbums() async {
     if (isLiveMode) {
-      final releases = await apiService.getNewReleases(limit: 10);
+      final releases = await deezerService.getTrendingAlbums(limit: 10);
       if (releases.isNotEmpty) return releases;
-      final searched = await apiService.search('tag:new', type: 'album', limit: 10);
+      final searched = await deezerService.searchAlbums('year:2024', limit: 10);
       if (searched.isNotEmpty) return searched;
     }
     return SpotifyMockData.trendingAlbums;
@@ -27,16 +35,8 @@ class SpotifyRepository {
 
   Future<List<MusicItem>> getHotTracks() async {
     if (isLiveMode) {
-      final searchResults = await apiService.search('year:2024', type: 'track', limit: 10);
-      if (searchResults.isNotEmpty) {
-        searchResults.sort((a, b) => b.popularity.compareTo(a.popularity));
-        return searchResults;
-      }
-      final fallbackResults = await apiService.search('top hits', type: 'track', limit: 10);
-      if (fallbackResults.isNotEmpty) {
-        fallbackResults.sort((a, b) => b.popularity.compareTo(a.popularity));
-        return fallbackResults;
-      }
+      final hotTracks = await deezerService.getHotTracks(limit: 10);
+      if (hotTracks.isNotEmpty) return hotTracks;
     }
     return [];
   }
@@ -46,11 +46,11 @@ class SpotifyRepository {
     if (cleanQuery.isEmpty) return [];
 
     if (isLiveMode) {
-      String typeParam = 'album,track';
+      String typeParam = 'all';
       if (type == MusicType.album) typeParam = 'album';
       if (type == MusicType.song) typeParam = 'track';
 
-      final results = await apiService.search(cleanQuery, type: typeParam, limit: 10);
+      final results = await deezerService.search(cleanQuery, type: typeParam, limit: 10);
       if (results.isNotEmpty) return results;
     }
 
@@ -65,26 +65,104 @@ class SpotifyRepository {
     }).toList();
   }
 
-  Future<MusicItem?> getItemById(String id, {MusicType? type}) async {
+  Future<MusicItem?> getItemById(
+    String id, {
+    MusicType? type,
+    String? name,
+    String? artist,
+  }) async {
     // Check mock items first
     try {
       final mock = SpotifyMockData.allItems.firstWhere((item) => item.id == id);
-      return mock;
+      if (mock.tracks.isNotEmpty || mock.type == MusicType.song) {
+        return mock;
+      }
     } catch (_) {}
 
     if (isLiveMode) {
-      if (type == MusicType.song || id.startsWith('track_')) {
-        final track = await apiService.getTrack(id);
+      final cleanId = id.replaceFirst('track_', '').replaceFirst('album_', '');
+      final isNumeric = int.tryParse(cleanId) != null;
+
+      // 1. Direct Deezer ID lookup (only possible if ID is numeric)
+      if (isNumeric) {
+        // Explicit track ID
+        if (id.startsWith('track_')) {
+          final track = await deezerService.getTrack(cleanId);
+          if (track != null) return track;
+          final album = await deezerService.getAlbum(cleanId);
+          if (album != null) return album;
+        }
+
+        // Explicit album / EP ID or type
+        if (id.startsWith('album_') || type == MusicType.album || type == MusicType.ep) {
+          final album = await deezerService.getAlbum(cleanId);
+          if (album != null && album.tracks.isNotEmpty) return album;
+          final track = await deezerService.getTrack(cleanId);
+          if (track != null) return track;
+          if (album != null) return album;
+        }
+
+        // For song type: try track first, then fallback to album
+        if (type == MusicType.song) {
+          final track = await deezerService.getTrack(cleanId);
+          if (track != null) return track;
+          final album = await deezerService.getAlbum(cleanId);
+          if (album != null) return album;
+        }
+
+        // Default: try album first (to get full album tracklists and metadata)
+        final album = await deezerService.getAlbum(cleanId);
+        if (album != null && album.tracks.isNotEmpty) return album;
+
+        final track = await deezerService.getTrack(cleanId);
         if (track != null) return track;
-        return await apiService.getAlbum(id);
-      } else if (type == MusicType.album || type == MusicType.ep || id.startsWith('album_')) {
-        final album = await apiService.getAlbum(id);
+
         if (album != null) return album;
-        return await apiService.getTrack(id);
-      } else {
-        final album = await apiService.getAlbum(id);
-        if (album != null) return album;
-        return await apiService.getTrack(id);
+      }
+
+      // 2. Resilient Fallback: Search by name and artist if direct ID failed
+      // or if ID is an old Spotify 22-character ID or mock string ID
+      if (name != null && name.trim().isNotEmpty) {
+        final cleanName = name.trim();
+        final cleanArtist = (artist ?? '').trim();
+        final query = cleanArtist.isNotEmpty ? '$cleanName $cleanArtist' : cleanName;
+
+        if (type == MusicType.album || type == MusicType.ep || id.startsWith('album_')) {
+          final albums = await deezerService.searchAlbums(query, limit: 5);
+          if (albums.isNotEmpty) {
+            final matched = albums.firstWhere(
+              (a) => a.name.toLowerCase() == cleanName.toLowerCase(),
+              orElse: () => albums.first,
+            );
+            final fullAlbum = await deezerService.getAlbum(matched.id);
+            if (fullAlbum != null) return fullAlbum;
+            return matched;
+          }
+        } else if (type == MusicType.song || id.startsWith('track_')) {
+          final tracks = await deezerService.searchTracks(query, limit: 5);
+          if (tracks.isNotEmpty) {
+            final matched = tracks.firstWhere(
+              (t) => t.name.toLowerCase() == cleanName.toLowerCase(),
+              orElse: () => tracks.first,
+            );
+            final fullTrack = await deezerService.getTrack(matched.id);
+            if (fullTrack != null) return fullTrack;
+            return matched;
+          }
+        } else {
+          final combined = await deezerService.search(query, limit: 5);
+          if (combined.isNotEmpty) {
+            final first = combined.first;
+            if (first.type == MusicType.album || first.type == MusicType.ep) {
+              final fullAlbum = await deezerService.getAlbum(first.id);
+              if (fullAlbum != null) return fullAlbum;
+            } else {
+              final fullTrack = await deezerService.getTrack(first.id);
+              if (fullTrack != null) return fullTrack;
+            }
+            return first;
+          }
+        }
       }
     }
 
@@ -103,11 +181,7 @@ class SpotifyRepository {
     final primaryLower = primaryArtist.toLowerCase();
 
     if (isLiveMode) {
-      List<MusicItem> results = await apiService.search('artist:"$primaryArtist"', type: 'album,track', limit: 10);
-      if (results.isEmpty) {
-        results = await apiService.search(primaryArtist, type: 'album,track', limit: 10);
-      }
-
+      final results = await deezerService.searchAlbums(primaryArtist, limit: 10);
       if (results.isNotEmpty) {
         final filtered = <MusicItem>[];
         final seenIds = <String>{};
@@ -142,20 +216,22 @@ class SpotifyRepository {
     return filtered;
   }
 
-  /// Retrieves an artist by Spotify ID or name, enriched with Wikipedia biographical summary.
+  /// Retrieves an artist by Deezer ID or name, enriched with Wikipedia biographical summary.
   Future<Artist?> getArtist(String artistIdOrName) async {
     final clean = artistIdOrName.trim();
     if (clean.isEmpty) return null;
     final lower = clean.toLowerCase();
 
     // Check mock data first if it's a known mock ID
-    final mockById = SpotifyMockData.mockArtists.where((a) => a.id == clean || a.name.toLowerCase() == lower).firstOrNull;
+    final mockById = SpotifyMockData.mockArtists
+        .where((a) => a.id == clean || a.name.toLowerCase() == lower)
+        .firstOrNull;
 
     if (isLiveMode) {
       Map<String, dynamic>? artistJson;
-      // If it looks like a clean Spotify ID (alphanumeric, no spaces, length around 22)
-      if (!clean.contains(' ') && !clean.startsWith('artist_')) {
-        artistJson = await apiService.getArtist(clean);
+      // If numeric ID, query directly
+      if (RegExp(r'^\d+$').hasMatch(clean)) {
+        artistJson = await deezerService.getArtist(clean);
       }
 
       // Search by artist name if not found by ID
@@ -166,11 +242,15 @@ class SpotifyRepository {
         } else if (clean.startsWith('artist_')) {
           nameToSearch = clean.replaceFirst('artist_', '').replaceAll('_', ' ');
         }
-        artistJson = await apiService.searchArtist(nameToSearch);
+        artistJson = await deezerService.searchArtist(nameToSearch);
+        if (artistJson != null && artistJson['id'] != null) {
+          final fullProfile = await deezerService.getArtist(artistJson['id'].toString());
+          if (fullProfile != null) artistJson = fullProfile;
+        }
       }
 
       if (artistJson != null) {
-        var artist = Artist.fromSpotifyJson(artistJson);
+        var artist = Artist.fromDeezerJson(artistJson);
         // Fetch bio from Wikipedia
         try {
           final wiki = await wikipediaService.getArtistSummary(artist.name);
@@ -190,7 +270,9 @@ class SpotifyRepository {
     }
 
     // Generic fallback: check if any items in mock data match this artist
-    final matchingItems = SpotifyMockData.allItems.where((i) => i.artist.toLowerCase().contains(lower)).toList();
+    final matchingItems = SpotifyMockData.allItems
+        .where((i) => i.artist.toLowerCase().contains(lower))
+        .toList();
     if (matchingItems.isNotEmpty) {
       final first = matchingItems.first;
       final genres = matchingItems.expand((i) => i.genres).toSet().toList();
@@ -209,20 +291,14 @@ class SpotifyRepository {
     return null;
   }
 
-  /// Search Spotify or catalog for artists matching the query
+  /// Search catalog for artists matching the query
   Future<List<Artist>> searchArtists(String query, {int limit = 5}) async {
     final cleanQuery = query.trim();
     if (cleanQuery.isEmpty) return [];
 
     if (isLiveMode) {
-      final artistsJson = await apiService.searchArtists(cleanQuery, limit: limit);
-      if (artistsJson.isNotEmpty) {
-        final list = <Artist>[];
-        for (final json in artistsJson) {
-          list.add(Artist.fromSpotifyJson(json));
-        }
-        return list;
-      }
+      final artists = await deezerService.searchArtists(cleanQuery, limit: limit);
+      if (artists.isNotEmpty) return artists;
     }
 
     // Mock search fallback
@@ -270,12 +346,14 @@ class SpotifyRepository {
     if (clean.isEmpty) return [];
 
     final lower = clean.toLowerCase();
-    final mockById = SpotifyMockData.mockArtists.where((a) => a.id == clean || a.name.toLowerCase() == lower).firstOrNull;
+    final mockById = SpotifyMockData.mockArtists
+        .where((a) => a.id == clean || a.name.toLowerCase() == lower)
+        .firstOrNull;
 
     if (isLiveMode) {
       String? resolvedId = clean;
       String queryName = clean;
-      if (clean.contains(' ') || clean.startsWith('artist_')) {
+      if (!RegExp(r'^\d+$').hasMatch(clean)) {
         String nameToSearch = clean;
         if (mockById != null) {
           nameToSearch = mockById.name;
@@ -283,39 +361,33 @@ class SpotifyRepository {
           nameToSearch = clean.replaceFirst('artist_', '').replaceAll('_', ' ');
         }
         queryName = nameToSearch;
-        final searchResult = await apiService.searchArtist(nameToSearch);
-        resolvedId = searchResult?['id'] as String?;
-        if (searchResult?['name'] != null) {
-          queryName = searchResult!['name'] as String;
-        }
-      } else {
-        final artistData = await apiService.getArtist(clean);
-        if (artistData?['name'] != null) {
-          queryName = artistData!['name'] as String;
-        }
+        final searchResult = await deezerService.searchArtist(nameToSearch);
+        resolvedId = searchResult?['id']?.toString();
       }
 
       if (resolvedId != null && resolvedId.isNotEmpty) {
-        final tracks = await apiService.getArtistTopTracks(resolvedId, artistName: queryName);
+        final tracks = await deezerService.getArtistTopTracks(resolvedId, limit: 10);
         if (tracks.isNotEmpty) return tracks;
       }
 
       // Secondary search fallback directly
-      final searchedTracks = await apiService.search('artist:"$queryName"', type: 'track', limit: 10);
+      final searchedTracks = await deezerService.searchTracks(queryName, limit: 10);
       if (searchedTracks.isNotEmpty) return searchedTracks;
-      final fallbackTracks = await apiService.search(queryName, type: 'track', limit: 10);
-      if (fallbackTracks.isNotEmpty) return fallbackTracks;
     }
 
     // Mock fallback: return songs by this artist
     final mockSongs = SpotifyMockData.allItems
-        .where((i) => i.isSong && (i.artist.toLowerCase().contains(lower) || lower.contains(i.artist.toLowerCase())))
+        .where((i) =>
+            i.isSong &&
+            (i.artist.toLowerCase().contains(lower) || lower.contains(i.artist.toLowerCase())))
         .toList();
     if (mockSongs.isNotEmpty) return mockSongs;
 
     // If no tracks, return tracks from matching albums
     final mockAlbums = SpotifyMockData.allItems
-        .where((i) => i.isAlbum && (i.artist.toLowerCase().contains(lower) || lower.contains(i.artist.toLowerCase())))
+        .where((i) =>
+            i.isAlbum &&
+            (i.artist.toLowerCase().contains(lower) || lower.contains(i.artist.toLowerCase())))
         .toList();
     final extractedTracks = <MusicItem>[];
     for (final alb in mockAlbums) {
@@ -330,7 +402,7 @@ class SpotifyRepository {
             releaseDate: alb.releaseDate,
             genres: alb.genres,
             durationMs: t.durationMs,
-            previewUrl: t.previewUrl,
+            previewUrl: null,
           ),
         );
       }
@@ -342,12 +414,14 @@ class SpotifyRepository {
   Future<List<MusicItem>> getArtistDiscography(String artistIdOrName) async {
     final clean = artistIdOrName.trim();
     final lower = clean.toLowerCase();
-    final mockById = SpotifyMockData.mockArtists.where((a) => a.id == clean || a.name.toLowerCase() == lower).firstOrNull;
+    final mockById = SpotifyMockData.mockArtists
+        .where((a) => a.id == clean || a.name.toLowerCase() == lower)
+        .firstOrNull;
 
     if (isLiveMode) {
       String? resolvedId = clean;
       String queryName = clean;
-      if (clean.contains(' ') || clean.startsWith('artist_')) {
+      if (!RegExp(r'^\d+$').hasMatch(clean)) {
         String nameToSearch = clean;
         if (mockById != null) {
           nameToSearch = mockById.name;
@@ -355,64 +429,24 @@ class SpotifyRepository {
           nameToSearch = clean.replaceFirst('artist_', '').replaceAll('_', ' ');
         }
         queryName = nameToSearch;
-        final searchResult = await apiService.searchArtist(nameToSearch);
-        resolvedId = searchResult?['id'] as String?;
-        if (searchResult?['name'] != null) {
-          queryName = searchResult!['name'] as String;
-        }
-      } else {
-        final artistData = await apiService.getArtist(clean);
-        if (artistData?['name'] != null) {
-          queryName = artistData!['name'] as String;
-        }
+        final searchResult = await deezerService.searchArtist(nameToSearch);
+        resolvedId = searchResult?['id']?.toString();
       }
-
-      final results = <MusicItem>[];
-      final seenIds = <String>{};
-      final seenTitles = <String>{};
 
       if (resolvedId != null && resolvedId.isNotEmpty) {
-        final albums = await apiService.getArtistAlbums(resolvedId, limit: 10);
-        for (final a in albums) {
-          final titleKey = '${a.name.toLowerCase().trim()}_${a.type}';
-          if (!seenIds.contains(a.id) && !seenTitles.contains(titleKey)) {
-            seenIds.add(a.id);
-            seenTitles.add(titleKey);
-            results.add(a);
-          }
-        }
+        final albums = await deezerService.getArtistAlbums(resolvedId, limit: 25);
+        if (albums.isNotEmpty) return albums;
       }
 
-      // Supplement with search: this finds studio albums/singles that might be omitted due to market or developer mode restrictions
-      final searched = await apiService.search('artist:"$queryName"', type: 'album', limit: 10);
-      for (final a in searched) {
-        final titleKey = '${a.name.toLowerCase().trim()}_${a.type}';
-        if (!seenIds.contains(a.id) && !seenTitles.contains(titleKey)) {
-          seenIds.add(a.id);
-          seenTitles.add(titleKey);
-          results.add(a);
-        }
-      }
-
-      if (results.isEmpty) {
-        final fallbackSearch = await apiService.search(queryName, type: 'album', limit: 10);
-        for (final a in fallbackSearch) {
-          final titleKey = '${a.name.toLowerCase().trim()}_${a.type}';
-          if (!seenIds.contains(a.id) && !seenTitles.contains(titleKey)) {
-            seenIds.add(a.id);
-            seenTitles.add(titleKey);
-            results.add(a);
-          }
-        }
-      }
-
-      if (results.isNotEmpty) return results;
+      // Supplement with search directly
+      final searched = await deezerService.searchAlbums(queryName, limit: 15);
+      if (searched.isNotEmpty) return searched;
     }
 
     // Mock fallback
     return SpotifyMockData.allItems
-        .where((i) => i.artist.toLowerCase().contains(lower) || lower.contains(i.artist.toLowerCase()))
+        .where((i) =>
+            i.artist.toLowerCase().contains(lower) || lower.contains(i.artist.toLowerCase()))
         .toList();
   }
 }
-

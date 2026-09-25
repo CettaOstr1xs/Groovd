@@ -2,9 +2,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/constants/spotify_config.dart';
 import '../data/models/artist.dart';
 import '../data/models/music_item.dart';
+import '../data/services/deezer_api_service.dart';
 import '../data/services/spotify_api_service.dart';
 import '../data/services/spotify_repository.dart';
 import 'settings_provider.dart';
+
+/// Singleton DeezerApiService providing free public catalog metadata
+final deezerApiServiceProvider = Provider<DeezerApiService>((ref) {
+  return DeezerApiService();
+});
 
 /// Singleton SpotifyApiService initialized with default config credentials
 final spotifyApiServiceProvider = Provider<SpotifyApiService>((ref) {
@@ -14,12 +20,17 @@ final spotifyApiServiceProvider = Provider<SpotifyApiService>((ref) {
   );
 });
 
-/// Spotify Repository provider
+/// Music Repository provider backed by Deezer API for free live music metadata
 final spotifyRepositoryProvider = Provider<SpotifyRepository>((ref) {
+  final deezer = ref.watch(deezerApiServiceProvider);
   final api = ref.watch(spotifyApiServiceProvider);
   // Reactively track settings changes
   ref.watch(spotifySettingsProvider);
-  return SpotifyRepository(apiService: api);
+  return SpotifyRepository(
+    apiService: api,
+    deezerService: deezer,
+    enableLiveCatalog: true,
+  );
 });
 
 /// Trending Albums on Groovd
@@ -100,8 +111,15 @@ final searchResultsProvider = FutureProvider<List<MusicItem>>((ref) async {
 class ItemQuery {
   final String id;
   final MusicType? type;
+  final String? name;
+  final String? artist;
 
-  const ItemQuery({required this.id, this.type});
+  const ItemQuery({
+    required this.id,
+    this.type,
+    this.name,
+    this.artist,
+  });
 
   @override
   bool operator ==(Object other) =>
@@ -109,16 +127,27 @@ class ItemQuery {
       other is ItemQuery &&
           runtimeType == other.runtimeType &&
           id == other.id &&
-          type == other.type;
+          type == other.type &&
+          name == other.name &&
+          artist == other.artist;
 
   @override
-  int get hashCode => id.hashCode ^ (type?.hashCode ?? 0);
+  int get hashCode =>
+      id.hashCode ^
+      (type?.hashCode ?? 0) ^
+      (name?.hashCode ?? 0) ^
+      (artist?.hashCode ?? 0);
 }
 
 /// Music Item Detail Provider by ItemQuery
 final musicItemDetailProvider = FutureProvider.family<MusicItem?, ItemQuery>((ref, query) async {
   final repo = ref.watch(spotifyRepositoryProvider);
-  return repo.getItemById(query.id, type: query.type);
+  return repo.getItemById(
+    query.id,
+    type: query.type,
+    name: query.name,
+    artist: query.artist,
+  );
 });
 
 /// Query parameter for discovering more pieces by an artist

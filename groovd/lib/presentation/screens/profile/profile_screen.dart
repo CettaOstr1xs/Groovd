@@ -1284,68 +1284,81 @@ class ProfileScreen extends ConsumerWidget {
                   Expanded(
                     child: isSearching
                         ? const Center(child: CircularProgressIndicator(color: AppColors.acidLime))
-                        : searchResults.isNotEmpty
-                            ? ListView.separated(
-                                itemCount: searchResults.length,
-                                separatorBuilder: (context, index) => const Divider(height: 1),
-                                itemBuilder: (context, idx) {
-                                  final item = searchResults[idx];
-                                  return _CandidateTile(
-                                    item: item,
-                                    onSelect: () async {
-                                      await ref.read(dossierTopPicksProvider.notifier).pinItem(
-                                            isAlbum: isAlbum,
-                                            slotIndex: slotIndex,
-                                            item: item,
-                                          );
-                                      if (context.mounted) Navigator.of(context).pop();
-                                    },
+                        : () {
+                            Future<void> pinSelectedItem(MusicItem rawItem) async {
+                              var itemToPin = rawItem.copyWith(
+                                type: isAlbum
+                                    ? (rawItem.isEp ? MusicType.ep : MusicType.album)
+                                    : MusicType.song,
+                              );
+                              if (itemToPin.tracks.isEmpty) {
+                                try {
+                                  final repo = ref.read(spotifyRepositoryProvider);
+                                  final detailed = await repo.getItemById(
+                                    itemToPin.id,
+                                    type: itemToPin.type,
+                                    name: itemToPin.name,
+                                    artist: itemToPin.artist,
                                   );
-                                },
-                              )
-                            : ListView(
-                                children: [
-                                  if (reviewedCandidates.isNotEmpty) ...[
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 8),
-                                      child: Text(
-                                        'FROM YOUR RECENT CRITIQUES',
-                                        style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 10),
-                                      ),
-                                    ),
-                                    ...reviewedCandidates.map((item) => _CandidateTile(
-                                          item: item,
-                                          onSelect: () async {
-                                            await ref.read(dossierTopPicksProvider.notifier).pinItem(
-                                                  isAlbum: isAlbum,
-                                                  slotIndex: slotIndex,
-                                                  item: item,
-                                                );
-                                            if (context.mounted) Navigator.of(context).pop();
-                                          },
-                                        )),
-                                    const Divider(height: 24),
-                                  ],
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    child: Text(
-                                      'SUGGESTED CANON',
-                                      style: AppTypography.monoBadge(color: AppColors.cyberCyan, fontSize: 10),
-                                    ),
-                                  ),
-                                  ...curatedCandidates.map((item) => _CandidateTile(
+                                  if (detailed != null && (detailed.tracks.isNotEmpty || detailed.id.isNotEmpty)) {
+                                    itemToPin = detailed.copyWith(
+                                      type: isAlbum
+                                          ? (detailed.isEp ? MusicType.ep : MusicType.album)
+                                          : MusicType.song,
+                                    );
+                                  }
+                                } catch (_) {}
+                              }
+                              await ref.read(dossierTopPicksProvider.notifier).pinItem(
+                                    isAlbum: isAlbum,
+                                    slotIndex: slotIndex,
+                                    item: itemToPin,
+                                  );
+                              if (context.mounted) Navigator.of(context).pop();
+                            }
+
+                            return searchResults.isNotEmpty
+                                ? ListView.separated(
+                                    itemCount: searchResults.length,
+                                    separatorBuilder: (context, index) => const Divider(height: 1),
+                                    itemBuilder: (context, idx) {
+                                      final item = searchResults[idx];
+                                      return _CandidateTile(
                                         item: item,
-                                        onSelect: () async {
-                                          await ref.read(dossierTopPicksProvider.notifier).pinItem(
-                                                isAlbum: isAlbum,
-                                                slotIndex: slotIndex,
-                                                item: item,
-                                              );
-                                          if (context.mounted) Navigator.of(context).pop();
-                                        },
-                                      )),
-                                ],
-                              ),
+                                        onSelect: () => pinSelectedItem(item),
+                                      );
+                                    },
+                                  )
+                                : ListView(
+                                    children: [
+                                      if (reviewedCandidates.isNotEmpty) ...[
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                          child: Text(
+                                            'FROM YOUR RECENT CRITIQUES',
+                                            style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 10),
+                                          ),
+                                        ),
+                                        ...reviewedCandidates.map((item) => _CandidateTile(
+                                              item: item,
+                                              onSelect: () => pinSelectedItem(item),
+                                            )),
+                                        const Divider(height: 24),
+                                      ],
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        child: Text(
+                                          'SUGGESTED CANON',
+                                          style: AppTypography.monoBadge(color: AppColors.cyberCyan, fontSize: 10),
+                                        ),
+                                      ),
+                                      ...curatedCandidates.map((item) => _CandidateTile(
+                                            item: item,
+                                            onSelect: () => pinSelectedItem(item),
+                                          )),
+                                    ],
+                                  );
+                          }(),
                   ),
 
                   const SizedBox(height: 8),
@@ -2065,10 +2078,20 @@ class _TopPicksPodiumSection extends StatelessWidget {
                     item: i < items.length ? items[i] : null,
                     isAlbum: isAlbum,
                     onTap: () {
-                      final item = i < items.length ? items[i] : null;
-                      if (item != null) {
+                      final rawItem = i < items.length ? items[i] : null;
+                      if (rawItem != null) {
+                        final configuredItem = rawItem.copyWith(
+                          type: isAlbum
+                              ? (rawItem.isEp ? MusicType.ep : MusicType.album)
+                              : MusicType.song,
+                        );
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item)),
+                          MaterialPageRoute(
+                            builder: (_) => MusicDetailScreen(
+                              item: configuredItem,
+                              heroTag: 'podium_${isAlbum ? "album" : "song"}_$i',
+                            ),
+                          ),
                         );
                       } else {
                         onSelectSlot(i);

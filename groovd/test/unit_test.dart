@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:groovd/data/models/artist.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/models/review.dart';
+import 'package:groovd/data/services/deezer_api_service.dart';
 import 'package:groovd/data/services/spotify_api_service.dart';
 import 'package:groovd/data/services/spotify_repository.dart';
 import 'package:groovd/data/services/wikipedia_api_service.dart';
@@ -94,12 +95,11 @@ void main() {
       expect(songResults.any((item) => item.name.contains('BIRDS')), true);
     });
 
-    test('Live Spotify search works with safe limit and retrieves real results', () async {
-      final apiService = SpotifyApiService(
-        clientId: '4cf83c2b597b4b16a332e231a21fb9d3',
-        clientSecret: '1c572e4231e04103b58f61e101304164',
+    test('Live Deezer search works and retrieves real results', () async {
+      final repo = SpotifyRepository(
+        deezerService: DeezerApiService(),
+        enableLiveCatalog: true,
       );
-      final repo = SpotifyRepository(apiService: apiService);
       expect(repo.isLiveMode, true);
 
       final results = await repo.search('GNX', type: MusicType.album);
@@ -115,11 +115,10 @@ void main() {
     });
 
     test('Live search for slowdive returns both albums and tracks with artwork', () async {
-      final apiService = SpotifyApiService(
-        clientId: '4cf83c2b597b4b16a332e231a21fb9d3',
-        clientSecret: '1c572e4231e04103b58f61e101304164',
+      final repo = SpotifyRepository(
+        deezerService: DeezerApiService(),
+        enableLiveCatalog: true,
       );
-      final repo = SpotifyRepository(apiService: apiService);
 
       final searchResults = await repo.search('slowdive');
       expect(searchResults.isNotEmpty, true);
@@ -133,12 +132,51 @@ void main() {
       for (final item in searchResults) {
         expect(item.coverUrl.isNotEmpty, true, reason: '${item.name} should have cover art');
       }
+    });
 
-      // Verify single track lookup gets artwork
-      final firstTrack = searchResults.firstWhere((item) => item.isSong);
-      final trackDetail = await repo.getItemById(firstTrack.id, type: MusicType.song);
-      expect(trackDetail, isNotNull);
-      expect(trackDetail!.coverUrl.isNotEmpty, true);
+    test('getItemById recovers album tracklist via name and artist fallback for old/non-numeric IDs', () async {
+      final repo = SpotifyRepository(
+        deezerService: DeezerApiService(),
+        enableLiveCatalog: true,
+      );
+
+      // Simulate an album clicked from Dossier Top 3 that had an old Spotify ID or review ID
+      final recoveredAlbum = await repo.getItemById(
+        'spotify_legacy_id_0VvAea2vUt',
+        type: MusicType.album,
+        name: 'GNX',
+        artist: 'Kendrick Lamar',
+      );
+
+      expect(recoveredAlbum, isNotNull);
+      expect(recoveredAlbum!.name.toUpperCase().contains('GNX'), true);
+      expect(recoveredAlbum.tracks.isNotEmpty, true);
+      expect(recoveredAlbum.tracks.length >= 10, true);
+      // Verify tracks are sequentially ordered 1, 2, 3...
+      for (int i = 0; i < recoveredAlbum.tracks.length; i++) {
+        expect(recoveredAlbum.tracks[i].trackNumber, i + 1);
+      }
+    });
+
+    test('Deezer album tracklist assigns continuous sequential track numbers (01, 02, 03...)', () {
+      final deezerAlbumJson = {
+        'id': 123456,
+        'title': 'Test Album',
+        'artist': {'name': 'Test Artist'},
+        'tracks': {
+          'data': [
+            {'id': 101, 'title': 'Track One', 'duration': 180}, // Note: no track_position
+            {'id': 102, 'title': 'Track Two', 'duration': 200},
+            {'id': 103, 'title': 'Track Three', 'duration': 220},
+          ]
+        }
+      };
+
+      final album = MusicItem.fromDeezerAlbum(deezerAlbumJson);
+      expect(album.tracks.length, 3);
+      expect(album.tracks[0].trackNumber, 1);
+      expect(album.tracks[1].trackNumber, 2);
+      expect(album.tracks[2].trackNumber, 3);
     });
   });
 

@@ -65,6 +65,8 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
     MusicItem? item = await ref.read(spotifyRepositoryProvider).getItemById(
           _review.musicItemId,
           type: itemType,
+          name: _review.musicItemName,
+          artist: _review.artistName,
         );
 
     item ??= MusicItem(
@@ -98,6 +100,8 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
     MusicItem? item = await ref.read(spotifyRepositoryProvider).getItemById(
           _review.musicItemId,
           type: itemType,
+          name: _review.musicItemName,
+          artist: _review.artistName,
         );
 
     item ??= MusicItem(

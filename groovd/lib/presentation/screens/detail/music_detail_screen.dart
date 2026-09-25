@@ -219,7 +219,12 @@ class MusicDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(musicItemDetailProvider(ItemQuery(id: item.id, type: item.type)));
+    final detailAsync = ref.watch(musicItemDetailProvider(ItemQuery(
+      id: item.id,
+      type: item.type,
+      name: item.name,
+      artist: item.artist,
+    )));
     final fetched = detailAsync.asData?.value;
     final activeItem = fetched != null
         ? fetched.copyWith(
@@ -526,8 +531,8 @@ class MusicDetailScreen extends ConsumerWidget {
               ),
             ),
 
-            // Tracklist Section (for Albums)
-            if (activeItem.tracks.isNotEmpty) ...[
+            // Tracklist Section (for Albums & EPs)
+            if (activeItem.isRelease) ...[
               const Divider(),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -535,55 +540,93 @@ class MusicDetailScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'TRACKLIST [${activeItem.tracks.length}]',
+                      detailAsync.isLoading && activeItem.tracks.isEmpty
+                          ? 'LOADING TRACKLIST...'
+                          : 'TRACKLIST [${activeItem.tracks.length}]',
                       style: AppTypography.monoLabel(
                         color: AppColors.textPrimary,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    Text(
-                      'DURATION',
-                      style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted),
-                    ),
+                    if (activeItem.tracks.isNotEmpty)
+                      Text(
+                        'DURATION',
+                        style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted),
+                      ),
                   ],
                 ),
               ),
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: activeItem.tracks.length,
-                separatorBuilder: (context, index) => const Divider(
-                  height: 1,
-                  color: AppColors.borderSubtle,
-                  indent: 20,
-                  endIndent: 20,
-                ),
-                itemBuilder: (context, index) {
-                  final track = activeItem.tracks[index];
-                  return InkWell(
-                    onTap: () {
-                      final trackItem = MusicItem(
-                        id: track.id,
-                        name: track.name,
-                        artist: track.artist.isNotEmpty ? track.artist : activeItem.artist,
-                        type: MusicType.song,
-                        coverUrl: activeItem.coverUrl,
-                        releaseDate: activeItem.releaseDate,
-                        genres: activeItem.genres,
-                        durationMs: track.durationMs,
-                        previewUrl: track.previewUrl,
-                        externalSpotifyUrl: track.id.isNotEmpty ? 'https://open.spotify.com/track/${track.id}' : '',
-                      );
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => MusicDetailScreen(
-                            item: trackItem,
-                            heroTag: 'track_${track.id}',
+              if (detailAsync.isLoading && activeItem.tracks.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.acidLime),
+                    ),
+                  ),
+                )
+              else if (activeItem.tracks.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceCard,
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'NO TRACKLIST DATA AVAILABLE',
+                        style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 10),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: activeItem.tracks.length,
+                  separatorBuilder: (context, index) => const Divider(
+                    height: 1,
+                    color: AppColors.borderSubtle,
+                    indent: 20,
+                    endIndent: 20,
+                  ),
+                  itemBuilder: (context, index) {
+                    final track = activeItem.tracks[index];
+                    final bool hasDuplicatedTrackNumbers = activeItem.tracks.length > 1 &&
+                        activeItem.tracks[0].trackNumber == activeItem.tracks[1].trackNumber;
+                    final trackNumber = (track.trackNumber > 0 && !hasDuplicatedTrackNumbers)
+                        ? track.trackNumber
+                        : (index + 1);
+
+                    return InkWell(
+                      onTap: () {
+                        final trackItem = MusicItem(
+                          id: track.id,
+                          name: track.name,
+                          artist: track.artist.isNotEmpty ? track.artist : activeItem.artist,
+                          type: MusicType.song,
+                          coverUrl: activeItem.coverUrl,
+                          releaseDate: activeItem.releaseDate,
+                          genres: activeItem.genres,
+                          durationMs: track.durationMs,
+                          previewUrl: track.previewUrl,
+                          externalSpotifyUrl: track.id.isNotEmpty ? 'https://www.deezer.com/track/${track.id}' : '',
+                        );
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => MusicDetailScreen(
+                              item: trackItem,
+                              heroTag: 'track_${track.id}',
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       child: Row(
@@ -591,7 +634,7 @@ class MusicDetailScreen extends ConsumerWidget {
                           SizedBox(
                             width: 28,
                             child: Text(
-                              track.trackNumber.toString().padLeft(2, '0'),
+                              trackNumber.toString().padLeft(2, '0'),
                               style: AppTypography.monoBadge(
                                 color: AppColors.textMuted,
                                 fontSize: 11,

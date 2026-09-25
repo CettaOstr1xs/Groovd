@@ -65,6 +65,35 @@ class TrackInfo {
       artist: artistName,
     );
   }
+
+  factory TrackInfo.fromDeezerJson(
+    Map<String, dynamic> json, {
+    String defaultArtist = '',
+    int fallbackTrackNumber = 1,
+  }) {
+    String artistName = defaultArtist;
+    if (json['artist'] is Map && json['artist']['name'] != null) {
+      artistName = json['artist']['name'].toString();
+    }
+
+    final durationSeconds = (json['duration'] as num?)?.toInt() ?? 0;
+    final parsedPos = (json['track_position'] as num?)?.toInt() ??
+        (json['track_number'] as num?)?.toInt() ??
+        (json['track_pos'] as num?)?.toInt() ??
+        (json['position'] as num?)?.toInt();
+    final trackNum = (parsedPos != null && parsedPos > 0)
+        ? parsedPos
+        : fallbackTrackNumber;
+
+    return TrackInfo(
+      id: json['id'].toString(),
+      name: json['title'] as String? ?? '',
+      trackNumber: trackNum,
+      durationMs: durationSeconds * 1000,
+      previewUrl: null,
+      artist: artistName,
+    );
+  }
 }
 
 class MusicItem {
@@ -383,6 +412,136 @@ class MusicItem {
         ),
       ],
       popularity: (json['popularity'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  /// Parses an album from Deezer API response.
+  factory MusicItem.fromDeezerAlbum(Map<String, dynamic> json) {
+    String artistName = 'Unknown Artist';
+    if (json['artist'] is Map && json['artist']['name'] != null) {
+      artistName = json['artist']['name'].toString();
+    } else if (json['contributors'] is List && (json['contributors'] as List).isNotEmpty) {
+      artistName = (json['contributors'] as List)
+          .map((c) => (c as Map)['name']?.toString() ?? '')
+          .where((n) => n.isNotEmpty)
+          .join(', ');
+    }
+
+    final cover = json['cover_xl'] as String? ??
+        json['cover_big'] as String? ??
+        json['cover_medium'] as String? ??
+        json['cover'] as String? ??
+        '';
+
+    final tracksList = <TrackInfo>[];
+    if (json['tracks'] != null && json['tracks']['data'] is List) {
+      final list = json['tracks']['data'] as List;
+      for (var i = 0; i < list.length; i++) {
+        final t = list[i];
+        if (t is Map<String, dynamic>) {
+          tracksList.add(TrackInfo.fromDeezerJson(
+            t,
+            defaultArtist: artistName,
+            fallbackTrackNumber: i + 1,
+          ));
+        }
+      }
+    }
+
+    final link = json['link'] as String? ?? '';
+    final recordType = (json['record_type'] as String? ?? 'album').toLowerCase().trim();
+    final albumName = json['title'] as String? ?? '';
+    final totalTracks = (json['nb_tracks'] as num?)?.toInt() ?? (tracksList.isNotEmpty ? tracksList.length : 1);
+    final durationSeconds = (json['duration'] as num?)?.toInt() ?? 0;
+    final totalDurationMs = durationSeconds > 0
+        ? durationSeconds * 1000
+        : tracksList.fold<int>(0, (sum, t) => sum + t.durationMs);
+
+    final genresList = <String>[];
+    if (json['genres'] != null && json['genres']['data'] is List) {
+      for (final g in json['genres']['data'] as List) {
+        if (g is Map && g['name'] != null) {
+          genresList.add(g['name'].toString().toUpperCase());
+        }
+      }
+    }
+
+    final MusicType resolvedType;
+    if (recordType == 'ep' ||
+        isEpRelease(
+          name: albumName,
+          rawAlbumType: recordType,
+          trackCount: totalTracks,
+          durationMs: totalDurationMs,
+        )) {
+      resolvedType = MusicType.ep;
+    } else {
+      resolvedType = MusicType.album;
+    }
+
+    return MusicItem(
+      id: json['id'].toString(),
+      name: albumName,
+      artist: artistName,
+      type: resolvedType,
+      coverUrl: cover,
+      releaseDate: json['release_date'] as String? ?? '',
+      genres: genresList,
+      trackCount: totalTracks,
+      durationMs: totalDurationMs,
+      previewUrl: null,
+      externalSpotifyUrl: link,
+      tracks: tracksList,
+      popularity: ((json['fans'] as num?)?.toInt() ?? 0) ~/ 1000,
+    );
+  }
+
+  /// Parses a track from Deezer API response.
+  factory MusicItem.fromDeezerTrack(Map<String, dynamic> json) {
+    String artistName = 'Unknown Artist';
+    if (json['artist'] is Map && json['artist']['name'] != null) {
+      artistName = json['artist']['name'].toString();
+    }
+
+    String cover = '';
+    final album = json['album'] as Map<String, dynamic>?;
+    if (album != null) {
+      cover = album['cover_xl'] as String? ??
+          album['cover_big'] as String? ??
+          album['cover_medium'] as String? ??
+          album['cover'] as String? ??
+          '';
+    }
+
+    final link = json['link'] as String? ?? '';
+    final durationSeconds = (json['duration'] as num?)?.toInt() ?? 0;
+    final durationMs = durationSeconds * 1000;
+    final trackId = json['id'].toString();
+    final trackName = json['title'] as String? ?? '';
+
+    return MusicItem(
+      id: trackId,
+      name: trackName,
+      artist: artistName,
+      type: MusicType.song,
+      coverUrl: cover,
+      releaseDate: json['release_date'] as String? ?? album?['release_date'] as String? ?? '',
+      genres: const [],
+      trackCount: 1,
+      durationMs: durationMs,
+      previewUrl: null,
+      externalSpotifyUrl: link,
+      tracks: [
+        TrackInfo(
+          id: trackId,
+          name: trackName,
+          trackNumber: (json['track_position'] as num?)?.toInt() ?? 1,
+          durationMs: durationMs,
+          previewUrl: null,
+          artist: artistName,
+        ),
+      ],
+      popularity: (((json['rank'] as num?)?.toInt() ?? 0) ~/ 10000).clamp(0, 100),
     );
   }
 }

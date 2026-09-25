@@ -119,4 +119,22 @@ class Artist {
       spotifyUrl: spotifyLink,
     );
   }
+
+  factory Artist.fromDeezerJson(Map<String, dynamic> json) {
+    final image = json['picture_xl'] as String? ??
+        json['picture_big'] as String? ??
+        json['picture_medium'] as String? ??
+        json['picture'] as String? ??
+        '';
+
+    return Artist(
+      id: json['id'].toString(),
+      name: json['name'] as String? ?? '',
+      imageUrl: image,
+      genres: const [],
+      followers: (json['nb_fan'] as num?)?.toInt() ?? 0,
+      popularity: 75,
+      spotifyUrl: json['link'] as String? ?? '',
+    );
+  }
 }
