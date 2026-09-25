@@ -4,6 +4,7 @@ import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/presentation/screens/home/home_screen.dart';
 import 'package:groovd/presentation/screens/search/search_screen.dart';
+import 'package:groovd/presentation/screens/friends/friends_screen.dart';
 import 'package:groovd/presentation/screens/profile/profile_screen.dart';
 import 'package:groovd/state/settings_provider.dart';
 import 'package:groovd/state/user_profile_provider.dart';
@@ -22,6 +23,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   final List<Widget> _screens = const [
     HomeScreen(),
     SearchScreen(),
+    FriendsScreen(),
     ProfileScreen(),
   ];
 
@@ -68,11 +70,11 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               children: [
                 // Sliding acid-lime indicator bar atop the selected tab
                 AnimatedAlign(
-                  alignment: Alignment(-1.0 + (_currentIndex * 1.0), -1.0),
+                  alignment: Alignment(-1.0 + (_currentIndex * (2.0 / 3.0)), -1.0),
                   duration: const Duration(milliseconds: 240),
                   curve: Curves.easeOutCubic,
                   child: FractionallySizedBox(
-                    widthFactor: 1 / 3,
+                    widthFactor: 1 / 4,
                     child: Container(
                       height: 3.0,
                       decoration: const BoxDecoration(
@@ -105,6 +107,12 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                     ),
                     _buildNavItem(
                       index: 2,
+                      icon: Icons.people_outline,
+                      activeIcon: Icons.people,
+                      label: 'FRIENDS',
+                    ),
+                    _buildNavItem(
+                      index: 3,
                       icon: Icons.person_outline,
                       activeIcon: Icons.person,
                       label: 'DOSSIER',

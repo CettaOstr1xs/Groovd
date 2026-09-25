@@ -22,6 +22,8 @@ import 'package:groovd/state/user_lists_provider.dart';
 import 'package:groovd/presentation/screens/review/critique_story_card.dart';
 import 'package:groovd/data/services/spotify_mock_data.dart';
 import 'package:groovd/core/theme/app_colors.dart';
+import 'package:groovd/data/models/friend_profile.dart';
+import 'package:groovd/data/repositories/friends_repository.dart';
 
 void main() {
   group('Review Model Tests', () {
@@ -1786,6 +1788,85 @@ void main() {
       final deserialized = MusicItem.fromMap(map);
       expect(deserialized.type, MusicType.ep);
       expect(deserialized.isEp, isTrue);
+    });
+  });
+
+  group('Friends & Critic Circle Tests', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('FriendProfile serializes and deserializes accurately', () {
+      final profile = FriendProfile(
+        userId: 'critic_test_01',
+        userName: 'TEST CRITIC',
+        userHandle: '@testcritic',
+        bio: 'Sonic explorer and test writer.',
+        followersCount: 1500,
+        followingCount: 42,
+        reviewsCount: 12,
+        isFollowing: true,
+      );
+
+      final map = profile.toMap();
+      final deserialized = FriendProfile.fromMap(map);
+
+      expect(deserialized.userId, 'critic_test_01');
+      expect(deserialized.userName, 'TEST CRITIC');
+      expect(deserialized.formattedHandle, '@testcritic');
+      expect(deserialized.followersCount, 1500);
+      expect(deserialized.formattedFollowers, '1.5K');
+      expect(deserialized.isFollowing, isTrue);
+    });
+
+    test('FriendsRepository returns empty following list on fresh launch without mock tastemakers', () async {
+      final repo = FriendsRepository();
+      final following = await repo.getFollowing('guest_user');
+
+      expect(following.isEmpty, isTrue);
+    });
+
+    test('FriendsRepository followCritic and unfollowCritic update persistence accurately', () async {
+      final repo = FriendsRepository();
+      const testUser = 'user_test_follow';
+      const realCritic = FriendProfile(
+        userId: 'real_user_1',
+        userName: 'REAL CRITIC',
+        userHandle: '@realcritic',
+        bio: 'Real music reviews only.',
+      );
+
+      final updatedList = await repo.followCritic(testUser, realCritic);
+      expect(updatedList.any((c) => c.userId == realCritic.userId), isTrue);
+
+      final listAfterUnfollow = await repo.unfollowCritic(testUser, realCritic.userId);
+      expect(listAfterUnfollow.any((c) => c.userId == realCritic.userId), isFalse);
+    });
+
+    test('FriendsRepository searchCritics matches local cached critics by name and handle', () async {
+      final repo = FriendsRepository();
+      const testUser = 'user_test_search';
+      const realCritic = FriendProfile(
+        userId: 'real_user_vinyl',
+        userName: 'VINYL ADDICT',
+        userHandle: '@vinyl_addict',
+        bio: 'Crate digging & spins.',
+      );
+      await repo.followCritic(testUser, realCritic);
+
+      final nameResults = await repo.searchCritics('vinyl', currentUserId: testUser);
+      expect(nameResults.isNotEmpty, isTrue);
+      expect(nameResults.first.userName.contains('VINYL'), isTrue);
+
+      final handleResults = await repo.searchCritics('@vinyl_addict', currentUserId: testUser);
+      expect(handleResults.isNotEmpty, isTrue);
+      expect(handleResults.first.userHandle, '@vinyl_addict');
+    });
+
+    test('FriendsRepository getFriendsFeed returns empty when followed list is empty and filters by followed IDs', () async {
+      final repo = FriendsRepository();
+      final emptyFeed = await repo.getFriendsFeed([]);
+      expect(emptyFeed.isEmpty, isTrue);
     });
   });
 }

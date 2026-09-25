@@ -22,6 +22,11 @@ import 'package:groovd/presentation/screens/auth/landing_screen.dart';
 import 'package:groovd/presentation/screens/auth/login_screen.dart';
 import 'package:groovd/presentation/screens/auth/register_screen.dart';
 import 'package:groovd/presentation/screens/search/search_screen.dart';
+import 'package:groovd/presentation/navigation/main_navigation_screen.dart';
+import 'package:groovd/presentation/screens/friends/friends_screen.dart';
+import 'package:groovd/presentation/screens/friends/friend_profile_screen.dart';
+import 'package:groovd/data/models/friend_profile.dart';
+import 'package:groovd/state/friends_provider.dart';
 import 'package:groovd/state/artist_providers.dart';
 import 'package:groovd/state/onboarding_provider.dart';
 import 'package:groovd/state/review_providers.dart';
@@ -1070,6 +1075,184 @@ void main() {
     // Verify Cloud Dossier sync section
     expect(find.text('CLOUD DOSSIER // SYNC'), findsOneWidget);
     expect(find.text('OFFLINE'), findsOneWidget);
+  });
+
+  testWidgets('MainNavigationScreen renders FRIENDS tab to the left of DOSSIER and switches to FriendsScreen', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: MainNavigationScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Check all four tabs in bottom navigation
+    expect(find.text('DISPATCH'), findsOneWidget);
+    expect(find.text('SEARCH'), findsOneWidget);
+    expect(find.text('FRIENDS'), findsOneWidget);
+    expect(find.text('DOSSIER'), findsOneWidget);
+
+    // Verify FRIENDS is rendered to the left of DOSSIER
+    final friendsPos = tester.getCenter(find.text('FRIENDS'));
+    final dossierPos = tester.getCenter(find.text('DOSSIER'));
+    expect(friendsPos.dx < dossierPos.dx, isTrue);
+
+    // Tap FRIENDS tab
+    await tester.tap(find.text('FRIENDS'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Verify FriendsScreen content is visible
+    expect(find.text('CRITIC CIRCLE'), findsOneWidget);
+    expect(find.text('ACTIVITY FEED'), findsOneWidget);
+    expect(find.text('MY CIRCLE'), findsOneWidget);
+    expect(find.text('DISCOVER'), findsOneWidget);
+  });
+
+  testWidgets('FriendsScreen switches to DISCOVER and displays suggested tastemakers', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          suggestedCriticsProvider.overrideWith((ref) async => [
+            const FriendProfile(
+              userId: 'real_critic_1',
+              userName: 'DISCO_CRITIC',
+              userHandle: '@discocritic',
+              bio: 'Vinyl only.',
+            ),
+          ]),
+        ],
+        child: const MaterialApp(
+          home: FriendsScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // Switch to DISCOVER tab
+    await tester.tap(find.text('DISCOVER'));
+    for (int i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // Check suggested real critics are listed
+    expect(find.text('DISCO_CRITIC'), findsWidgets);
+    expect(find.text('@discocritic'), findsWidgets);
+  });
+
+  testWidgets('FriendProfileScreen renders full critic dossier with podiums and follow button', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    const testFriend = FriendProfile(
+      userId: 'test_friend_99',
+      userName: 'SYNTH_WAVE_99',
+      userHandle: 'synth_wave',
+      bio: 'Electronic & retrowave sounds only.',
+      reviewsCount: 42,
+      followersCount: 1500,
+      followingCount: 300,
+      wantlistCount: 8,
+      listsCount: 3,
+      isFollowing: false,
+      topAlbums: [
+        MusicItem(
+          id: 'alb_1',
+          name: 'Discovery',
+          artist: 'Daft Punk',
+          type: MusicType.album,
+          coverUrl: 'https://example.com/discovery.jpg',
+          releaseDate: '2001-03-12',
+        ),
+        MusicItem(
+          id: 'alb_2',
+          name: 'OutRun',
+          artist: 'Kavinsky',
+          type: MusicType.album,
+          coverUrl: 'https://example.com/outrun.jpg',
+          releaseDate: '2013-02-22',
+        ),
+      ],
+      topSongs: [
+        MusicItem(
+          id: 'sng_1',
+          name: 'Nightcall',
+          artist: 'Kavinsky',
+          type: MusicType.song,
+          coverUrl: 'https://example.com/nightcall.jpg',
+          releaseDate: '2010-04-06',
+        ),
+        MusicItem(
+          id: 'sng_2',
+          name: 'One More Time',
+          artist: 'Daft Punk',
+          type: MusicType.song,
+          coverUrl: 'https://example.com/onemoretime.jpg',
+          releaseDate: '2000-11-13',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: FriendProfileScreen(initialProfile: testFriend),
+        ),
+      ),
+    );
+
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // Verify Dossier title & profile details
+    expect(find.text('CRITIC DOSSIER'), findsOneWidget);
+    expect(find.text('SYNTH_WAVE_99'), findsOneWidget);
+    expect(find.text('@synth_wave'), findsOneWidget);
+    expect(find.text('Electronic & retrowave sounds only.'), findsOneWidget);
+    expect(find.text('+ FOLLOW CRITIC'), findsOneWidget);
+
+    // Verify stats boxes
+    expect(find.text('LOGGED'), findsOneWidget);
+    expect(find.text('AVG SCORE'), findsOneWidget);
+    expect(find.text('PERFECT 10s'), findsOneWidget);
+
+    // Verify podium sections (mirroring ProfileScreen)
+    expect(find.textContaining('CRITIC\'S CANON'), findsOneWidget);
+    expect(find.textContaining('TOP 3 ALBUMS'), findsOneWidget);
+    expect(find.textContaining('TOP 3 SONGS'), findsOneWidget);
+    expect(find.text('DISCOVERY'), findsOneWidget);
+    expect(find.text('NIGHTCALL'), findsOneWidget);
+
+    // Verify recent activity and logged reviews headers
+    expect(find.text('RECENT ACTIVITY'), findsOneWidget);
+    expect(find.text('CRITIC\'S LOGGED REVIEWS'), findsOneWidget);
+
+    // Verify wantlist and curated lists banners
+    expect(find.text('CRITIC WANTLIST // QUEUE'), findsOneWidget);
+    expect(find.text('CURATED LISTS // ARCHIVE'), findsOneWidget);
+
+    // Tap follow button
+    await tester.tap(find.text('+ FOLLOW CRITIC'));
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    expect(find.text('✓ FOLLOWING'), findsWidgets);
   });
 }
 
