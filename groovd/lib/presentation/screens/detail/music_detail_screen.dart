@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:groovd/presentation/widgets/artwork_zoom_viewer.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
@@ -174,48 +174,6 @@ class MusicDetailScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _launchSpotify(BuildContext context, String url) async {
-    if (url.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppColors.surfaceElevated,
-          content: Text('NO SPOTIFY LINK AVAILABLE', style: AppTypography.monoLabel(color: AppColors.textPrimary)),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-    final uri = Uri.parse(url);
-    try {
-      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (!launched) {
-        final fallback = await launchUrl(uri, mode: LaunchMode.platformDefault);
-        if (!fallback && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: AppColors.surfaceElevated,
-              content: Text('COULD NOT OPEN SPOTIFY', style: AppTypography.monoLabel(color: AppColors.vermillion)),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    } catch (_) {
-      try {
-        await launchUrl(uri, mode: LaunchMode.platformDefault);
-      } catch (err) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: AppColors.surfaceElevated,
-              content: Text('FAILED TO OPEN SPOTIFY: $err', style: AppTypography.monoLabel(color: AppColors.vermillion)),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -292,12 +250,6 @@ class MusicDetailScreen extends ConsumerWidget {
               }
             },
           ),
-          if (item.externalSpotifyUrl.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.open_in_new, color: AppColors.textSecondary, size: 20),
-              tooltip: 'Open in Spotify',
-              onPressed: () => _launchSpotify(context, item.externalSpotifyUrl),
-            ),
         ],
       ),
       bottomNavigationBar: Container(
@@ -371,17 +323,6 @@ class MusicDetailScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              if ((activeItem.externalSpotifyUrl.isNotEmpty ? activeItem.externalSpotifyUrl : item.externalSpotifyUrl).isNotEmpty) ...[
-                const SizedBox(width: 10),
-                BrutalistButton(
-                  label: 'SPOTIFY',
-                  icon: Icons.play_arrow,
-                  backgroundColor: AppColors.surfaceElevated,
-                  textColor: AppColors.textPrimary,
-                  borderColor: AppColors.border,
-                  onPressed: () => _launchSpotify(context, activeItem.externalSpotifyUrl.isNotEmpty ? activeItem.externalSpotifyUrl : item.externalSpotifyUrl),
-                ),
-              ],
             ],
           ),
         ),
@@ -475,12 +416,24 @@ class MusicDetailScreen extends ConsumerWidget {
 
                   const SizedBox(height: 20),
 
-                  // Album Artwork with Brutalist framing
+                  // Album Artwork with Brutalist framing & Interactive Zoom
                   Center(
                     child: AlbumArtCard(
                       imageUrl: activeItem.coverUrl,
                       size: 240,
                       heroTag: heroTag ?? 'cover_${item.id}',
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        ArtworkZoomViewer.show(
+                          context,
+                          imageUrl: activeItem.coverUrl,
+                          title: activeItem.name,
+                          artist: activeItem.artist,
+                          heroTag: heroTag ?? 'cover_${item.id}',
+                          year: activeItem.formattedYear,
+                          typeLabel: activeItem.fullTypeLabel,
+                        );
+                      },
                     ),
                   ),
 

@@ -17,6 +17,7 @@ import 'package:groovd/data/services/spotify_mock_data.dart';
 import 'package:groovd/data/models/artist.dart';
 import 'package:groovd/presentation/screens/artist/artist_detail_screen.dart';
 import 'package:groovd/presentation/screens/profile/all_rated_releases_screen.dart';
+import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/presentation/screens/auth/landing_screen.dart';
 import 'package:groovd/presentation/screens/auth/login_screen.dart';
@@ -375,6 +376,28 @@ void main() {
 
     // Verify other Frank Ocean pieces (NIGHTS) appear in the shelf
     expect(find.text('NIGHTS'), findsOneWidget);
+
+    // Verify Spotify button is removed
+    expect(find.text('SPOTIFY'), findsNothing);
+    expect(find.byTooltip('Open in Spotify'), findsNothing);
+
+    // Verify no intrusive zoom badge is displayed on the cover
+    expect(find.text('ZOOM ART'), findsNothing);
+
+    // Tap directly on the cover artwork card to zoom in
+    await tester.tap(find.byType(AlbumArtCard).first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Verify ArtworkZoomViewer opened with high-res viewer controls
+    expect(find.text('HIGH-RES ARTWORK'), findsOneWidget);
+    expect(find.text('PINCH OR DOUBLE-TAP TO ZOOM'), findsOneWidget);
+    expect(find.text('BACK'), findsOneWidget);
+
+    // Tap BACK button to dismiss viewer
+    await tester.tap(find.text('BACK'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     // Ensure no exceptions or overflows occurred
     expect(tester.takeException(), isNull);

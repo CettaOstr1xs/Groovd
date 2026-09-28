@@ -12,6 +12,7 @@ class AlbumArtCard extends StatelessWidget {
   final Color badgeColor;
   final bool showShadow;
   final String? heroTag;
+  final VoidCallback? onTap;
 
   const AlbumArtCard({
     super.key,
@@ -23,6 +24,7 @@ class AlbumArtCard extends StatelessWidget {
     this.badgeColor = AppColors.acidLime,
     this.showShadow = true,
     this.heroTag,
+    this.onTap,
   });
 
   @override
@@ -77,7 +79,7 @@ class AlbumArtCard extends StatelessWidget {
       );
     }
 
-    return Stack(
+    Widget result = Stack(
       clipBehavior: Clip.none,
       children: [
         // Hard-edge offset shadow
@@ -121,6 +123,19 @@ class AlbumArtCard extends StatelessWidget {
           ),
       ],
     );
+
+    if (onTap != null) {
+      result = MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: result,
+        ),
+      );
+    }
+
+    return result;
   }
 }
 
