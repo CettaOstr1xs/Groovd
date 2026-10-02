@@ -84,7 +84,7 @@ class MusicDetailScreen extends ConsumerWidget {
                         separatorBuilder: (ctx, i) => const Divider(height: 1),
                         itemBuilder: (context, index) {
                           final list = lists[index];
-                          final inList = list.items.any((i) => i.id == musicItem.id);
+                          final inList = list.items.any((i) => i.id == musicItem.id || i.isSameWork(musicItem));
 
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
@@ -190,14 +190,15 @@ class MusicDetailScreen extends ConsumerWidget {
           )
         : item;
 
-    final reviewsAsync = ref.watch(itemReviewsProvider(item.id));
+    final reviewQuery = ItemReviewQuery.fromItem(activeItem);
+    final reviewsAsync = ref.watch(itemReviewsProvider(reviewQuery));
     final currentUserId = ref.watch(currentUserIdProvider);
     final existingUserReview = reviewsAsync.asData?.value
         .where((r) => r.userId == currentUserId)
         .firstOrNull;
-    final avgScoreAsync = ref.watch(itemAverageScoreProvider(item.id));
-    final reviewCountAsync = ref.watch(itemReviewCountProvider(item.id));
-    final isWishlisted = ref.watch(isInWishlistProvider(activeItem.id));
+    final avgScoreAsync = ref.watch(itemAverageScoreProvider(reviewQuery));
+    final reviewCountAsync = ref.watch(itemReviewCountProvider(reviewQuery));
+    final isWishlisted = ref.watch(isItemInWishlistProvider(activeItem));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -664,7 +665,11 @@ class MusicDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   InkWell(
-                    onTap: () => WriteReviewModal.show(context, item),
+                    onTap: () => WriteReviewModal.show(
+                      context,
+                      activeItem,
+                      existingReview: existingUserReview,
+                    ),
                     child: Text(
                       '+ WRITE YOURS',
                       style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 10),
@@ -702,7 +707,11 @@ class MusicDetailScreen extends ConsumerWidget {
                         const SizedBox(height: 16),
                         BrutalistButton(
                           label: 'BE THE FIRST TO REVIEW',
-                          onPressed: () => WriteReviewModal.show(context, item),
+                          onPressed: () => WriteReviewModal.show(
+                            context,
+                            activeItem,
+                            existingReview: existingUserReview,
+                          ),
                         ),
                       ],
                     ),
@@ -942,7 +951,7 @@ class _MoreByArtistCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scoreAsync = ref.watch(itemAverageScoreProvider(item.id));
+    final scoreAsync = ref.watch(itemAverageScoreProvider(ItemReviewQuery.fromItem(item)));
     final tag = 'more_${item.id}';
 
     return InkWell(

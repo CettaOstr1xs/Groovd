@@ -585,7 +585,7 @@ class _SearchItemTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scoreAsync = ref.watch(itemAverageScoreProvider(item.id));
+    final scoreAsync = ref.watch(itemAverageScoreProvider(ItemReviewQuery.fromItem(item)));
 
     return InkWell(
       onTap: () {

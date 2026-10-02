@@ -208,7 +208,7 @@ class UserListsNotifier extends Notifier<List<UserMusicList>> {
     if (index == -1) return false;
 
     final existing = state[index];
-    if (existing.items.any((i) => i.id == item.id)) {
+    if (existing.items.any((i) => i.id == item.id || i.isSameWork(item))) {
       return false; // already in list
     }
 
@@ -228,13 +228,13 @@ class UserListsNotifier extends Notifier<List<UserMusicList>> {
   }
 
   /// Removes an item from a list.
-  Future<void> removeItemFromList(String listId, String musicItemId) async {
+  Future<void> removeItemFromList(String listId, String musicItemId, [MusicItem? item]) async {
     final index = state.indexWhere((l) => l.id == listId);
     if (index == -1) return;
 
     final existing = state[index];
     final updatedItems = List<MusicItem>.from(existing.items)
-      ..removeWhere((i) => i.id == musicItemId);
+      ..removeWhere((i) => i.id == musicItemId || (item != null && i.isSameWork(item)));
 
     final updated = existing.copyWith(
       items: updatedItems,

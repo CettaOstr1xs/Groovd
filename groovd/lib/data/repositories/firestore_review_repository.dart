@@ -33,29 +33,68 @@ class FirestoreReviewRepository implements ReviewRepository {
   }
 
   @override
-  Future<List<Review>> getReviewsForItem(String musicItemId) async {
+  Future<List<Review>> getReviewsForItem(
+    String musicItemId, {
+    String? itemName,
+    String? artistName,
+    String? itemType,
+  }) async {
     // Opportunistically trigger background sync of local reviews
     syncLocalReviewsToFirestore();
     try {
-      final snapshot = await _firestore
+      final list = <Review>[];
+
+      // Query by ID
+      final snapshotById = await _firestore
           .collection(collectionPath)
           .where('musicItemId', isEqualTo: musicItemId)
           .get()
           .timeout(const Duration(milliseconds: 3000));
-      final list = snapshot.docs.map((d) => Review.fromMap(d.data())).toList();
-      final localList = await _local.getReviewsForItem(musicItemId);
+      list.addAll(snapshotById.docs.map((d) => Review.fromMap(d.data())));
+
+      // If itemName is provided, also query by musicItemName if cross-catalog
+      if (itemName != null && itemName.trim().isNotEmpty) {
+        try {
+          final snapshotByName = await _firestore
+              .collection(collectionPath)
+              .where('musicItemName', isEqualTo: itemName)
+              .get()
+              .timeout(const Duration(milliseconds: 3000));
+          list.addAll(snapshotByName.docs.map((d) => Review.fromMap(d.data())));
+        } catch (_) {}
+      }
+
+      final localList = await _local.getReviewsForItem(
+        musicItemId,
+        itemName: itemName,
+        artistName: artistName,
+        itemType: itemType,
+      );
+
       final map = <String, Review>{};
       for (final r in localList) {
         map[r.id] = r;
       }
       for (final r in list) {
-        map[r.id] = r;
+        if (r.matchesItem(
+          id: musicItemId,
+          name: itemName,
+          artist: artistName,
+          type: itemType,
+        )) {
+          map[r.id] = r;
+        }
       }
       final merged = map.values.toList();
       merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return merged;
     } catch (_) {
-      return _local.getReviewsForItem(musicItemId);
+      return _local.getReviewsForItem(
+        musicItemId,
+        itemName: itemName,
+        artistName: artistName,
+        itemType: itemType,
+      );
     }
   }
 
@@ -142,15 +181,35 @@ class FirestoreReviewRepository implements ReviewRepository {
   }
 
   @override
-  Future<double> getAverageScore(String musicItemId) async {
-    final reviews = await getReviewsForItem(musicItemId);
+  Future<double> getAverageScore(
+    String musicItemId, {
+    String? itemName,
+    String? artistName,
+    String? itemType,
+  }) async {
+    final reviews = await getReviewsForItem(
+      musicItemId,
+      itemName: itemName,
+      artistName: artistName,
+      itemType: itemType,
+    );
     if (reviews.isEmpty) return 0.0;
     return reviews.fold<double>(0.0, (acc, r) => acc + r.rating) / reviews.length;
   }
 
   @override
-  Future<int> getReviewCount(String musicItemId) async {
-    final reviews = await getReviewsForItem(musicItemId);
+  Future<int> getReviewCount(
+    String musicItemId, {
+    String? itemName,
+    String? artistName,
+    String? itemType,
+  }) async {
+    final reviews = await getReviewsForItem(
+      musicItemId,
+      itemName: itemName,
+      artistName: artistName,
+      itemType: itemType,
+    );
     return reviews.length;
   }
 

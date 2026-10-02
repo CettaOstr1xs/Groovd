@@ -394,7 +394,7 @@ class _FeaturedHeroBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scoreAsync = ref.watch(itemAverageScoreProvider(item.id));
+    final scoreAsync = ref.watch(itemAverageScoreProvider(ItemReviewQuery.fromItem(item)));
     final tag = 'featured_${item.id}';
 
     return GestureDetector(
@@ -506,7 +506,7 @@ class _AlbumPosterCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scoreAsync = ref.watch(itemAverageScoreProvider(item.id));
+    final scoreAsync = ref.watch(itemAverageScoreProvider(ItemReviewQuery.fromItem(item)));
     final tag = 'poster_${item.id}';
 
     return InkWell(
@@ -576,7 +576,7 @@ class _HotTrackTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scoreAsync = ref.watch(itemAverageScoreProvider(track.id));
+    final scoreAsync = ref.watch(itemAverageScoreProvider(ItemReviewQuery.fromItem(track)));
     final tag = 'track_${track.id}';
 
     return InkWell(

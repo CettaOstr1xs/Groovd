@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/repositories/review_repository.dart';
 import 'package:groovd/data/repositories/local_review_repository.dart';
@@ -59,25 +60,87 @@ final recentReviewsProvider = FutureProvider<List<Review>>((ref) async {
   return repo.getRecentReviews(limit: 30);
 });
 
+/// Resilient query descriptor for fetching item reviews across different catalog IDs.
+class ItemReviewQuery {
+  final String id;
+  final String? name;
+  final String? artist;
+  final String? type;
+
+  const ItemReviewQuery({
+    required this.id,
+    this.name,
+    this.artist,
+    this.type,
+  });
+
+  factory ItemReviewQuery.fromId(String id) => ItemReviewQuery(id: id);
+
+  factory ItemReviewQuery.fromItem(MusicItem item) => ItemReviewQuery(
+        id: item.id,
+        name: item.name,
+        artist: item.artist,
+        type: item.type.name,
+      );
+
+  String get canonicalKey {
+    if (name != null && name!.trim().isNotEmpty && artist != null && artist!.trim().isNotEmpty) {
+      final normTitle = MusicItem.normalizeTitle(name!);
+      final normArtist = MusicItem.normalizeArtist(artist!);
+      final normType = (type?.toLowerCase() == 'song' || type?.toLowerCase() == 'track') ? 'song' : 'album';
+      return '$normType::$normArtist::$normTitle';
+    }
+    return 'id::$id';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! ItemReviewQuery) return false;
+    return canonicalKey == other.canonicalKey;
+  }
+
+  @override
+  int get hashCode => canonicalKey.hashCode;
+
+  @override
+  String toString() => 'ItemReviewQuery($canonicalKey, id: $id)';
+}
+
 /// Reviews for specific Music Item
-final itemReviewsProvider = FutureProvider.family<List<Review>, String>((ref, itemId) async {
+final itemReviewsProvider = FutureProvider.family<List<Review>, ItemReviewQuery>((ref, query) async {
   ref.watch(reviewRefreshProvider);
   final repo = ref.watch(reviewRepositoryProvider);
-  return repo.getReviewsForItem(itemId);
+  return repo.getReviewsForItem(
+    query.id,
+    itemName: query.name,
+    artistName: query.artist,
+    itemType: query.type,
+  );
 });
 
 /// Average Rating for specific Music Item
-final itemAverageScoreProvider = FutureProvider.family<double, String>((ref, itemId) async {
+final itemAverageScoreProvider = FutureProvider.family<double, ItemReviewQuery>((ref, query) async {
   ref.watch(reviewRefreshProvider);
   final repo = ref.watch(reviewRepositoryProvider);
-  return repo.getAverageScore(itemId);
+  return repo.getAverageScore(
+    query.id,
+    itemName: query.name,
+    artistName: query.artist,
+    itemType: query.type,
+  );
 });
 
 /// Review Count for specific Music Item
-final itemReviewCountProvider = FutureProvider.family<int, String>((ref, itemId) async {
+final itemReviewCountProvider = FutureProvider.family<int, ItemReviewQuery>((ref, query) async {
   ref.watch(reviewRefreshProvider);
   final repo = ref.watch(reviewRepositoryProvider);
-  return repo.getReviewCount(itemId);
+  return repo.getReviewCount(
+    query.id,
+    itemName: query.name,
+    artistName: query.artist,
+    itemType: query.type,
+  );
 });
 
 /// User's Reviews Provider

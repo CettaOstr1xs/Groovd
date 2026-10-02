@@ -1,3 +1,5 @@
+import 'music_item.dart';
+
 class Review {
   final String id;
   final String musicItemId;
@@ -66,6 +68,29 @@ class Review {
 
   /// Whether this entry is a score-only rating without written commentary.
   bool get isQuickRating => !hasWrittenReview;
+
+  /// Checks if this review belongs to the specified music item by exact ID or resilient Title + Artist match.
+  bool matchesItem({
+    required String id,
+    String? name,
+    String? artist,
+    String? type,
+  }) {
+    if (id.isNotEmpty && musicItemId == id) return true;
+    if (name != null && name.trim().isNotEmpty && artist != null && artist.trim().isNotEmpty) {
+      return MusicItem.isSameRelease(
+        name1: musicItemName,
+        artist1: artistName,
+        type1: itemType,
+        id1: musicItemId,
+        name2: name,
+        artist2: artist,
+        type2: type,
+        id2: id,
+      );
+    }
+    return false;
+  }
 
   Review copyWith({
     String? id,

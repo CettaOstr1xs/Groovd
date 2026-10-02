@@ -742,7 +742,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          itemReviewsProvider('m_already_rated').overrideWith((ref) => Future.value([myReview])),
+          itemReviewsProvider(ItemReviewQuery.fromItem(musicItem)).overrideWith((ref) => Future.value([myReview])),
         ],
         child: MaterialApp(
           home: MusicDetailScreen(item: musicItem),
@@ -756,6 +756,64 @@ void main() {
 
     // Verify the bottom action bar displays 'EDIT YOUR REVIEW [9.8]' instead of '+ LOG YOUR REVIEW'
     expect(find.text('EDIT YOUR REVIEW [9.8]'), findsOneWidget);
+    expect(find.byIcon(Icons.edit_note), findsOneWidget);
+  });
+
+  testWidgets('MusicDetailScreen resolves existing review across different catalog IDs (e.g. mock ID to Deezer numeric ID)', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    // Review was originally logged under older mock/Spotify ID 'album_blonde'
+    final existingReview = Review(
+      id: 'rev_blonde_1',
+      musicItemId: 'album_blonde',
+      musicItemName: 'Blonde',
+      artistName: 'Frank Ocean',
+      coverUrl: '',
+      itemType: 'album',
+      userId: 'user_me',
+      userName: 'YOU',
+      userHandle: '@you',
+      rating: 9.5,
+      headline: 'Masterpiece of modern R&B',
+      body: 'Incredible album from start to finish.',
+      createdAt: DateTime.now(),
+    );
+
+    // User navigates from Deezer search catalog, returning numeric ID '14088928'
+    final deezerItem = MusicItem(
+      id: '14088928',
+      name: 'Blonde',
+      artist: 'Frank Ocean',
+      coverUrl: '',
+      type: MusicType.album,
+      releaseDate: '2016',
+    );
+
+    // Verify ItemReviewQuery resolves equality across different IDs with same work
+    final queryFromMock = ItemReviewQuery(id: 'album_blonde', name: 'Blonde', artist: 'Frank Ocean', type: 'album');
+    final queryFromDeezer = ItemReviewQuery.fromItem(deezerItem);
+    expect(queryFromDeezer, equals(queryFromMock));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          itemReviewsProvider(queryFromDeezer).overrideWith((ref) => Future.value([existingReview])),
+        ],
+        child: MaterialApp(
+          home: MusicDetailScreen(item: deezerItem),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // Even though deezerItem has ID '14088928' and existingReview has 'album_blonde',
+    // the user's review is resolved and displays edit button
+    expect(find.text('EDIT YOUR REVIEW [9.5]'), findsOneWidget);
     expect(find.byIcon(Icons.edit_note), findsOneWidget);
   });
 

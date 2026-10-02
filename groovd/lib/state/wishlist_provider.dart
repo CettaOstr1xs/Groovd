@@ -125,9 +125,10 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
   /// Toggles an item in the wishlist.
   /// Returns `true` if added, `false` if removed.
   Future<bool> toggleItem(MusicItem item, {String note = ''}) async {
-    final exists = state.any((w) => w.musicItem.id == item.id);
-    if (exists) {
-      await removeItem(item.id);
+    final existingIndex = state.indexWhere((w) => w.musicItem.id == item.id || w.musicItem.isSameWork(item));
+    if (existingIndex != -1) {
+      final existing = state[existingIndex];
+      await removeItem(existing.musicItem.id);
       return false;
     } else {
       await addItem(item, note: note);
@@ -137,7 +138,7 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
 
   Future<void> addItem(MusicItem item, {String note = ''}) async {
     final current = List<WishlistItem>.from(state);
-    current.removeWhere((w) => w.musicItem.id == item.id);
+    current.removeWhere((w) => w.musicItem.id == item.id || w.musicItem.isSameWork(item));
     final newItem = WishlistItem(
       musicItem: item,
       addedAt: DateTime.now(),
@@ -182,15 +183,14 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
   /// Automatically removes an item matching a review (by ID or matching Title + Artist).
   Future<void> removeItemByReview(Review review) async {
     final current = List<WishlistItem>.from(state);
-    final targetName = review.musicItemName.trim().toLowerCase();
-    final targetArtist = review.artistName.trim().toLowerCase();
-
     final removedIds = <String>[];
     current.removeWhere((w) {
-      final idMatch = w.musicItem.id == review.musicItemId;
-      final nameArtistMatch = w.musicItem.name.trim().toLowerCase() == targetName &&
-          w.musicItem.artist.trim().toLowerCase() == targetArtist;
-      if (idMatch || nameArtistMatch) {
+      if (review.matchesItem(
+        id: w.musicItem.id,
+        name: w.musicItem.name,
+        artist: w.musicItem.artist,
+        type: w.musicItem.type.name,
+      )) {
         removedIds.add(w.musicItem.id);
         return true;
       }
@@ -221,17 +221,15 @@ class WishlistNotifier extends Notifier<List<WishlistItem>> {
   Future<void> removeReviewedItems(List<Review> reviews) async {
     if (reviews.isEmpty || state.isEmpty) return;
     final current = List<WishlistItem>.from(state);
-    final reviewedItemIds = reviews.map((r) => r.musicItemId).toSet();
-    final reviewedNameArtists = reviews
-        .map((r) => '${r.musicItemName.trim().toLowerCase()}:::${r.artistName.trim().toLowerCase()}')
-        .toSet();
-
     final removedIds = <String>[];
     current.removeWhere((w) {
-      final idMatches = reviewedItemIds.contains(w.musicItem.id);
-      final key = '${w.musicItem.name.trim().toLowerCase()}:::${w.musicItem.artist.trim().toLowerCase()}';
-      final nameMatches = reviewedNameArtists.contains(key);
-      if (idMatches || nameMatches) {
+      final isReviewed = reviews.any((r) => r.matchesItem(
+        id: w.musicItem.id,
+        name: w.musicItem.name,
+        artist: w.musicItem.artist,
+        type: w.musicItem.type.name,
+      ));
+      if (isReviewed) {
         removedIds.add(w.musicItem.id);
         return true;
       }
@@ -285,6 +283,11 @@ final wishlistProvider =
 final isInWishlistProvider = Provider.family<bool, String>((ref, musicItemId) {
   final items = ref.watch(wishlistProvider);
   return items.any((w) => w.musicItem.id == musicItemId);
+});
+
+final isItemInWishlistProvider = Provider.family<bool, MusicItem>((ref, item) {
+  final items = ref.watch(wishlistProvider);
+  return items.any((w) => w.musicItem.id == item.id || w.musicItem.isSameWork(item));
 });
 
 final wishlistCountProvider = Provider<int>((ref) {

@@ -70,9 +70,21 @@ class LocalReviewRepository implements ReviewRepository {
   }
 
   @override
-  Future<List<Review>> getReviewsForItem(String musicItemId) async {
+  Future<List<Review>> getReviewsForItem(
+    String musicItemId, {
+    String? itemName,
+    String? artistName,
+    String? itemType,
+  }) async {
     await _ensureInitialized();
-    final list = _inMemoryReviews.where((r) => r.musicItemId == musicItemId).toList();
+    final list = _inMemoryReviews.where((r) {
+      return r.matchesItem(
+        id: musicItemId,
+        name: itemName,
+        artist: artistName,
+        type: itemType,
+      );
+    }).toList();
     list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list;
   }
@@ -114,18 +126,39 @@ class LocalReviewRepository implements ReviewRepository {
   }
 
   @override
-  Future<double> getAverageScore(String musicItemId) async {
+  Future<double> getAverageScore(
+    String musicItemId, {
+    String? itemName,
+    String? artistName,
+    String? itemType,
+  }) async {
     await _ensureInitialized();
-    final items = _inMemoryReviews.where((r) => r.musicItemId == musicItemId).toList();
+    final items = await getReviewsForItem(
+      musicItemId,
+      itemName: itemName,
+      artistName: artistName,
+      itemType: itemType,
+    );
     if (items.isEmpty) return 0.0;
     final sum = items.fold<double>(0.0, (acc, r) => acc + r.rating);
     return sum / items.length;
   }
 
   @override
-  Future<int> getReviewCount(String musicItemId) async {
+  Future<int> getReviewCount(
+    String musicItemId, {
+    String? itemName,
+    String? artistName,
+    String? itemType,
+  }) async {
     await _ensureInitialized();
-    return _inMemoryReviews.where((r) => r.musicItemId == musicItemId).length;
+    final items = await getReviewsForItem(
+      musicItemId,
+      itemName: itemName,
+      artistName: artistName,
+      itemType: itemType,
+    );
+    return items.length;
   }
 
   @override

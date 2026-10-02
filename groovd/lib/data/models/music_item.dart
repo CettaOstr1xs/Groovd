@@ -264,6 +264,95 @@ class MusicItem {
     return false;
   }
 
+  /// Normalizes a release or song title for resilient cross-catalog matching.
+  static String normalizeTitle(String title) {
+    var t = title.trim().toLowerCase();
+    // Strip common editions / remasters in brackets/parentheses e.g. (Deluxe Edition), [Remastered]
+    t = t.replaceAll(
+      RegExp(
+        r'\s*[\(\[](deluxe|remastered|remaster|bonus track edition|expanded|anniversary|special edition|explicit|clean|original version).*?[\)\]]',
+        caseSensitive: false,
+      ),
+      '',
+    );
+    // Strip trailing - Single, - EP, - Remastered 2024
+    t = t.replaceAll(RegExp(r'\s*-\s*(single|ep|remastered|\d{4}\s*remaster)$', caseSensitive: false), '');
+    // Condense whitespace
+    t = t.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return t;
+  }
+
+  /// Normalizes an artist name for resilient cross-catalog matching.
+  static String normalizeArtist(String artist) {
+    var a = artist.trim().toLowerCase();
+    // Extract primary artist if features are present e.g. 'Kendrick Lamar feat. Rihanna' -> 'Kendrick Lamar'
+    final featMatch = RegExp(r'\s*(feat\.?|ft\.?|with|featuring)\s+.*$', caseSensitive: false).firstMatch(a);
+    if (featMatch != null) {
+      a = a.substring(0, featMatch.start).trim();
+    }
+    // Extract first artist if comma-separated or ampersand
+    if (a.contains(',')) {
+      a = a.split(',').first.trim();
+    }
+    if (a.contains(' & ')) {
+      a = a.split(' & ').first.trim();
+    }
+    return a.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  /// Checks whether two items/queries represent the same musical work across different
+  /// API providers (Deezer, Spotify, Mock, etc.).
+  static bool isSameRelease({
+    required String name1,
+    required String artist1,
+    String? type1,
+    String? id1,
+    required String name2,
+    required String artist2,
+    String? type2,
+    String? id2,
+  }) {
+    if (id1 != null && id2 != null && id1.isNotEmpty && id2.isNotEmpty && id1 == id2) {
+      return true;
+    }
+
+    final n1 = normalizeTitle(name1);
+    final n2 = normalizeTitle(name2);
+    if (n1.isEmpty || n2.isEmpty || n1 != n2) {
+      return false;
+    }
+
+    final a1 = normalizeArtist(artist1);
+    final a2 = normalizeArtist(artist2);
+    if (a1.isEmpty || a2.isEmpty) return false;
+    if (a1 != a2 && !a1.contains(a2) && !a2.contains(a1)) {
+      return false;
+    }
+
+    // Distinguish standalone single tracks from full albums/EPs if types are both known
+    if (type1 != null && type2 != null && type1.isNotEmpty && type2.isNotEmpty) {
+      final isRelease1 = type1 == 'album' || type1 == 'ep';
+      final isRelease2 = type2 == 'album' || type2 == 'ep';
+      if (isRelease1 != isRelease2) return false;
+    }
+
+    return true;
+  }
+
+  /// Convenience method on a MusicItem instance to check equality of work with another item.
+  bool isSameWork(MusicItem other) {
+    return isSameRelease(
+      name1: name,
+      artist1: artist,
+      type1: type.name,
+      id1: id,
+      name2: other.name,
+      artist2: other.artist,
+      type2: other.type.name,
+      id2: other.id,
+    );
+  }
+
   /// Parses an album from Spotify Web API response.
   factory MusicItem.fromSpotifyAlbum(Map<String, dynamic> json) {
     String artistName = 'Unknown Artist';
