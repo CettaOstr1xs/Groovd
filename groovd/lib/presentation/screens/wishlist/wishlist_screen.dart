@@ -503,6 +503,7 @@ class _WishlistCard extends StatelessWidget {
                 height: 72,
                 child: AlbumArtCard(
                   imageUrl: item.coverUrl,
+                  musicItem: item,
                   showShadow: false,
                 ),
               ),

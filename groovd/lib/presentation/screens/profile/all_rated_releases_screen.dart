@@ -560,6 +560,7 @@ class _AllRatedReleasesScreenState extends ConsumerState<AllRatedReleasesScreen>
                               final review = displayedReleases[index];
                               return _RatedPosterCard(
                                 review: review,
+                                userId: effectiveUserId,
                                 scoreColor: _getScoreColor(review.rating),
                                 onTap: () => _navigateToReview(context, review),
                               );
@@ -574,6 +575,7 @@ class _AllRatedReleasesScreenState extends ConsumerState<AllRatedReleasesScreen>
                               final review = displayedReleases[index];
                               return _RatedListCard(
                                 review: review,
+                                userId: effectiveUserId,
                                 scoreColor: _getScoreColor(review.rating),
                                 onTap: () => _navigateToReview(context, review),
                               );
@@ -705,25 +707,76 @@ class _FilterPill extends StatelessWidget {
   }
 }
 
-class _RatedPosterCard extends StatelessWidget {
+class _RepeatCountBadge extends StatelessWidget {
+  final int count;
+
+  const _RepeatCountBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: AppColors.acidLime,
+        border: Border.all(
+          color: AppColors.pureBlack,
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(1),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.pureBlack,
+            offset: Offset(1.0, 1.0),
+            blurRadius: 0,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.repeat,
+            size: 7.5,
+            color: AppColors.pureBlack,
+          ),
+          const SizedBox(width: 1.5),
+          Text(
+            '${count}X',
+            style: AppTypography.monoBadge(
+              color: AppColors.pureBlack,
+              fontSize: 7.5,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RatedPosterCard extends ConsumerWidget {
   final Review review;
+  final String userId;
   final Color scoreColor;
   final VoidCallback onTap;
 
   const _RatedPosterCard({
     required this.review,
+    required this.userId,
     required this.scoreColor,
     required this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isAlbum = review.itemType == 'album';
     final isEp = review.itemType == 'ep';
     final badgeColor = isEp
         ? AppColors.electricPink
         : (isAlbum ? AppColors.acidLime : AppColors.cyberCyan);
     final badgeText = isEp ? 'EP' : (isAlbum ? 'LP' : 'TRACK');
+
+    final logIndex = ref.watch(userReviewLogIndexProvider((userId: userId, review: review)));
 
     return InkWell(
       onTap: onTap,
@@ -745,6 +798,7 @@ class _RatedPosterCard extends StatelessWidget {
                   aspectRatio: 1.0,
                   child: AlbumArtCard(
                     imageUrl: review.coverUrl,
+                    showRepeatCount: false,
                     showShadow: false,
                   ),
                 ),
@@ -787,23 +841,31 @@ class _RatedPosterCard extends StatelessWidget {
               style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 8.5),
             ),
             const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: badgeColor.withValues(alpha: 0.15),
-                border: Border.all(
-                  color: badgeColor,
-                  width: 1,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withValues(alpha: 0.15),
+                    border: Border.all(
+                      color: badgeColor,
+                      width: 1,
+                    ),
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                  child: Text(
+                    badgeText,
+                    style: AppTypography.monoBadge(
+                      color: badgeColor,
+                      fontSize: 7.5,
+                    ),
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(1),
-              ),
-              child: Text(
-                badgeText,
-                style: AppTypography.monoBadge(
-                  color: badgeColor,
-                  fontSize: 7.5,
-                ),
-              ),
+                if (logIndex > 1)
+                  _RepeatCountBadge(count: logIndex),
+              ],
             ),
           ],
         ),
@@ -812,19 +874,21 @@ class _RatedPosterCard extends StatelessWidget {
   }
 }
 
-class _RatedListCard extends StatelessWidget {
+class _RatedListCard extends ConsumerWidget {
   final Review review;
+  final String userId;
   final Color scoreColor;
   final VoidCallback onTap;
 
   const _RatedListCard({
     required this.review,
+    required this.userId,
     required this.scoreColor,
     required this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isAlbum = review.itemType == 'album';
     final isEp = review.itemType == 'ep';
     final badgeColor = isEp
@@ -832,6 +896,8 @@ class _RatedListCard extends StatelessWidget {
         : (isAlbum ? AppColors.acidLime : AppColors.cyberCyan);
     final badgeText = isEp ? 'EP' : (isAlbum ? 'LP' : 'TRACK');
     final formattedDate = DateFormat('MMM d, yyyy').format(review.createdAt).toUpperCase();
+
+    final logIndex = ref.watch(userReviewLogIndexProvider((userId: userId, review: review)));
 
     return InkWell(
       onTap: onTap,
@@ -847,6 +913,7 @@ class _RatedListCard extends StatelessWidget {
           children: [
             AlbumArtCard(
               imageUrl: review.coverUrl,
+              showRepeatCount: false,
               size: 68,
               showShadow: false,
             ),
@@ -881,6 +948,9 @@ class _RatedListCard extends StatelessWidget {
                         formattedDate,
                         style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 8.5),
                       ),
+                      const Spacer(),
+                      if (logIndex > 1)
+                        _RepeatCountBadge(count: logIndex),
                     ],
                   ),
                   const SizedBox(height: 3),

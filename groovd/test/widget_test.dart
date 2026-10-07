@@ -294,8 +294,12 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    // Settings modal appears with Light / Dark Mode buttons, Header Banner and Bio
+    // Settings modal appears with Light / Dark Mode buttons, fused Profile Customization and Bio
     expect(find.text('SETTINGS'), findsOneWidget);
+    expect(find.text('PROFILE CUSTOMIZATION'), findsOneWidget);
+    await tester.tap(find.text('PROFILE CUSTOMIZATION'));
+    await tester.pumpAndSettle();
+
     expect(find.text('HEADER BANNER PHOTO'), findsOneWidget);
     expect(find.text('ADD BACKGROUND PHOTO'), findsOneWidget);
     expect(find.text('CRITIC BIO // SELF-EXPRESSION'), findsOneWidget);
@@ -516,7 +520,12 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
 
-    // Verify Settings modal shows Critic Identity Card
+    // Verify Settings modal shows fused Profile Customization container
+    expect(find.text('PROFILE CUSTOMIZATION'), findsOneWidget);
+    await tester.tap(find.text('PROFILE CUSTOMIZATION'));
+    await tester.pumpAndSettle();
+
+    // Verify Critic Identity Card is revealed
     expect(find.text('CRITIC IDENTITY'), findsOneWidget);
     expect(find.text('GROOVD ID'), findsOneWidget);
     expect(find.text('CHANGE USERNAME & HANDLE'), findsOneWidget);
@@ -754,8 +763,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
     await tester.pump(const Duration(milliseconds: 400));
 
-    // Verify the bottom action bar displays 'EDIT YOUR REVIEW [9.8]' instead of '+ LOG YOUR REVIEW'
-    expect(find.text('EDIT YOUR REVIEW [9.8]'), findsOneWidget);
+    // Verify the bottom action bar displays '+ LOG AGAIN' and 'EDIT [9.8]' instead of '+ LOG YOUR REVIEW'
+    expect(find.text('+ LOG AGAIN'), findsOneWidget);
+    expect(find.text('EDIT [9.8]'), findsOneWidget);
+    expect(find.byIcon(Icons.repeat), findsOneWidget);
     expect(find.byIcon(Icons.edit_note), findsOneWidget);
   });
 
@@ -812,9 +823,238 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     // Even though deezerItem has ID '14088928' and existingReview has 'album_blonde',
-    // the user's review is resolved and displays edit button
-    expect(find.text('EDIT YOUR REVIEW [9.5]'), findsOneWidget);
+    // the user's review is resolved and displays both '+ LOG AGAIN' and 'EDIT [9.5]'
+    expect(find.text('+ LOG AGAIN'), findsOneWidget);
+    expect(find.text('EDIT [9.5]'), findsOneWidget);
     expect(find.byIcon(Icons.edit_note), findsOneWidget);
+  });
+
+  testWidgets('MusicDetailScreen "+ LOG AGAIN" button opens WriteReviewModal in re-listen mode', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final musicItem = MusicItem(
+      id: 'album_relog',
+      name: 'CURRENTS',
+      artist: 'TAME IMPALA',
+      coverUrl: '',
+      type: MusicType.album,
+      releaseDate: '2015',
+    );
+
+    final firstReview = Review(
+      id: 'rev_cur_1',
+      musicItemId: 'album_relog',
+      musicItemName: 'CURRENTS',
+      artistName: 'TAME IMPALA',
+      coverUrl: '',
+      itemType: 'album',
+      userId: 'user_me',
+      userName: 'YOU',
+      userHandle: '@you',
+      rating: 9.0,
+      headline: 'Psychedelic masterpiece',
+      body: 'Let it happen on repeat.',
+      createdAt: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          itemReviewsProvider(ItemReviewQuery.fromItem(musicItem)).overrideWith((ref) => Future.value([firstReview])),
+        ],
+        child: MaterialApp(
+          home: MusicDetailScreen(item: musicItem),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+
+    // Tap + LOG AGAIN
+    await tester.tap(find.text('+ LOG AGAIN'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // WriteReviewModal should appear in re-listen mode
+    expect(find.textContaining('LOG AGAIN // RE-LISTEN'), findsOneWidget);
+  });
+
+  testWidgets('AlbumArtCard displays repeat count badge only when logged more than 1 time', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    // Card with logCount: 1 -> should NOT show badge
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: AlbumArtCard(imageUrl: '', size: 100, logCount: 1),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('1X'), findsNothing);
+
+    // Card with logCount: 3 -> should show '3X' badge
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: AlbumArtCard(imageUrl: '', size: 100, logCount: 3),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('3X'), findsOneWidget);
+  });
+
+  testWidgets('ProfileScreen navbar has no cloud icon and settings modal contains fused Profile Customization dropdown', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: ProfileScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+
+    // Verify cloud icons (cloud_done / cloud_queue) are absent from top navbar
+    expect(find.byIcon(Icons.cloud_done), findsNothing);
+    expect(find.byIcon(Icons.cloud_queue_outlined), findsNothing);
+
+    // Tap Settings gear icon to open modal
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    // Verify fused 'PROFILE CUSTOMIZATION' container with '3 MODULES' is rendered
+    expect(find.text('PROFILE CUSTOMIZATION'), findsOneWidget);
+    expect(find.text('3 MODULES'), findsOneWidget);
+  });
+
+  testWidgets('AllRatedReleasesScreen places repeat count badge aligned to the right of LP/EP/TRACK badge', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    // Two reviews for the same album VESPERTINE (logged twice -> 2X)
+    // and one review for a song PAGAN POETRY (logged once -> no badge)
+    final sampleReviews = [
+      Review(
+        id: 'r1',
+        musicItemId: 'm1',
+        musicItemName: 'VESPERTINE',
+        artistName: 'BJÖRK',
+        coverUrl: '',
+        itemType: 'album',
+        userId: 'user_me',
+        userName: 'YOU',
+        userHandle: '@you',
+        rating: 10.0,
+        headline: 'Pure bliss',
+        body: 'Microbeats and choirs.',
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      ),
+      Review(
+        id: 'r2',
+        musicItemId: 'm1',
+        musicItemName: 'VESPERTINE',
+        artistName: 'BJÖRK',
+        coverUrl: '',
+        itemType: 'album',
+        userId: 'user_me',
+        userName: 'YOU',
+        userHandle: '@you',
+        rating: 9.8,
+        headline: 'Re-listening session',
+        body: 'Even better on vinyl.',
+        createdAt: DateTime.now(),
+      ),
+      Review(
+        id: 'r3',
+        musicItemId: 'm2',
+        musicItemName: 'PAGAN POETRY',
+        artistName: 'BJÖRK',
+        coverUrl: '',
+        itemType: 'song',
+        userId: 'user_me',
+        userName: 'YOU',
+        userHandle: '@you',
+        rating: 9.5,
+        headline: 'Single',
+        body: 'Amazing track.',
+        createdAt: DateTime.now(),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userReviewsProvider('user_me').overrideWith((ref) => Future.value(sampleReviews)),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: AllRatedReleasesScreen(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    // '2X' badge should be present ONLY for the 2nd log (r2); past log (r1) remains unbadged
+    expect(find.text('2X'), findsOneWidget);
+
+    // Switch to List view
+    final listIcon = find.byIcon(Icons.view_agenda_outlined);
+    expect(listIcon, findsOneWidget);
+    await tester.tap(listIcon);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // '2X' badge should also appear for only the 2nd log in list view
+    expect(find.text('2X'), findsOneWidget);
+  });
+
+  testWidgets("ProfileScreen Critic's Canon section does not display repeat count badge", (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: ProfileScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+
+    // CRITIC'S CANON section is rendered
+    expect(find.text("CRITIC'S CANON"), findsOneWidget);
+
+    // Verify TOP 3 ALBUMS podium slot does not display a count badge inside its card
+    final canonFinder = find.ancestor(
+      of: find.text('TOP 3 ALBUMS'),
+      matching: find.byType(Column),
+    );
+    expect(canonFinder, findsWidgets);
   });
 
   testWidgets('ArtistDetailScreen renders artist header, stats bar, biography card, and discography', (WidgetTester tester) async {

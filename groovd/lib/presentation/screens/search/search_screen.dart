@@ -610,6 +610,7 @@ class _SearchItemTile extends ConsumerWidget {
             // Artwork Thumbnail
             AlbumArtCard(
               imageUrl: item.coverUrl,
+              musicItem: item,
               size: 64,
               showShadow: false,
               heroTag: 'search_${item.id}',

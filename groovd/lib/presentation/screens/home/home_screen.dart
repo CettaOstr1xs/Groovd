@@ -449,6 +449,7 @@ class _FeaturedHeroBanner extends ConsumerWidget {
               children: [
                 AlbumArtCard(
                   imageUrl: item.coverUrl,
+                  musicItem: item,
                   size: 110,
                   heroTag: tag,
                 ),
@@ -528,6 +529,7 @@ class _AlbumPosterCard extends ConsumerWidget {
           children: [
             AlbumArtCard(
               imageUrl: item.coverUrl,
+              musicItem: item,
               width: 125,
               height: 125,
               showShadow: false,
@@ -601,6 +603,7 @@ class _HotTrackTile extends ConsumerWidget {
             const SizedBox(width: 14),
             AlbumArtCard(
               imageUrl: track.coverUrl,
+              musicItem: track,
               size: 48,
               showShadow: false,
               heroTag: tag,

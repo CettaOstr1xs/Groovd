@@ -301,6 +301,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                               // Artwork
                               AlbumArtCard(
                                 imageUrl: item.coverUrl,
+                                musicItem: item,
                                 size: 48,
                                 heroTag: 'list_${list.id}_item_${item.id}_$index',
                               ),
@@ -410,6 +411,7 @@ class _ListDetailScreenState extends ConsumerState<ListDetailScreen> {
                               // Artwork
                               AlbumArtCard(
                                 imageUrl: item.coverUrl,
+                                musicItem: item,
                                 size: 48,
                                 heroTag: 'list_${list.id}_item_${item.id}_$index',
                               ),
@@ -656,7 +658,7 @@ class _AddMusicToListModalState extends ConsumerState<_AddMusicToListModal> {
 
                           return ListTile(
                             contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                            leading: AlbumArtCard(imageUrl: item.coverUrl, size: 42),
+                            leading: AlbumArtCard(imageUrl: item.coverUrl, musicItem: item, size: 42),
                             title: Text(
                               item.name.toUpperCase(),
                               maxLines: 1,

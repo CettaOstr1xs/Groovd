@@ -15,17 +15,26 @@ import 'package:groovd/state/user_profile_provider.dart';
 class WriteReviewModal extends ConsumerStatefulWidget {
   final MusicItem musicItem;
   final Review? existingReview;
+  final bool isLogAgain;
+  final int? previousLogCount;
+  final double? initialRating;
 
   const WriteReviewModal({
     super.key,
     required this.musicItem,
     this.existingReview,
+    this.isLogAgain = false,
+    this.previousLogCount,
+    this.initialRating,
   });
 
   static Future<Review?> show(
     BuildContext context,
     MusicItem musicItem, {
     Review? existingReview,
+    bool isLogAgain = false,
+    int? previousLogCount,
+    double? initialRating,
   }) {
     return showModalBottomSheet<Review>(
       context: context,
@@ -34,6 +43,9 @@ class WriteReviewModal extends ConsumerStatefulWidget {
       builder: (context) => WriteReviewModal(
         musicItem: musicItem,
         existingReview: existingReview,
+        isLogAgain: isLogAgain,
+        previousLogCount: previousLogCount,
+        initialRating: initialRating,
       ),
     );
   }
@@ -75,6 +87,8 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
       _headlineController.text = widget.existingReview!.headline;
       _bodyController.text = widget.existingReview!.body;
       _selectedTags.addAll(widget.existingReview!.tags);
+    } else if (widget.initialRating != null) {
+      _rating = widget.initialRating!;
     }
     _loadCustomTags();
     _headlineController.addListener(() => setState(() {}));
@@ -168,7 +182,7 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
     final userHandle = profile.userHandle;
     final userAvatarUrl = profile.avatarPath;
 
-    final isEditing = widget.existingReview != null;
+    final isEditing = widget.existingReview != null && !widget.isLogAgain;
     final reviewToSave = isEditing
         ? widget.existingReview!.copyWith(
             rating: _rating,
@@ -213,9 +227,11 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
             content: Text(
               isEditing
                   ? 'CRITIQUE & RATING UPDATED'
-                  : (reviewToSave.hasWrittenReview
-                      ? 'CRITIQUE DISPATCHED TO ARCHIVE'
-                      : 'RATING LOGGED TO DOSSIER'),
+                  : (widget.isLogAgain
+                      ? 'LOGGED AGAIN TO ARCHIVE [LISTEN #${(widget.previousLogCount ?? 1) + 1}]'
+                      : (reviewToSave.hasWrittenReview
+                          ? 'CRITIQUE DISPATCHED TO ARCHIVE'
+                          : 'RATING LOGGED TO DOSSIER')),
               style: AppTypography.monoBadge(color: AppColors.pureBlack),
             ),
             backgroundColor: AppColors.acidLime,
@@ -293,7 +309,11 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.existingReview != null ? 'EDIT YOUR REVIEW' : 'LOG YOUR REVIEW',
+                        widget.existingReview != null
+                            ? 'EDIT YOUR REVIEW'
+                            : (widget.isLogAgain
+                                ? 'LOG AGAIN // RE-LISTEN #${(widget.previousLogCount ?? 1) + 1}'
+                                : 'LOG YOUR REVIEW'),
                         style: AppTypography.displaySmall(),
                       ),
                       const SizedBox(height: 2),
@@ -598,17 +618,21 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
 
               const SizedBox(height: 24),
 
-              // Submit Button (Dynamic for written review vs quick rating vs editing)
+              // Submit Button (Dynamic for written review vs quick rating vs editing vs log again)
               BrutalistButton(
                 label: _isSubmitting
                     ? 'SAVING...'
-                    : widget.existingReview != null
+                    : (widget.existingReview != null && !widget.isLogAgain)
                         ? (_hasWrittenText
                             ? 'UPDATE CRITIQUE [${_rating.toStringAsFixed(1)}]'
                             : 'UPDATE RATING [${_rating.toStringAsFixed(1)}]')
-                        : (_hasWrittenText
-                            ? 'PUBLISH CRITIQUE'
-                            : 'LOG SCORE [${_rating.toStringAsFixed(1)}] // QUICK RATE'),
+                        : (widget.isLogAgain
+                            ? (_hasWrittenText
+                                ? 'LOG RE-LISTEN CRITIQUE [${_rating.toStringAsFixed(1)}]'
+                                : 'LOG RE-LISTEN SCORE [${_rating.toStringAsFixed(1)}]')
+                            : (_hasWrittenText
+                                ? 'PUBLISH CRITIQUE'
+                                : 'LOG SCORE [${_rating.toStringAsFixed(1)}] // QUICK RATE')),
                 icon: Icons.check,
                 isFullWidth: true,
                 backgroundColor: AppColors.acidLime,

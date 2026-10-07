@@ -196,6 +196,7 @@ class MusicDetailScreen extends ConsumerWidget {
     final existingUserReview = reviewsAsync.asData?.value
         .where((r) => r.userId == currentUserId)
         .firstOrNull;
+    final userLogCount = ref.watch(currentUserItemLogCountProvider(reviewQuery));
     final avgScoreAsync = ref.watch(itemAverageScoreProvider(reviewQuery));
     final reviewCountAsync = ref.watch(itemReviewCountProvider(reviewQuery));
     final isWishlisted = ref.watch(isItemInWishlistProvider(activeItem));
@@ -262,24 +263,56 @@ class MusicDetailScreen extends ConsumerWidget {
         child: SafeArea(
           child: Row(
             children: [
-              Expanded(
-                child: BrutalistButton(
-                  label: existingUserReview != null
-                      ? 'EDIT YOUR REVIEW [${existingUserReview.rating.toStringAsFixed(1)}]'
-                      : '+ LOG YOUR REVIEW',
-                  icon: existingUserReview != null
-                      ? Icons.edit_note
-                      : Icons.rate_review_outlined,
-                  backgroundColor: AppColors.acidLime,
-                  textColor: AppColors.pureBlack,
-                  isFullWidth: true,
-                  onPressed: () => WriteReviewModal.show(
-                    context,
-                    activeItem,
-                    existingReview: existingUserReview,
+              if (existingUserReview != null) ...[
+                Expanded(
+                  flex: 3,
+                  child: BrutalistButton(
+                    label: '+ LOG AGAIN',
+                    icon: Icons.repeat,
+                    backgroundColor: AppColors.acidLime,
+                    textColor: AppColors.pureBlack,
+                    isFullWidth: true,
+                    onPressed: () => WriteReviewModal.show(
+                      context,
+                      activeItem,
+                      isLogAgain: true,
+                      previousLogCount: userLogCount,
+                      initialRating: existingUserReview.rating,
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: BrutalistButton(
+                    label: 'EDIT [${existingUserReview.rating.toStringAsFixed(1)}]',
+                    icon: Icons.edit_note,
+                    backgroundColor: AppColors.surfaceElevated,
+                    textColor: AppColors.textPrimary,
+                    borderColor: AppColors.borderBold,
+                    isFullWidth: true,
+                    onPressed: () => WriteReviewModal.show(
+                      context,
+                      activeItem,
+                      existingReview: existingUserReview,
+                    ),
+                  ),
+                ),
+              ] else ...[
+                Expanded(
+                  child: BrutalistButton(
+                    label: '+ LOG YOUR REVIEW',
+                    icon: Icons.rate_review_outlined,
+                    backgroundColor: AppColors.acidLime,
+                    textColor: AppColors.pureBlack,
+                    isFullWidth: true,
+                    onPressed: () => WriteReviewModal.show(
+                      context,
+                      activeItem,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(width: 10),
               // Tactile Wishlist Bookmark Button
               InkWell(
@@ -373,6 +406,26 @@ class MusicDetailScreen extends ConsumerWidget {
                           '• ${activeItem.formattedDuration}',
                           style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted),
                         ),
+                      if (userLogCount > 1)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.acidLime,
+                            border: Border.all(color: AppColors.pureBlack, width: 1.0),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.repeat, size: 10, color: AppColors.pureBlack),
+                              const SizedBox(width: 3),
+                              Text(
+                                'HEARD ${userLogCount}X',
+                                style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
 
@@ -421,6 +474,7 @@ class MusicDetailScreen extends ConsumerWidget {
                   Center(
                     child: AlbumArtCard(
                       imageUrl: activeItem.coverUrl,
+                      musicItem: activeItem,
                       size: 240,
                       heroTag: heroTag ?? 'cover_${item.id}',
                       onTap: () {
@@ -668,7 +722,10 @@ class MusicDetailScreen extends ConsumerWidget {
                     onTap: () => WriteReviewModal.show(
                       context,
                       activeItem,
-                      existingReview: existingUserReview,
+                      existingReview: existingUserReview == null ? null : null,
+                      isLogAgain: existingUserReview != null,
+                      previousLogCount: userLogCount,
+                      initialRating: existingUserReview?.rating,
                     ),
                     child: Text(
                       '+ WRITE YOURS',
@@ -973,6 +1030,7 @@ class _MoreByArtistCard extends ConsumerWidget {
           children: [
             AlbumArtCard(
               imageUrl: item.coverUrl,
+              musicItem: item,
               width: 124,
               height: 124,
               showShadow: false,

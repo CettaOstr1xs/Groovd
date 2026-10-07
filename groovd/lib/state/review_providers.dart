@@ -83,6 +83,13 @@ class ItemReviewQuery {
         type: item.type.name,
       );
 
+  factory ItemReviewQuery.fromReview(Review review) => ItemReviewQuery(
+        id: review.musicItemId,
+        name: review.musicItemName,
+        artist: review.artistName,
+        type: review.itemType,
+      );
+
   String get canonicalKey {
     if (name != null && name!.trim().isNotEmpty && artist != null && artist!.trim().isNotEmpty) {
       final normTitle = MusicItem.normalizeTitle(name!);
@@ -148,6 +155,77 @@ final userReviewsProvider = FutureProvider.family<List<Review>, String>((ref, us
   ref.watch(reviewRefreshProvider);
   final repo = ref.watch(reviewRepositoryProvider);
   return repo.getUserReviews(userId);
+});
+
+/// Computed reactive mapping of item IDs and canonical keys to the count of reviews for a user.
+final userLogCountsProvider = Provider.family<Map<String, int>, String>((ref, userId) {
+  final userReviewsAsync = ref.watch(userReviewsProvider(userId));
+  final reviews = userReviewsAsync.asData?.value ?? const [];
+
+  final map = <String, int>{};
+  for (final r in reviews) {
+    if (r.musicItemId.isNotEmpty) {
+      map[r.musicItemId] = (map[r.musicItemId] ?? 0) + 1;
+    }
+    final key = ItemReviewQuery(
+      id: r.musicItemId,
+      name: r.musicItemName,
+      artist: r.artistName,
+      type: r.itemType,
+    ).canonicalKey;
+    map[key] = (map[key] ?? 0) + 1;
+  }
+  return map;
+});
+
+/// Computed reactive mapping of item IDs and canonical keys to the count of reviews by current user.
+final currentUserLogCountsProvider = Provider<Map<String, int>>((ref) {
+  final currentUserId = ref.watch(currentUserIdProvider);
+  return ref.watch(userLogCountsProvider(currentUserId));
+});
+
+/// Number of times the current user has logged/reviewed a specific music item.
+final currentUserItemLogCountProvider = Provider.family<int, ItemReviewQuery>((ref, query) {
+  final map = ref.watch(currentUserLogCountsProvider);
+  return map[query.canonicalKey] ?? map[query.id] ?? 0;
+});
+
+/// Provider that returns the chronological 1-based log sequence index of a specific review
+/// among all reviews of the same music release by that user.
+///
+/// For example:
+/// - 1st log of Album X -> index 1 (no badge, as count <= 1)
+/// - 2nd log of Album X -> index 2 ('2X' badge on this 2nd log container)
+/// - 3rd log of Album X -> index 3 ('3X' badge on this 3rd log container)
+final userReviewLogIndexProvider = Provider.family<int, ({String userId, Review review})>((ref, arg) {
+  final userReviewsAsync = ref.watch(userReviewsProvider(arg.userId));
+  final reviews = userReviewsAsync.asData?.value ?? const [];
+
+  final targetKey = ItemReviewQuery.fromReview(arg.review).canonicalKey;
+
+  // Filter reviews matching the same music item
+  final matchingReviews = reviews.where((r) {
+    if (r.musicItemId.isNotEmpty && r.musicItemId == arg.review.musicItemId) {
+      return true;
+    }
+    return ItemReviewQuery.fromReview(r).canonicalKey == targetKey;
+  }).toList();
+
+  // Sort chronologically ascending (earliest review first)
+  matchingReviews.sort((a, b) {
+    final cmp = a.createdAt.compareTo(b.createdAt);
+    if (cmp != 0) return cmp;
+    return a.id.compareTo(b.id);
+  });
+
+  final idx = matchingReviews.indexWhere((r) => r.id == arg.review.id);
+  return idx >= 0 ? idx + 1 : 1;
+});
+
+/// Convenience provider for current user's review log index.
+final currentUserReviewLogIndexProvider = Provider.family<int, Review>((ref, review) {
+  final currentUserId = ref.watch(currentUserIdProvider);
+  return ref.watch(userReviewLogIndexProvider((userId: currentUserId, review: review)));
 });
 
 /// Review Action Controller

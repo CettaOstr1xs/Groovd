@@ -173,6 +173,7 @@ class ProfileScreen extends ConsumerWidget {
 
   void _showSettingsModal(BuildContext context, WidgetRef ref) {
     bool isDarkMode = true;
+    bool isProfileCustomizationExpanded = false;
 
     showModalBottomSheet(
       context: context,
@@ -223,381 +224,428 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // Critic Identity Feature (Username & Handle)
+                    // Fused Profile Customization Dropdown Container
                     Container(
-                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceCard,
-                        border: Border.all(color: AppColors.border, width: 1.5),
+                        border: Border.all(
+                          color: isProfileCustomizationExpanded ? AppColors.acidLime : AppColors.border,
+                          width: 1.5,
+                        ),
                         borderRadius: BorderRadius.circular(2),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
+                          InkWell(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setModalState(() {
+                                isProfileCustomizationExpanded = !isProfileCustomizationExpanded;
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Icon(
-                                    Icons.badge_outlined,
-                                    size: 18,
-                                    color: AppColors.acidLime,
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.tune,
+                                        size: 18,
+                                        color: AppColors.acidLime,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'PROFILE CUSTOMIZATION',
+                                        style: AppTypography.monoLabel(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'CRITIC IDENTITY',
-                                    style: AppTypography.monoLabel(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 11,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.surfaceElevated,
+                                          border: Border.all(color: AppColors.border),
+                                        ),
+                                        child: Text(
+                                          '3 MODULES',
+                                          style: AppTypography.monoBadge(
+                                            color: AppColors.acidLime,
+                                            fontSize: 9,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        isProfileCustomizationExpanded
+                                            ? Icons.keyboard_arrow_up
+                                            : Icons.keyboard_arrow_down,
+                                        color: AppColors.acidLime,
+                                        size: 20,
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceElevated,
-                                  border: Border.all(color: AppColors.border),
-                                ),
-                                child: Text(
-                                  'GROOVD ID',
-                                  style: AppTypography.monoBadge(
-                                    color: AppColors.acidLime,
-                                    fontSize: 9,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: AppColors.acidLime,
-                                  border: Border.all(color: AppColors.pureBlack, width: 1.5),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                                child: profile.avatarPath != null
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(1),
-                                        child: (profile.avatarPath!.startsWith('http://') || profile.avatarPath!.startsWith('https://'))
-                                            ? Image.network(
-                                                profile.avatarPath!,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (c, e, s) => Center(
-                                                  child: Text(
-                                                    profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
-                                                    style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
-                                                  ),
-                                                ),
-                                              )
-                                            : Image.file(
-                                                File(profile.avatarPath!),
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (c, e, s) => Center(
-                                                  child: Text(
-                                                    profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
-                                                    style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
-                                                  ),
-                                                ),
-                                              ),
-                                      )
-                                    : Center(
-                                        child: Text(
-                                          profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
-                                          style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
-                                        ),
-                                      ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      profile.userName.toUpperCase(),
-                                      style: AppTypography.displaySmall(fontSize: 14),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    Text(
-                                      profile.userHandle,
-                                      style: AppTypography.monoLabel(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 10.5,
-                                      ),
-                                    ),
-                                    if (isAuthenticated) ...[
-                                      const SizedBox(height: 4),
+                          if (isProfileCustomizationExpanded) ...[
+                            const Divider(height: 1, color: AppColors.border),
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // 1. Critic Identity Module
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
                                       Row(
                                         children: [
-                                          Container(
-                                            width: 6,
-                                            height: 6,
-                                            decoration: const BoxDecoration(
-                                              color: AppColors.acidLime,
-                                              shape: BoxShape.circle,
+                                          const Icon(
+                                            Icons.badge_outlined,
+                                            size: 16,
+                                            color: AppColors.acidLime,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'CRITIC IDENTITY',
+                                            style: AppTypography.monoLabel(
+                                              color: AppColors.textPrimary,
+                                              fontSize: 10.5,
                                             ),
                                           ),
-                                          const SizedBox(width: 5),
+                                        ],
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.surfaceElevated,
+                                          border: Border.all(color: AppColors.border),
+                                        ),
+                                        child: Text(
+                                          'GROOVD ID',
+                                          style: AppTypography.monoBadge(
+                                            color: AppColors.acidLime,
+                                            fontSize: 8.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.acidLime,
+                                          border: Border.all(color: AppColors.pureBlack, width: 1.5),
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                        child: profile.avatarPath != null
+                                            ? ClipRRect(
+                                                borderRadius: BorderRadius.circular(1),
+                                                child: (profile.avatarPath!.startsWith('http://') || profile.avatarPath!.startsWith('https://'))
+                                                    ? Image.network(
+                                                        profile.avatarPath!,
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder: (c, e, s) => Center(
+                                                          child: Text(
+                                                            profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
+                                                            style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
+                                                          ),
+                                                        ),
+                                                      )
+                                                    : Image.file(
+                                                        File(profile.avatarPath!),
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder: (c, e, s) => Center(
+                                                          child: Text(
+                                                            profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
+                                                            style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
+                                                          ),
+                                                        ),
+                                                      ),
+                                              )
+                                            : Center(
+                                                child: Text(
+                                                  profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
+                                                  style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
+                                                ),
+                                              ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              profile.userName.toUpperCase(),
+                                              style: AppTypography.displaySmall(fontSize: 14),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            Text(
+                                              profile.userHandle,
+                                              style: AppTypography.monoLabel(
+                                                color: AppColors.textSecondary,
+                                                fontSize: 10.5,
+                                              ),
+                                            ),
+                                            if (isAuthenticated) ...[
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    width: 6,
+                                                    height: 6,
+                                                    decoration: const BoxDecoration(
+                                                      color: AppColors.acidLime,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 5),
+                                                  Text(
+                                                    'CLOUD SYNC ACTIVE',
+                                                    style: AppTypography.monoBadge(
+                                                      color: AppColors.acidLime,
+                                                      fontSize: 9,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  BrutalistButton(
+                                    label: 'CHANGE USERNAME & HANDLE',
+                                    icon: Icons.edit_outlined,
+                                    backgroundColor: AppColors.surfaceElevated,
+                                    textColor: AppColors.textPrimary,
+                                    borderColor: AppColors.borderBold,
+                                    isSmall: true,
+                                    isFullWidth: true,
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      _showEditUsernameDialog(context, ref);
+                                    },
+                                  ),
+
+                                  const Divider(height: 28, color: AppColors.border),
+
+                                  // 2. Header Banner Photo Feature
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.panorama_outlined,
+                                            size: 16,
+                                            color: AppColors.acidLime,
+                                          ),
+                                          const SizedBox(width: 8),
                                           Text(
-                                            'CLOUD SYNC ACTIVE',
-                                            style: AppTypography.monoBadge(
-                                              color: AppColors.acidLime,
-                                              fontSize: 9,
+                                            'HEADER BANNER PHOTO',
+                                            style: AppTypography.monoLabel(
+                                              color: AppColors.textPrimary,
+                                              fontSize: 10.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.surfaceElevated,
+                                          border: Border.all(color: AppColors.border),
+                                        ),
+                                        child: Text(
+                                          profile.backdropPath != null ? 'ACTIVE' : 'NONE',
+                                          style: AppTypography.monoBadge(
+                                            color: profile.backdropPath != null
+                                                ? AppColors.acidLime
+                                                : AppColors.textSecondary,
+                                            fontSize: 8.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Display a cinematic widescreen background photo above your Critic Dossier banner.',
+                                    style: AppTypography.bodySmall(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  if (profile.backdropPath != null) ...[
+                                    Container(
+                                      height: 85,
+                                      width: double.infinity,
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: AppColors.borderBold, width: 1.5),
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(1),
+                                        child: Image.file(
+                                          File(profile.backdropPath!),
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (ctx, err, stack) => const SizedBox.shrink(),
+                                        ),
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: BrutalistButton(
+                                            label: 'CHANGE PHOTO',
+                                            icon: Icons.photo_library_outlined,
+                                            backgroundColor: AppColors.surfaceElevated,
+                                            textColor: AppColors.textPrimary,
+                                            borderColor: AppColors.borderBold,
+                                            isSmall: true,
+                                            onPressed: () async {
+                                              final ok = await ref
+                                                  .read(userProfileProvider.notifier)
+                                                  .pickBackdropFromGallery();
+                                              if (context.mounted && ok) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      'HEADER BANNER UPDATED',
+                                                      style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                                    ),
+                                                    backgroundColor: AppColors.acidLime,
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: BrutalistButton(
+                                            label: 'REMOVE PHOTO',
+                                            icon: Icons.delete_outline,
+                                            backgroundColor: AppColors.surfaceElevated,
+                                            textColor: AppColors.vermillion,
+                                            borderColor: AppColors.vermillion,
+                                            isSmall: true,
+                                            onPressed: () async {
+                                              await ref.read(userProfileProvider.notifier).removeBackdrop();
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      'HEADER BANNER REMOVED',
+                                                      style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                                    ),
+                                                    backgroundColor: AppColors.acidLime,
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ] else ...[
+                                    BrutalistButton(
+                                      label: 'ADD BACKGROUND PHOTO',
+                                      icon: Icons.add_photo_alternate_outlined,
+                                      backgroundColor: AppColors.acidLime,
+                                      textColor: AppColors.pureBlack,
+                                      isFullWidth: true,
+                                      onPressed: () async {
+                                        final ok = await ref
+                                            .read(userProfileProvider.notifier)
+                                            .pickBackdropFromGallery();
+                                        if (context.mounted && ok) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'HEADER BANNER PHOTO APPLIED',
+                                                style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                              ),
+                                              backgroundColor: AppColors.acidLime,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ],
+
+                                  const Divider(height: 28, color: AppColors.border),
+
+                                  // 3. Critic Bio Feature
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.edit_note_outlined,
+                                            size: 16,
+                                            color: AppColors.cyberCyan,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'CRITIC BIO // SELF-EXPRESSION',
+                                            style: AppTypography.monoLabel(
+                                              color: AppColors.textPrimary,
+                                              fontSize: 10.5,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          BrutalistButton(
-                            label: 'CHANGE USERNAME & HANDLE',
-                            icon: Icons.edit_outlined,
-                            backgroundColor: AppColors.surfaceElevated,
-                            textColor: AppColors.textPrimary,
-                            borderColor: AppColors.borderBold,
-                            isSmall: true,
-                            isFullWidth: true,
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              _showEditUsernameDialog(context, ref);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Header Banner Photo Feature
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceCard,
-                        border: Border.all(color: AppColors.border, width: 1.5),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.panorama_outlined,
-                                    size: 18,
-                                    color: AppColors.acidLime,
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(height: 8),
                                   Text(
-                                    'HEADER BANNER PHOTO',
-                                    style: AppTypography.monoLabel(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 11,
+                                    profile.bio.isNotEmpty ? profile.bio : 'No bio set yet.',
+                                    style: AppTypography.bodySmall(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11.5,
                                     ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ],
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceElevated,
-                                  border: Border.all(color: AppColors.border),
-                                ),
-                                child: Text(
-                                  profile.backdropPath != null ? 'ACTIVE' : 'NONE',
-                                  style: AppTypography.monoBadge(
-                                    color: profile.backdropPath != null
-                                        ? AppColors.acidLime
-                                        : AppColors.textSecondary,
-                                    fontSize: 9,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Display a cinematic widescreen background photo above your Critic Dossier banner.',
-                            style: AppTypography.bodySmall(
-                              color: AppColors.textSecondary,
-                              fontSize: 11,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          if (profile.backdropPath != null) ...[
-                            Container(
-                              height: 85,
-                              width: double.infinity,
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: AppColors.borderBold, width: 1.5),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(1),
-                                child: Image.file(
-                                  File(profile.backdropPath!),
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (ctx, err, stack) => const SizedBox.shrink(),
-                                ),
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: BrutalistButton(
-                                    label: 'CHANGE PHOTO',
-                                    icon: Icons.photo_library_outlined,
+                                  const SizedBox(height: 12),
+                                  BrutalistButton(
+                                    label: 'EDIT BIO',
+                                    icon: Icons.edit,
                                     backgroundColor: AppColors.surfaceElevated,
                                     textColor: AppColors.textPrimary,
                                     borderColor: AppColors.borderBold,
                                     isSmall: true,
-                                    onPressed: () async {
-                                      final ok = await ref
-                                          .read(userProfileProvider.notifier)
-                                          .pickBackdropFromGallery();
-                                      if (context.mounted && ok) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'HEADER BANNER UPDATED',
-                                              style: AppTypography.monoBadge(color: AppColors.pureBlack),
-                                            ),
-                                            backgroundColor: AppColors.acidLime,
-                                          ),
-                                        );
-                                      }
+                                    isFullWidth: true,
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      _showEditBioDialog(context, ref);
                                     },
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: BrutalistButton(
-                                    label: 'REMOVE PHOTO',
-                                    icon: Icons.delete_outline,
-                                    backgroundColor: AppColors.surfaceElevated,
-                                    textColor: AppColors.vermillion,
-                                    borderColor: AppColors.vermillion,
-                                    isSmall: true,
-                                    onPressed: () async {
-                                      await ref.read(userProfileProvider.notifier).removeBackdrop();
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'HEADER BANNER REMOVED',
-                                              style: AppTypography.monoBadge(color: AppColors.pureBlack),
-                                            ),
-                                            backgroundColor: AppColors.acidLime,
-                                          ),
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ] else ...[
-                            BrutalistButton(
-                              label: 'ADD BACKGROUND PHOTO',
-                              icon: Icons.add_photo_alternate_outlined,
-                              backgroundColor: AppColors.acidLime,
-                              textColor: AppColors.pureBlack,
-                              isFullWidth: true,
-                              onPressed: () async {
-                                final ok = await ref
-                                    .read(userProfileProvider.notifier)
-                                    .pickBackdropFromGallery();
-                                if (context.mounted && ok) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'HEADER BANNER PHOTO APPLIED',
-                                        style: AppTypography.monoBadge(color: AppColors.pureBlack),
-                                      ),
-                                      backgroundColor: AppColors.acidLime,
-                                    ),
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Critic Bio Section
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceCard,
-                        border: Border.all(color: AppColors.border, width: 1.5),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.edit_note_outlined,
-                                    size: 18,
-                                    color: AppColors.cyberCyan,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'CRITIC BIO // SELF-EXPRESSION',
-                                    style: AppTypography.monoLabel(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 11,
-                                    ),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            profile.bio.isNotEmpty ? profile.bio : 'No bio set yet.',
-                            style: AppTypography.bodySmall(
-                              color: AppColors.textSecondary,
-                              fontSize: 11.5,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 14),
-                          BrutalistButton(
-                            label: 'EDIT BIO',
-                            icon: Icons.edit,
-                            backgroundColor: AppColors.surfaceElevated,
-                            textColor: AppColors.textPrimary,
-                            borderColor: AppColors.borderBold,
-                            isSmall: true,
-                            isFullWidth: true,
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              _showEditBioDialog(context, ref);
-                            },
-                          ),
+                          ],
                         ],
                       ),
                     ),
@@ -1395,7 +1443,6 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userProfileProvider);
     final isAuthenticated = ref.watch(isAuthenticatedProvider);
-    final currentUserEmail = ref.watch(currentUserEmailProvider);
     final userId = ref.watch(currentUserIdProvider);
     final userName = profile.userName;
     final userHandle = profile.userHandle;
@@ -1430,20 +1477,6 @@ class ProfileScreen extends ConsumerWidget {
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const WishlistScreen()),
             ),
-          ),
-          IconButton(
-            icon: Icon(
-              isAuthenticated ? Icons.cloud_done : Icons.cloud_queue_outlined,
-              color: isAuthenticated ? AppColors.acidLime : AppColors.textPrimary,
-            ),
-            tooltip: isAuthenticated ? 'Cloud Sync Active ($currentUserEmail)' : 'Log in / Cloud Sync',
-            onPressed: () {
-              if (isAuthenticated) {
-                _showSettingsModal(context, ref);
-              } else {
-                Navigator.of(context).push(LoginScreen.route());
-              }
-            },
           ),
           IconButton(
             icon: const Icon(Icons.settings, color: AppColors.textPrimary),
@@ -2213,6 +2246,7 @@ class _PodiumSlotCard extends StatelessWidget {
                 aspectRatio: 1.0,
                 child: AlbumArtCard(
                   imageUrl: item!.coverUrl,
+                  showRepeatCount: false,
                   showShadow: false,
                 ),
               ),
@@ -2298,6 +2332,7 @@ class _CandidateTile extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
       leading: AlbumArtCard(
         imageUrl: item.coverUrl,
+        showRepeatCount: false,
         size: 44,
         showShadow: false,
       ),
@@ -2513,6 +2548,7 @@ class _RecentActivityCard extends ConsumerWidget {
           children: [
             AlbumArtCard(
               imageUrl: review.coverUrl,
+              logCount: ref.watch(currentUserReviewLogIndexProvider(review)),
               size: 74,
               showShadow: false,
             ),

@@ -1,9 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
+import 'package:groovd/data/models/music_item.dart';
+import 'package:groovd/state/review_providers.dart';
 
-class AlbumArtCard extends StatelessWidget {
+class AlbumArtCard extends ConsumerWidget {
   final String imageUrl;
   final double size;
   final double? width;
@@ -13,6 +16,10 @@ class AlbumArtCard extends StatelessWidget {
   final bool showShadow;
   final String? heroTag;
   final VoidCallback? onTap;
+  final int? logCount;
+  final MusicItem? musicItem;
+  final String? musicItemId;
+  final bool showRepeatCount;
 
   const AlbumArtCard({
     super.key,
@@ -25,12 +32,29 @@ class AlbumArtCard extends StatelessWidget {
     this.showShadow = true,
     this.heroTag,
     this.onTap,
+    this.logCount,
+    this.musicItem,
+    this.musicItemId,
+    this.showRepeatCount = true,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final w = width ?? size;
     final h = height ?? size;
+
+    int? effectiveCount;
+    if (showRepeatCount) {
+      effectiveCount = logCount;
+      if (effectiveCount == null) {
+        if (musicItem != null) {
+          effectiveCount = ref.watch(currentUserItemLogCountProvider(ItemReviewQuery.fromItem(musicItem!)));
+        } else if (musicItemId != null && musicItemId!.isNotEmpty) {
+          final counts = ref.watch(currentUserLogCountsProvider);
+          effectiveCount = counts[musicItemId!] ?? 0;
+        }
+      }
+    }
 
     Widget imageContent = Container(
       width: w,
@@ -118,6 +142,50 @@ class AlbumArtCard extends StatelessWidget {
               child: Text(
                 badgeLabel!.toUpperCase(),
                 style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 8),
+              ),
+            ),
+          ),
+
+        // Count badge if logged more than 1 time (e.g. 2x, 3x)
+        if (effectiveCount != null && effectiveCount > 1)
+          Positioned(
+            top: 5,
+            left: 5,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: w < 60 ? 3.5 : 5.0,
+                vertical: w < 60 ? 1.0 : 2.0,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.acidLime,
+                borderRadius: BorderRadius.circular(1.5),
+                border: Border.all(color: AppColors.pureBlack, width: 1.2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: AppColors.pureBlack,
+                    offset: Offset(1.5, 1.5),
+                    blurRadius: 0,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.repeat,
+                    size: w < 60 ? 7.5 : 9.0,
+                    color: AppColors.pureBlack,
+                  ),
+                  SizedBox(width: w < 60 ? 1.5 : 2.5),
+                  Text(
+                    '${effectiveCount}X',
+                    style: AppTypography.monoBadge(
+                      color: AppColors.pureBlack,
+                      fontSize: w < 60 ? 7.5 : 8.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
