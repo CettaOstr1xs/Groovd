@@ -62,6 +62,19 @@ class FirestoreReviewRepository implements ReviewRepository {
               .timeout(const Duration(milliseconds: 3000));
           list.addAll(snapshotByName.docs.map((d) => Review.fromMap(d.data())));
         } catch (_) {}
+
+        // Also query stripped base title if itemName contained brackets/editions
+        final baseTitle = itemName.replaceAll(RegExp(r'\s*[\(\[].*?[\)\]]'), '').trim();
+        if (baseTitle.isNotEmpty && baseTitle.toLowerCase() != itemName.trim().toLowerCase()) {
+          try {
+            final snapshotByBase = await _firestore
+                .collection(collectionPath)
+                .where('musicItemName', isEqualTo: baseTitle)
+                .get()
+                .timeout(const Duration(milliseconds: 3000));
+            list.addAll(snapshotByBase.docs.map((d) => Review.fromMap(d.data())));
+          } catch (_) {}
+        }
       }
 
       final localList = await _local.getReviewsForItem(
@@ -140,6 +153,12 @@ class FirestoreReviewRepository implements ReviewRepository {
       for (final r in localList) {
         map[r.id] = r;
       }
+      if (userId != 'user_me') {
+        final guestLocal = await _local.getUserReviews('user_me');
+        for (final r in guestLocal) {
+          map[r.id] = r;
+        }
+      }
       for (final r in list) {
         map[r.id] = r;
       }
@@ -147,7 +166,21 @@ class FirestoreReviewRepository implements ReviewRepository {
       merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return merged;
     } catch (_) {
-      return _local.getUserReviews(userId);
+      final localList = await _local.getUserReviews(userId);
+      if (userId != 'user_me') {
+        final guestLocal = await _local.getUserReviews('user_me');
+        final map = <String, Review>{};
+        for (final r in localList) {
+          map[r.id] = r;
+        }
+        for (final r in guestLocal) {
+          map[r.id] = r;
+        }
+        final merged = map.values.toList();
+        merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return merged;
+      }
+      return localList;
     }
   }
 

@@ -6,6 +6,7 @@ import 'package:groovd/presentation/widgets/artwork_zoom_viewer.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
+import 'package:groovd/data/models/review.dart';
 import 'package:groovd/presentation/screens/artist/artist_detail_screen.dart';
 import 'package:groovd/presentation/screens/lists/create_edit_list_modal.dart';
 import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
@@ -23,8 +24,14 @@ import 'package:groovd/state/wishlist_provider.dart';
 class MusicDetailScreen extends ConsumerWidget {
   final MusicItem item;
   final String? heroTag;
+  final Review? initialReview;
 
-  const MusicDetailScreen({super.key, required this.item, this.heroTag});
+  const MusicDetailScreen({
+    super.key,
+    required this.item,
+    this.heroTag,
+    this.initialReview,
+  });
 
   void _showAddToListModal(BuildContext context, WidgetRef ref, MusicItem musicItem) {
     showModalBottomSheet(
@@ -194,10 +201,52 @@ class MusicDetailScreen extends ConsumerWidget {
     final reviewQuery = ItemReviewQuery.fromItem(activeItem);
     final reviewsAsync = ref.watch(itemReviewsProvider(reviewQuery));
     final currentUserId = ref.watch(currentUserIdProvider);
-    final existingUserReview = reviewsAsync.asData?.value
-        .where((r) => r.userId == currentUserId)
+
+    final userReviews = ref.watch(userReviewsProvider(currentUserId)).asData?.value ?? const [];
+    final fallbackUserReviews = currentUserId != 'user_me'
+        ? (ref.watch(userReviewsProvider('user_me')).asData?.value ?? const [])
+        : const <Review>[];
+    final allUserReviews = [
+      ?initialReview,
+      ...userReviews,
+      ...fallbackUserReviews,
+    ];
+
+    // 1. Resolve existing user review matching this music release
+    // Check user's personal review archive first (instant & resilient across cross-catalog IDs)
+    final userMatches = allUserReviews.where((r) {
+      if ((r.musicItemId.isNotEmpty && r.musicItemId == activeItem.id) ||
+          (r.musicItemId.isNotEmpty && r.musicItemId == item.id)) {
+        return true;
+      }
+      return r.matchesItem(
+            id: activeItem.id,
+            name: activeItem.name,
+            artist: activeItem.artist,
+            type: activeItem.type.name,
+          ) ||
+          r.matchesItem(
+            id: item.id,
+            name: item.name,
+            artist: item.artist,
+            type: item.type.name,
+          );
+    }).toList();
+
+    Review? existingUserReview = initialReview;
+    if (existingUserReview == null && userMatches.isNotEmpty) {
+      userMatches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      existingUserReview = userMatches.first;
+    }
+    existingUserReview ??= reviewsAsync.asData?.value
+        .where((r) => r.userId == currentUserId || r.userId == 'user_me')
         .firstOrNull;
-    final userLogCount = ref.watch(currentUserItemLogCountProvider(reviewQuery));
+
+    final computedLogCount = userMatches.isNotEmpty
+        ? userMatches.length
+        : (initialReview != null ? 1 : 0);
+    final providerLogCount = ref.watch(currentUserItemLogCountProvider(reviewQuery));
+    final userLogCount = providerLogCount > computedLogCount ? providerLogCount : computedLogCount;
     final avgScoreAsync = ref.watch(itemAverageScoreProvider(reviewQuery));
     final reviewCountAsync = ref.watch(itemReviewCountProvider(reviewQuery));
     final isWishlisted = ref.watch(isItemInWishlistProvider(activeItem));
@@ -280,7 +329,7 @@ class MusicDetailScreen extends ConsumerWidget {
                       isLogAgain: true,
                       previousLogCount: userLogCount,
                       autoOverallScore: autoOverallScore,
-                      initialRating: autoOverallScore ?? existingUserReview.rating,
+                      initialRating: autoOverallScore ?? existingUserReview?.rating,
                     ),
                   ),
                 ),
@@ -557,8 +606,14 @@ class MusicDetailScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(20),
               child: avgScoreAsync.when(
                 data: (score) {
-                  final count = reviewCountAsync.value ?? 0;
-                  return GiantScoreBadge(score: score, reviewCount: count)
+                  final rawCount = reviewCountAsync.value ?? 0;
+                  final effectiveScore = (score > 0 || existingUserReview == null)
+                      ? score
+                      : existingUserReview.rating;
+                  final effectiveCount = (rawCount > 0 || existingUserReview == null)
+                      ? rawCount
+                      : (computedLogCount > 0 ? computedLogCount : 1);
+                  return GiantScoreBadge(score: effectiveScore, reviewCount: effectiveCount)
                       .animate()
                       .fadeIn(duration: 400.ms, delay: 100.ms, curve: Curves.easeOutCubic)
                       .scale(
@@ -567,10 +622,26 @@ class MusicDetailScreen extends ConsumerWidget {
                         curve: Curves.easeOutBack,
                       );
                 },
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.acidLime),
-                ),
-                error: (err, stack) => const GiantScoreBadge(score: 0.0),
+                loading: () {
+                  if (existingUserReview != null) {
+                    return GiantScoreBadge(
+                      score: existingUserReview.rating,
+                      reviewCount: computedLogCount > 0 ? computedLogCount : 1,
+                    );
+                  }
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.acidLime),
+                  );
+                },
+                error: (err, stack) {
+                  if (existingUserReview != null) {
+                    return GiantScoreBadge(
+                      score: existingUserReview.rating,
+                      reviewCount: computedLogCount > 0 ? computedLogCount : 1,
+                    );
+                  }
+                  return const GiantScoreBadge(score: 0.0);
+                },
               ),
             ),
 
@@ -837,7 +908,19 @@ class MusicDetailScreen extends ConsumerWidget {
 
             reviewsAsync.when(
               data: (reviews) {
-                if (reviews.isEmpty) {
+                final combinedReviews = <Review>[];
+                final seenReviewIds = <String>{};
+                if (existingUserReview != null) {
+                  combinedReviews.add(existingUserReview);
+                  seenReviewIds.add(existingUserReview.id);
+                }
+                for (final r in reviews) {
+                  if (seenReviewIds.add(r.id)) {
+                    combinedReviews.add(r);
+                  }
+                }
+
+                if (combinedReviews.isEmpty) {
                   return Container(
                     margin: const EdgeInsets.all(20),
                     padding: const EdgeInsets.all(24),
@@ -880,10 +963,10 @@ class MusicDetailScreen extends ConsumerWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  itemCount: reviews.length,
+                  itemCount: combinedReviews.length,
                   separatorBuilder: (context, index) => const SizedBox(height: 14),
                   itemBuilder: (context, index) {
-                    final review = reviews[index];
+                    final review = combinedReviews[index];
                     return ReviewCard(
                       review: review,
                       showItemHeader: false,
@@ -908,16 +991,62 @@ class MusicDetailScreen extends ConsumerWidget {
                   },
                 );
               },
-              loading: () => const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(
-                  child: CircularProgressIndicator(color: AppColors.acidLime),
-                ),
-              ),
-              error: (err, _) => Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text('Failed to load reviews: $err'),
-              ),
+              loading: () {
+                if (existingUserReview != null) {
+                  return ListView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    children: [
+                      ReviewCard(
+                        review: existingUserReview,
+                        showItemHeader: false,
+                        onLike: () {},
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ReviewDetailScreen(review: existingUserReview!),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  );
+                }
+                return const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.acidLime),
+                  ),
+                );
+              },
+              error: (err, _) {
+                if (existingUserReview != null) {
+                  return ListView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    children: [
+                      ReviewCard(
+                        review: existingUserReview,
+                        showItemHeader: false,
+                        onLike: () {},
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ReviewDetailScreen(review: existingUserReview!),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  );
+                }
+                return Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text('Failed to load reviews: $err'),
+                );
+              },
             ),
 
             // More by Artist Exploration Section

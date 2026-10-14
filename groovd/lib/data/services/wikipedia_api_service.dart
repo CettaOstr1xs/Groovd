@@ -40,6 +40,40 @@ class WikipediaApiService {
           await _fetchSummary('$clean (rapper)');
     }
 
+    // Try transliterated English titles if still not found
+    if (summary == null || (summary.description?.toLowerCase().contains('disambiguation') ?? false)) {
+      const transliterations = <String, String>{
+        'кино': 'Kino (band)',
+        'виктор цой': 'Viktor Tsoi',
+        'цой': 'Viktor Tsoi',
+        'гражданская оборона': 'Grazhdanskaya Oborona',
+        'гроб': 'Grazhdanskaya Oborona',
+        'ддт': 'DDT (band)',
+        'аквариум': 'Aquarium (band)',
+        'земфира': 'Zemfira',
+        'король и шут': 'Korol i Shut',
+        'сплин': 'Splean',
+        'мумий тролль': 'Mumiy Troll',
+        'наутилус помпилиус': 'Nautilus Pompilius',
+        'би-2': 'Bi-2',
+        'ария': 'Aria (band)',
+        'молчат дома': 'Molchat Doma',
+        'きのこ帝国': 'Kinoko Teikoku',
+        'ミドリ': 'Midori (band)',
+        'フィッシュマンズ': 'Fishmans',
+        '相対性理論': 'Soutaiseiriron',
+        'ラッドウィンプス': 'Radwimps',
+        '혁오': 'Hyukoh',
+        '새소년': 'Se So Neon',
+      };
+      final translit = transliterations[clean.toLowerCase()];
+      if (translit != null) {
+        summary = await _fetchSummary(translit) ??
+            await _fetchSummary('$translit (band)') ??
+            await _fetchSummary('$translit (musician)');
+      }
+    }
+
     _cache[cacheKey] = summary;
     return summary;
   }

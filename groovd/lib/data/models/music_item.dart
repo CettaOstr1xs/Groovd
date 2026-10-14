@@ -267,10 +267,19 @@ class MusicItem {
   /// Normalizes a release or song title for resilient cross-catalog matching.
   static String normalizeTitle(String title) {
     var t = title.trim().toLowerCase();
-    // Strip common editions / remasters in brackets/parentheses e.g. (Deluxe Edition), [Remastered]
+    // Normalize unicode punctuation
+    t = t
+        .replaceAll('’', '\'')
+        .replaceAll('‘', '\'')
+        .replaceAll('“', '"')
+        .replaceAll('”', '"')
+        .replaceAll('–', '-')
+        .replaceAll('—', '-');
+
+    // Strip common editions / remasters in brackets/parentheses e.g. (2011 Remaster), (Deluxe Edition), [Remastered]
     t = t.replaceAll(
       RegExp(
-        r'\s*[\(\[](deluxe|remastered|remaster|bonus track edition|expanded|anniversary|special edition|explicit|clean|original version).*?[\)\]]',
+        r'\s*[\(\[][^\)\]]*(?:deluxe|remaster|anniversary|expanded|edition|explicit|clean|bonus|version|original)[^\)\]]*[\)\]]',
         caseSensitive: false,
       ),
       '',
@@ -285,6 +294,15 @@ class MusicItem {
   /// Normalizes an artist name for resilient cross-catalog matching.
   static String normalizeArtist(String artist) {
     var a = artist.trim().toLowerCase();
+    // Normalize unicode punctuation
+    a = a
+        .replaceAll('’', '\'')
+        .replaceAll('‘', '\'')
+        .replaceAll('“', '"')
+        .replaceAll('”', '"')
+        .replaceAll('–', '-')
+        .replaceAll('—', '-');
+
     // Extract primary artist if features are present e.g. 'Kendrick Lamar feat. Rihanna' -> 'Kendrick Lamar'
     final featMatch = RegExp(r'\s*(feat\.?|ft\.?|with|featuring)\s+.*$', caseSensitive: false).firstMatch(a);
     if (featMatch != null) {
@@ -298,6 +316,138 @@ class MusicItem {
       a = a.split(' & ').first.trim();
     }
     return a.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  static const Map<String, String> _cyrillicToLatinMap = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+    'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+    'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+  };
+
+  /// Transliterates Cyrillic text to phonetic Latin for cross-catalog comparison.
+  static String cyrillicToLatin(String input) {
+    final sb = StringBuffer();
+    for (int i = 0; i < input.length; i++) {
+      final char = input[i].toLowerCase();
+      sb.write(_cyrillicToLatinMap[char] ?? input[i]);
+    }
+    return sb.toString();
+  }
+
+  /// Converts any string into a stripped phonetic key for cross-catalog index matching.
+  static String toLatinKey(String input) {
+    var s = cyrillicToLatin(input.trim().toLowerCase());
+    s = s.replaceAll('y', 'i');
+    s = s.replaceAll(RegExp(r'[^a-z0-9]'), '');
+    return s;
+  }
+
+  /// Known cross-alphabet artist aliases (e.g. Spotify Latin vs Deezer Cyrillic/Kanji).
+  static const Map<String, List<String>> _artistAliases = {
+    'kino': ['кино'],
+    'кино': ['kino'],
+    'tsoi': ['цой', 'виктор цой', 'кино'],
+    'tsoy': ['цой', 'виктор цой', 'кино'],
+    'цой': ['tsoi', 'kino'],
+    'виктор цой': ['viktor tsoi', 'kino'],
+    'grazhdanskaya oborona': ['гражданская оборона', 'гроб'],
+    'гражданская оборона': ['grazhdanskaya oborona'],
+    'grob': ['гражданская оборона', 'гроб'],
+    'гроб': ['grazhdanskaya oborona'],
+    'ddt': ['ддт'],
+    'ддт': ['ddt'],
+    'aquarium': ['аквариум'],
+    'akvarium': ['аквариум'],
+    'аквариум': ['aquarium'],
+    'zemfira': ['земфира'],
+    'земфира': ['zemfira'],
+    'korol i shut': ['король и шут', 'киш'],
+    'король и шут': ['korol i shut'],
+    'splean': ['сплин'],
+    'splin': ['сплин'],
+    'сплин': ['splean'],
+    'mumiy troll': ['мумий тролль'],
+    'мумий тролль': ['mumiy troll'],
+    'nautilus pompilius': ['наутилус помпилиус'],
+    'наутилус помпилиус': ['nautilus pompilius'],
+    'bi-2': ['би-2'],
+    'bi 2': ['би-2'],
+    'би-2': ['bi-2'],
+    'aria': ['ария'],
+    'ария': ['aria'],
+    'ploho': ['плохо'],
+    'плохо': ['ploho'],
+    'molchat doma': ['молчат дома'],
+    'молчат дома': ['molchat doma'],
+    'kinoko teikoku': ['きのこ帝国'],
+    'きのこ帝国': ['kinoko teikoku'],
+    'midori': ['ミドリ'],
+    'ミドリ': ['midori'],
+    'fishmans': ['フィッシュマンズ'],
+    'フィッシュマンズ': ['fishmans'],
+    'soutaiseiriron': ['相対性理論'],
+    '相対性理論': ['soutaiseiriron'],
+    'radwimps': ['ラッドウィンプス'],
+    'ラッドウィンプス': ['radwimps'],
+    'the black skirts': ['검정치마'],
+    '검정치마': ['the black skirts'],
+    'hyukoh': ['혁오'],
+    '혁오': ['hyukoh'],
+    'se so neon': ['새소년'],
+    '새소년': ['se so neon'],
+  };
+
+  /// Checks whether two artist strings refer to the same artist across languages and scripts.
+  static bool areArtistsEquivalent(String artist1, String artist2) {
+    final a1 = normalizeArtist(artist1);
+    final a2 = normalizeArtist(artist2);
+    if (a1.isEmpty || a2.isEmpty) return false;
+    if (a1 == a2 || a1.contains(a2) || a2.contains(a1)) return true;
+
+    // Direct key equivalence via Cyrillic-to-Latin transliteration
+    final k1 = toLatinKey(a1);
+    final k2 = toLatinKey(a2);
+    if (k1.isNotEmpty && k2.isNotEmpty && (k1 == k2 || k1.contains(k2) || k2.contains(k1))) {
+      return true;
+    }
+
+    // Check alias mapping
+    final aliases1 = _artistAliases[a1] ?? const [];
+    if (aliases1.any((alias) {
+      final aLower = alias.toLowerCase();
+      return a2 == aLower || a2.contains(aLower) || toLatinKey(a2) == toLatinKey(aLower);
+    })) {
+      return true;
+    }
+
+    final aliases2 = _artistAliases[a2] ?? const [];
+    if (aliases2.any((alias) {
+      final aLower = alias.toLowerCase();
+      return a1 == aLower || a1.contains(aLower) || toLatinKey(a1) == toLatinKey(aLower);
+    })) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Checks whether two release/track titles match across scripts and editions.
+  static bool areTitlesEquivalent(String name1, String name2) {
+    final n1 = normalizeTitle(name1);
+    final n2 = normalizeTitle(name2);
+    if (n1.isEmpty || n2.isEmpty) return false;
+    if (n1 == n2 || n1.contains(n2) || n2.contains(n1)) return true;
+
+    // Key equivalence via transliteration
+    final k1 = toLatinKey(n1);
+    final k2 = toLatinKey(n2);
+    if (k1.isNotEmpty && k2.isNotEmpty && (k1 == k2 || k1.contains(k2) || k2.contains(k1))) {
+      return true;
+    }
+
+    return false;
   }
 
   /// Checks whether two items/queries represent the same musical work across different
@@ -316,18 +466,11 @@ class MusicItem {
       return true;
     }
 
-    final n1 = normalizeTitle(name1);
-    final n2 = normalizeTitle(name2);
-    if (n1.isEmpty || n2.isEmpty || n1 != n2) {
-      return false;
-    }
+    final artistsMatch = areArtistsEquivalent(artist1, artist2);
+    if (!artistsMatch) return false;
 
-    final a1 = normalizeArtist(artist1);
-    final a2 = normalizeArtist(artist2);
-    if (a1.isEmpty || a2.isEmpty) return false;
-    if (a1 != a2 && !a1.contains(a2) && !a2.contains(a1)) {
-      return false;
-    }
+    final titlesMatch = areTitlesEquivalent(name1, name2);
+    if (!titlesMatch) return false;
 
     // Distinguish standalone single tracks from full albums/EPs if types are both known
     if (type1 != null && type2 != null && type1.isNotEmpty && type2.isNotEmpty) {

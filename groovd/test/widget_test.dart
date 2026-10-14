@@ -14,6 +14,7 @@ import 'package:groovd/presentation/screens/detail/music_detail_screen.dart';
 import 'package:groovd/presentation/screens/review/review_detail_screen.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/services/spotify_mock_data.dart';
+import 'package:groovd/data/services/deezer_api_service.dart';
 import 'package:groovd/data/models/artist.dart';
 import 'package:groovd/presentation/screens/artist/artist_detail_screen.dart';
 import 'package:groovd/presentation/screens/profile/all_rated_releases_screen.dart';
@@ -2098,4 +2099,71 @@ void main() {
     expect(friendSpike.rating, 9.6);
     expect(friendSpike.tier, RatingSignTier.eightPoint);
   });
+
+  testWidgets('MusicDetailScreen resolves old rated release across edition name variations and displays EDIT and LOG AGAIN', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    final pastReview = Review(
+      id: 'rev_past_deathconsciousness',
+      musicItemId: 'old_mock_id_99',
+      musicItemName: 'Deathconsciousness',
+      artistName: 'Have a Nice Life',
+      coverUrl: '',
+      itemType: 'album',
+      userId: 'user_me',
+      userName: 'CRITIC // YOU',
+      userHandle: '@groovd_me',
+      rating: 9.3,
+      headline: 'Post-punk monument',
+      body: 'Timeless masterpiece.',
+      createdAt: DateTime.now().subtract(const Duration(days: 30)),
+    );
+
+    // Active item returned by Deezer has edition variation in brackets and a different numeric ID
+    const currentDeezerItem = MusicItem(
+      id: 'deezer_numeric_1234567',
+      name: 'Deathconsciousness (Deluxe Edition)',
+      artist: 'Have a Nice Life',
+      type: MusicType.album,
+      coverUrl: '',
+      releaseDate: '2008-01-24',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserIdProvider.overrideWithValue('user_me'),
+          userReviewsProvider('user_me').overrideWith((ref) async => [pastReview]),
+        ],
+        child: const MaterialApp(
+          home: MusicDetailScreen(item: currentDeezerItem),
+        ),
+      ),
+    );
+
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // Must resolve existing review and show EDIT [9.3] and + LOG AGAIN
+    expect(find.text('+ LOG AGAIN'), findsOneWidget);
+    expect(find.text('EDIT [9.3]'), findsOneWidget);
+  });
+
+  test('Deezer transliteration and artist search catalog resilience for Kino and international bands', () {
+    final kinoTranslits = DeezerApiService.getTransliterations('kino');
+    expect(kinoTranslits, contains('кино'));
+
+    final tsoiTranslits = DeezerApiService.getTransliterations('tsoi');
+    expect(tsoiTranslits, contains('цой'));
+
+    final grobTranslits = DeezerApiService.getTransliterations('grob');
+    expect(grobTranslits, contains('гражданская оборона'));
+
+    final kinokoTranslits = DeezerApiService.getTransliterations('kinoko teikoku');
+    expect(kinokoTranslits, contains('きのこ帝国'));
+  });
 }
+

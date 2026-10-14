@@ -50,16 +50,88 @@ class SpotifyRepository {
       if (type == MusicType.album) typeParam = 'album';
       if (type == MusicType.song) typeParam = 'track';
 
-      final results = await deezerService.search(cleanQuery, type: typeParam, limit: 10);
+      // 1. Direct search from Deezer API
+      final results = await deezerService.search(cleanQuery, type: typeParam, limit: 15);
+
+      // 2. Resilient Popular Artist Releases Resolution
+      // Check if the query matches a prominent or foreign/non-Latin artist (e.g. Kino / Кино)
+      try {
+        final matchingArtists = await searchArtists(cleanQuery, limit: 3);
+        if (matchingArtists.isNotEmpty) {
+          final topArtist = matchingArtists.first;
+          final cleanLower = cleanQuery.toLowerCase();
+          final artistNameLower = topArtist.name.toLowerCase();
+          final translits = DeezerApiService.getTransliterations(cleanQuery);
+
+          final hasTranslitMatch = translits.any((t) => artistNameLower == t.toLowerCase());
+          final isEquivalent = (MusicItem.areArtistsEquivalent(topArtist.name, cleanQuery) ||
+                  artistNameLower == cleanLower) &&
+              (topArtist.followers >= 1000 || hasTranslitMatch);
+
+          final isStrongArtistMatch = hasTranslitMatch ||
+              isEquivalent ||
+              (topArtist.followers >= 5000 &&
+                  (artistNameLower.contains(cleanLower) || cleanLower.contains(artistNameLower))) ||
+              topArtist.followers >= 50000;
+
+          if (isStrongArtistMatch) {
+            final artistItems = <MusicItem>[];
+            if (type == MusicType.album) {
+              final albums = await getArtistDiscography(topArtist.id);
+              artistItems.addAll(albums);
+            } else if (type == MusicType.song) {
+              final tracks = await getArtistTopTracks(topArtist.id);
+              artistItems.addAll(tracks);
+            } else {
+              // 'all': fetch their iconic albums and top tracks
+              final albums = await getArtistDiscography(topArtist.id);
+              final tracks = await getArtistTopTracks(topArtist.id);
+              artistItems.addAll(albums.take(5));
+              artistItems.addAll(tracks.take(5));
+            }
+
+            final seenIds = <String>{};
+            final merged = <MusicItem>[];
+            // If direct results already contain an exact title match (e.g. album GNX), prioritize it
+            final directExactMatch = results.any((r) =>
+                r.name.toLowerCase() == cleanLower ||
+                r.name.toLowerCase().startsWith('$cleanLower '));
+
+            if (directExactMatch && results.isNotEmpty) {
+              for (final item in results) {
+                if (seenIds.add(item.id)) merged.add(item);
+              }
+              for (final item in artistItems) {
+                if (seenIds.add(item.id)) merged.add(item);
+              }
+            } else {
+              for (final item in artistItems) {
+                if (seenIds.add(item.id)) merged.add(item);
+              }
+              for (final item in results) {
+                if (seenIds.add(item.id)) merged.add(item);
+              }
+            }
+            if (merged.isNotEmpty) return merged;
+          }
+        }
+      } catch (_) {}
+
       if (results.isNotEmpty) return results;
     }
 
     // Mock search fallback
     final q = cleanQuery.toLowerCase();
+    final translits = DeezerApiService.getTransliterations(cleanQuery);
+    final terms = [q, ...translits.map((t) => t.toLowerCase())];
+
     return SpotifyMockData.allItems.where((item) {
-      final matchesQuery = item.name.toLowerCase().contains(q) ||
-          item.artist.toLowerCase().contains(q) ||
-          item.genres.any((g) => g.toLowerCase().contains(q));
+      final nameLower = item.name.toLowerCase();
+      final artistLower = item.artist.toLowerCase();
+      final matchesQuery = terms.any((term) =>
+          nameLower.contains(term) ||
+          artistLower.contains(term) ||
+          item.genres.any((g) => g.toLowerCase().contains(term)));
       if (type == null) return matchesQuery;
       return matchesQuery && item.type == type;
     }).toList();
@@ -292,7 +364,7 @@ class SpotifyRepository {
   }
 
   /// Search catalog for artists matching the query
-  Future<List<Artist>> searchArtists(String query, {int limit = 5}) async {
+  Future<List<Artist>> searchArtists(String query, {int limit = 10}) async {
     final cleanQuery = query.trim();
     if (cleanQuery.isEmpty) return [];
 
@@ -303,19 +375,22 @@ class SpotifyRepository {
 
     // Mock search fallback
     final q = cleanQuery.toLowerCase();
+    final translits = DeezerApiService.getTransliterations(cleanQuery);
+    final terms = [q, ...translits.map((t) => t.toLowerCase())];
     final results = <Artist>[];
     final seenNames = <String>{};
 
     for (final a in SpotifyMockData.mockArtists) {
-      if (a.name.toLowerCase().contains(q)) {
-        seenNames.add(a.name.toLowerCase());
+      final aLower = a.name.toLowerCase();
+      if (terms.any((term) => aLower.contains(term))) {
+        seenNames.add(aLower);
         results.add(a);
       }
     }
 
     for (final item in SpotifyMockData.allItems) {
       final nameLower = item.artist.toLowerCase();
-      if (nameLower.contains(q) && !seenNames.contains(nameLower)) {
+      if (terms.any((term) => nameLower.contains(term)) && !seenNames.contains(nameLower)) {
         seenNames.add(nameLower);
         results.add(
           Artist(

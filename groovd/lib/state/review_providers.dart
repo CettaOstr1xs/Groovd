@@ -92,8 +92,8 @@ class ItemReviewQuery {
 
   String get canonicalKey {
     if (name != null && name!.trim().isNotEmpty && artist != null && artist!.trim().isNotEmpty) {
-      final normTitle = MusicItem.normalizeTitle(name!);
-      final normArtist = MusicItem.normalizeArtist(artist!);
+      final normTitle = MusicItem.toLatinKey(name!);
+      final normArtist = MusicItem.toLatinKey(artist!);
       final normType = (type?.toLowerCase() == 'song' || type?.toLowerCase() == 'track') ? 'song' : 'album';
       return '$normType::$normArtist::$normTitle';
     }
@@ -118,36 +118,55 @@ class ItemReviewQuery {
 final itemReviewsProvider = FutureProvider.family<List<Review>, ItemReviewQuery>((ref, query) async {
   ref.watch(reviewRefreshProvider);
   final repo = ref.watch(reviewRepositoryProvider);
-  return repo.getReviewsForItem(
+  final fetched = await repo.getReviewsForItem(
     query.id,
     itemName: query.name,
     artistName: query.artist,
     itemType: query.type,
   );
+
+  // Cross-reference user's cached reviews to ensure locally/already logged reviews appear
+  final currentUserId = ref.watch(currentUserIdProvider);
+  final userReviews = ref.watch(userReviewsProvider(currentUserId)).asData?.value ?? const [];
+  final guestReviews = currentUserId != 'user_me'
+      ? (ref.watch(userReviewsProvider('user_me')).asData?.value ?? const [])
+      : const <Review>[];
+  final allPersonalReviews = [...userReviews, ...guestReviews];
+
+  final personalMatches = allPersonalReviews.where((r) {
+    if (r.musicItemId.isNotEmpty && r.musicItemId == query.id) return true;
+    return r.matchesItem(
+      id: query.id,
+      name: query.name,
+      artist: query.artist,
+      type: query.type,
+    );
+  });
+
+  final map = <String, Review>{};
+  for (final r in fetched) {
+    map[r.id] = r;
+  }
+  for (final r in personalMatches) {
+    map[r.id] = r;
+  }
+  final merged = map.values.toList();
+  merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  return merged;
 });
 
 /// Average Rating for specific Music Item
 final itemAverageScoreProvider = FutureProvider.family<double, ItemReviewQuery>((ref, query) async {
-  ref.watch(reviewRefreshProvider);
-  final repo = ref.watch(reviewRepositoryProvider);
-  return repo.getAverageScore(
-    query.id,
-    itemName: query.name,
-    artistName: query.artist,
-    itemType: query.type,
-  );
+  final reviews = await ref.watch(itemReviewsProvider(query).future);
+  if (reviews.isEmpty) return 0.0;
+  final total = reviews.map((r) => r.rating).reduce((a, b) => a + b);
+  return total / reviews.length;
 });
 
 /// Review Count for specific Music Item
 final itemReviewCountProvider = FutureProvider.family<int, ItemReviewQuery>((ref, query) async {
-  ref.watch(reviewRefreshProvider);
-  final repo = ref.watch(reviewRepositoryProvider);
-  return repo.getReviewCount(
-    query.id,
-    itemName: query.name,
-    artistName: query.artist,
-    itemType: query.type,
-  );
+  final reviews = await ref.watch(itemReviewsProvider(query).future);
+  return reviews.length;
 });
 
 /// User's Reviews Provider
@@ -187,7 +206,24 @@ final currentUserLogCountsProvider = Provider<Map<String, int>>((ref) {
 /// Number of times the current user has logged/reviewed a specific music item.
 final currentUserItemLogCountProvider = Provider.family<int, ItemReviewQuery>((ref, query) {
   final map = ref.watch(currentUserLogCountsProvider);
-  return map[query.canonicalKey] ?? map[query.id] ?? 0;
+  final countFromMap = map[query.canonicalKey] ?? map[query.id] ?? 0;
+
+  final currentUserId = ref.watch(currentUserIdProvider);
+  final userReviews = ref.watch(userReviewsProvider(currentUserId)).asData?.value ?? const [];
+  final guestReviews = currentUserId != 'user_me'
+      ? (ref.watch(userReviewsProvider('user_me')).asData?.value ?? const [])
+      : const <Review>[];
+  final countFromResilientMatch = [...userReviews, ...guestReviews].where((r) {
+    if (r.musicItemId.isNotEmpty && r.musicItemId == query.id) return true;
+    return r.matchesItem(
+      id: query.id,
+      name: query.name,
+      artist: query.artist,
+      type: query.type,
+    );
+  }).length;
+
+  return countFromMap > countFromResilientMatch ? countFromMap : countFromResilientMatch;
 });
 
 /// Provider that returns the chronological 1-based log sequence index of a specific review

@@ -61,113 +61,260 @@ class DeezerApiService {
     }
   }
 
-  /// Search specifically for albums.
+  /// Search specifically for albums with transliteration resilience.
   Future<List<MusicItem>> searchAlbums(String query, {int limit = 10}) async {
     final clean = query.trim();
     if (clean.isEmpty) return [];
 
-    try {
-      final uri = Uri.https(_baseUrl, '/search/album', {
-        'q': clean,
-        'limit': limit.clamp(1, 25).toString(),
-      });
-      final res = await _client.get(uri);
-      if (res.statusCode == 200) {
-        final json = jsonDecode(res.body) as Map<String, dynamic>;
-        if (json.containsKey('error')) return [];
-        final data = json['data'] as List?;
-        if (data != null) {
-          return data
-              .whereType<Map<String, dynamic>>()
-              .map((a) => MusicItem.fromDeezerAlbum(a))
-              .toList();
+    final translits = getTransliterations(clean);
+    final queriesToTry = [clean, ...translits];
+
+    final collected = <MusicItem>[];
+    final seenIds = <String>{};
+
+    for (final q in queriesToTry) {
+      try {
+        final uri = Uri.https(_baseUrl, '/search/album', {
+          'q': q,
+          'limit': limit.clamp(1, 25).toString(),
+        });
+        final res = await _client.get(uri);
+        if (res.statusCode == 200) {
+          final json = jsonDecode(res.body) as Map<String, dynamic>;
+          if (json.containsKey('error')) continue;
+          final data = json['data'] as List?;
+          if (data != null) {
+            for (final a in data.whereType<Map<String, dynamic>>()) {
+              final item = MusicItem.fromDeezerAlbum(a);
+              if (seenIds.add(item.id)) {
+                collected.add(item);
+              }
+            }
+          }
         }
-      }
-      return [];
-    } catch (_) {
-      return [];
+      } catch (_) {}
     }
+
+    if (collected.isEmpty) return [];
+
+    // Prioritize albums whose artist matches the query or transliterations
+    if (translits.isNotEmpty) {
+      final cleanLower = clean.toLowerCase();
+      collected.sort((a, b) {
+        final aArtist = a.artist.toLowerCase();
+        final bArtist = b.artist.toLowerCase();
+
+        final aExact = aArtist == cleanLower || translits.any((t) => aArtist == t.toLowerCase());
+        final bExact = bArtist == cleanLower || translits.any((t) => bArtist == t.toLowerCase());
+
+        if (aExact != bExact) {
+          return aExact ? -1 : 1;
+        }
+        return b.popularity.compareTo(a.popularity);
+      });
+    }
+
+    return collected.take(limit.clamp(1, 25)).toList();
   }
 
-  /// Search specifically for tracks.
+  /// Search specifically for tracks with transliteration resilience.
   Future<List<MusicItem>> searchTracks(String query, {int limit = 10}) async {
     final clean = query.trim();
     if (clean.isEmpty) return [];
 
-    try {
-      final uri = Uri.https(_baseUrl, '/search/track', {
-        'q': clean,
-        'limit': limit.clamp(1, 25).toString(),
-      });
-      final res = await _client.get(uri);
-      if (res.statusCode == 200) {
-        final json = jsonDecode(res.body) as Map<String, dynamic>;
-        if (json.containsKey('error')) return [];
-        final data = json['data'] as List?;
-        if (data != null) {
-          return data
-              .whereType<Map<String, dynamic>>()
-              .map((t) => MusicItem.fromDeezerTrack(t))
-              .toList();
+    final translits = getTransliterations(clean);
+    final queriesToTry = [clean, ...translits];
+
+    final collected = <MusicItem>[];
+    final seenIds = <String>{};
+
+    for (final q in queriesToTry) {
+      try {
+        final uri = Uri.https(_baseUrl, '/search/track', {
+          'q': q,
+          'limit': limit.clamp(1, 25).toString(),
+        });
+        final res = await _client.get(uri);
+        if (res.statusCode == 200) {
+          final json = jsonDecode(res.body) as Map<String, dynamic>;
+          if (json.containsKey('error')) continue;
+          final data = json['data'] as List?;
+          if (data != null) {
+            for (final t in data.whereType<Map<String, dynamic>>()) {
+              final item = MusicItem.fromDeezerTrack(t);
+              if (seenIds.add(item.id)) {
+                collected.add(item);
+              }
+            }
+          }
         }
-      }
-      return [];
-    } catch (_) {
-      return [];
+      } catch (_) {}
     }
+
+    if (collected.isEmpty) return [];
+
+    // Prioritize tracks whose artist matches the query or transliterations
+    if (translits.isNotEmpty) {
+      final cleanLower = clean.toLowerCase();
+      collected.sort((a, b) {
+        final aArtist = a.artist.toLowerCase();
+        final bArtist = b.artist.toLowerCase();
+
+        final aExact = aArtist == cleanLower || translits.any((t) => aArtist == t.toLowerCase());
+        final bExact = bArtist == cleanLower || translits.any((t) => bArtist == t.toLowerCase());
+
+        if (aExact != bExact) {
+          return aExact ? -1 : 1;
+        }
+        return b.popularity.compareTo(a.popularity);
+      });
+    }
+
+    return collected.take(limit.clamp(1, 25)).toList();
   }
 
-  /// Search for matching artists.
-  Future<List<Artist>> searchArtists(String query, {int limit = 5}) async {
+  /// Known multilingual / script transliterations for international artists
+  static final Map<String, List<String>> _artistTransliterations = {
+    'kino': ['кино'],
+    'кино': ['kino'],
+    'tsoi': ['цой', 'виктор цой', 'кино'],
+    'tsoy': ['цой', 'виктор цой', 'кино'],
+    'цой': ['tsoi', 'кино'],
+    'виктор цой': ['viktor tsoi', 'кино'],
+    'grazhdanskaya oborona': ['гражданская оборона', 'гроб'],
+    'гражданская оборона': ['grazhdanskaya oborona'],
+    'grob': ['гражданская оборона', 'гроб'],
+    'гроб': ['гражданская оборона'],
+    'ddt': ['ддт'],
+    'ддт': ['ddt'],
+    'aquarium': ['аквариум'],
+    'akvarium': ['аквариум'],
+    'аквариум': ['aquarium'],
+    'zemfira': ['земфира'],
+    'земфира': ['zemfira'],
+    'korol i shut': ['король и шут', 'киш'],
+    'король и шут': ['korol i shut'],
+    'киш': ['король и шут'],
+    'splean': ['сплин'],
+    'splin': ['сплин'],
+    'сплин': ['splean'],
+    'mumiy troll': ['мумий тролль'],
+    'мумий тролль': ['mumiy troll'],
+    'nautilus pompilius': ['наутилус помпилиус'],
+    'наутилус помпилиус': ['nautilus pompilius'],
+    'bi-2': ['би-2'],
+    'bi 2': ['би-2'],
+    'би-2': ['bi-2'],
+    'aria': ['ария'],
+    'ария': ['aria'],
+    'ploho': ['плохо'],
+    'плохо': ['ploho'],
+    'molchat doma': ['молчат дома'],
+    'молчат дома': ['molchat doma'],
+    'kinoko teikoku': ['きのこ帝国'],
+    'きのこ帝国': ['kinoko teikoku'],
+    'midori': ['ミドリ'],
+    'ミドリ': ['midori'],
+    'fishmans': ['フィッシュマンズ'],
+    'フィッシュマンズ': ['fishmans'],
+    'soutaiseiriron': ['相対性理論'],
+    '相対性理論': ['soutaiseiriron'],
+    'radwimps': ['ラッドウィンプス'],
+    'ラッドウィンプス': ['radwimps'],
+    'the black skirts': ['검정치마'],
+    '검정치마': ['the black skirts'],
+    'hyukoh': ['혁오'],
+    '혁오': ['hyukoh'],
+    'se so neon': ['새소년'],
+    '새소년': ['se so neon'],
+  };
+
+  static List<String> getTransliterations(String query) {
+    final clean = query.trim().toLowerCase();
+    final direct = _artistTransliterations[clean];
+    if (direct != null && direct.isNotEmpty) {
+      return direct;
+    }
+    final isCyrillic = RegExp(r'[\u0400-\u04FF]').hasMatch(clean);
+    if (isCyrillic) {
+      final latin = MusicItem.cyrillicToLatin(clean);
+      if (latin.isNotEmpty && latin != clean) {
+        return [latin];
+      }
+    }
+    return const [];
+  }
+
+  /// Search for matching artists with popularity-ranking and transliteration resilience.
+  Future<List<Artist>> searchArtists(String query, {int limit = 10}) async {
     final clean = query.trim();
     if (clean.isEmpty) return [];
 
-    try {
-      final uri = Uri.https(_baseUrl, '/search/artist', {
-        'q': clean,
-        'limit': limit.clamp(1, 20).toString(),
-      });
-      final res = await _client.get(uri);
-      if (res.statusCode == 200) {
-        final json = jsonDecode(res.body) as Map<String, dynamic>;
-        if (json.containsKey('error')) return [];
-        final data = json['data'] as List?;
-        if (data != null) {
-          return data
-              .whereType<Map<String, dynamic>>()
-              .map((a) => Artist.fromDeezerJson(a))
-              .toList();
+    final cleanLower = clean.toLowerCase();
+    final translits = getTransliterations(clean);
+    final queriesToTry = [clean, ...translits];
+
+    final collectedArtists = <Artist>[];
+    final seenIds = <String>{};
+
+    for (final q in queriesToTry) {
+      try {
+        final uri = Uri.https(_baseUrl, '/search/artist', {
+          'q': q,
+          'limit': '25',
+        });
+        final res = await _client.get(uri);
+        if (res.statusCode == 200) {
+          final json = jsonDecode(res.body) as Map<String, dynamic>;
+          if (json.containsKey('error')) continue;
+          final data = json['data'] as List?;
+          if (data != null) {
+            for (final item in data.whereType<Map<String, dynamic>>()) {
+              final artist = Artist.fromDeezerJson(item);
+              if (seenIds.add(artist.id)) {
+                collectedArtists.add(artist);
+              }
+            }
+          }
         }
-      }
-      return [];
-    } catch (_) {
-      return [];
+      } catch (_) {}
     }
+
+    if (collectedArtists.isEmpty) return [];
+
+    // Rank artists:
+    // 1. Direct name match or transliterated exact match
+    // 2. High follower count (nb_fan)
+    collectedArtists.sort((a, b) {
+      final aNameLower = a.name.toLowerCase();
+      final bNameLower = b.name.toLowerCase();
+
+      final aExact = aNameLower == cleanLower || translits.any((t) => aNameLower == t);
+      final bExact = bNameLower == cleanLower || translits.any((t) => bNameLower == t);
+
+      // Prioritize exact match if it has legitimate fanbase (> 100 fans)
+      if (aExact != bExact) {
+        if (aExact && (a.followers >= 100 || b.followers < 1000)) return -1;
+        if (bExact && (b.followers >= 100 || a.followers < 1000)) return 1;
+      }
+
+      return b.followers.compareTo(a.followers);
+    });
+
+    return collectedArtists.take(limit).toList();
   }
 
-  /// Search for a single artist by name.
+  /// Search for a single best-matching artist by name with popularity ranking.
   Future<Map<String, dynamic>?> searchArtist(String artistName) async {
     final clean = artistName.trim();
     if (clean.isEmpty) return null;
 
-    try {
-      final uri = Uri.https(_baseUrl, '/search/artist', {
-        'q': clean,
-        'limit': '1',
-      });
-      final res = await _client.get(uri);
-      if (res.statusCode == 200) {
-        final json = jsonDecode(res.body) as Map<String, dynamic>;
-        if (json.containsKey('error')) return null;
-        final data = json['data'] as List?;
-        if (data != null && data.isNotEmpty) {
-          return data.first as Map<String, dynamic>;
-        }
-      }
-      return null;
-    } catch (_) {
-      return null;
+    final artists = await searchArtists(clean, limit: 10);
+    if (artists.isNotEmpty) {
+      final top = artists.first;
+      return getArtist(top.id);
     }
+    return null;
   }
 
   /// Get detailed album information including complete tracklist.

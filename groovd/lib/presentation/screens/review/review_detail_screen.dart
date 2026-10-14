@@ -115,7 +115,12 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
 
     if (mounted) {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => MusicDetailScreen(item: item!)),
+        MaterialPageRoute(
+          builder: (_) => MusicDetailScreen(
+            item: item!,
+            initialReview: _review,
+          ),
+        ),
       );
     }
   }

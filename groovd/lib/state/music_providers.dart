@@ -87,7 +87,7 @@ final artistSearchResultsProvider = FutureProvider<List<Artist>>((ref) async {
     return [];
   }
 
-  return repo.searchArtists(query.trim(), limit: 5);
+  return repo.searchArtists(query.trim(), limit: 10);
 });
 
 /// Search Results Provider
