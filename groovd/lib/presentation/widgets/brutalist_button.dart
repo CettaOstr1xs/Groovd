@@ -10,6 +10,7 @@ class BrutalistButton extends StatefulWidget {
   final Color textColor;
   final Color borderColor;
   final IconData? icon;
+  final Widget? leading;
   final double height;
   final double? width;
   final bool isFullWidth;
@@ -23,6 +24,7 @@ class BrutalistButton extends StatefulWidget {
     this.textColor = AppColors.pureBlack,
     this.borderColor = AppColors.pureBlack,
     this.icon,
+    this.leading,
     this.height = 48,
     this.width,
     this.isFullWidth = false,
@@ -84,6 +86,10 @@ class _BrutalistButtonState extends State<BrutalistButton> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            if (widget.leading != null) ...[
+              widget.leading!,
+              const SizedBox(width: 8),
+            ],
             if (widget.icon != null) ...[
               Icon(widget.icon, size: widget.isSmall ? 14 : 18, color: widget.textColor),
               const SizedBox(width: 8),

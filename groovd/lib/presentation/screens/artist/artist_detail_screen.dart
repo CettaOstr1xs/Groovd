@@ -7,6 +7,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../data/models/artist.dart';
 import '../../../data/models/music_item.dart';
 import '../../../state/artist_providers.dart';
+import '../../widgets/rating_spike_sign.dart';
 import '../detail/music_detail_screen.dart';
 
 enum DiscographyFilter { all, albums, singles }
@@ -463,9 +464,20 @@ class _ArtistDetailScreenState extends ConsumerState<ArtistDetailScreen> {
                               color: _getScoreColor(stats.communityFavoriteScore!),
                               borderRadius: BorderRadius.circular(2),
                             ),
-                            child: Text(
-                              stats.communityFavoriteScore!.toStringAsFixed(1),
-                              style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                RatingSpikeSign(
+                                  rating: stats.communityFavoriteScore!,
+                                  size: 9,
+                                  color: AppColors.pureBlack,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  stats.communityFavoriteScore!.toStringAsFixed(1),
+                                  style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
+                                ),
+                              ],
                             ),
                           ),
                         ],

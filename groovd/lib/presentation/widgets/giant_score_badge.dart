@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
+import 'package:groovd/presentation/widgets/rating_spike_sign.dart';
 
 class GiantScoreBadge extends StatelessWidget {
   final double score;
@@ -64,20 +65,34 @@ class GiantScoreBadge extends StatelessWidget {
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              scoreStr,
-              style: AppTypography.scoreMedium(color: AppColors.pureBlack),
-            ),
-            const SizedBox(width: 2),
-            Text(
-              '/10',
-              style: AppTypography.monoBadge(
-                color: AppColors.pureBlack.withValues(alpha: 0.7),
-                fontSize: 9,
+            if (score > 0) ...[
+              RatingSpikeSign(
+                rating: score,
+                size: 13,
+                color: AppColors.pureBlack,
               ),
+              const SizedBox(width: 4),
+            ],
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  scoreStr,
+                  style: AppTypography.scoreMedium(color: AppColors.pureBlack),
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  '/10',
+                  style: AppTypography.monoBadge(
+                    color: AppColors.pureBlack.withValues(alpha: 0.7),
+                    fontSize: 9,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -130,9 +145,23 @@ class GiantScoreBadge extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Text(
-                  scoreStr,
-                  style: AppTypography.scoreGiant(color: AppColors.pureBlack),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (score > 0) ...[
+                      RatingSpikeSign(
+                        rating: score,
+                        size: 26,
+                        color: AppColors.pureBlack,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Text(
+                      scoreStr,
+                      style: AppTypography.scoreGiant(color: AppColors.pureBlack),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 14),
@@ -271,22 +300,36 @@ class ScoreVerdictBar extends StatelessWidget {
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  scoreStr,
-                  style: AppTypography.scoreMedium(
+                if (score > 0) ...[
+                  RatingSpikeSign(
+                    rating: score,
+                    size: 15,
                     color: AppColors.pureBlack,
                   ),
-                ),
-                const SizedBox(width: 2),
-                Text(
-                  '/10',
-                  style: AppTypography.monoBadge(
-                    color: AppColors.pureBlack.withValues(alpha: 0.75),
-                    fontSize: 9,
-                  ),
+                  const SizedBox(width: 6),
+                ],
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      scoreStr,
+                      style: AppTypography.scoreMedium(
+                        color: AppColors.pureBlack,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '/10',
+                      style: AppTypography.monoBadge(
+                        color: AppColors.pureBlack.withValues(alpha: 0.75),
+                        fontSize: 9,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

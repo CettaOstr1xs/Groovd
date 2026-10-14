@@ -5,6 +5,7 @@ import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/presentation/widgets/critic_avatar.dart';
+import 'package:groovd/presentation/widgets/rating_spike_sign.dart';
 import 'package:groovd/state/auth_providers.dart';
 import 'package:groovd/state/user_profile_provider.dart';
 
@@ -100,7 +101,7 @@ class ReviewCard extends ConsumerWidget {
                 ),
                 // Score Box
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: _scoreColor,
                     borderRadius: BorderRadius.circular(2),
@@ -109,6 +110,12 @@ class ReviewCard extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      RatingSpikeSign(
+                        rating: review.rating,
+                        size: 14,
+                        color: AppColors.pureBlack,
+                      ),
+                      const SizedBox(width: 5),
                       Text(
                         review.scoreFormatted,
                         style: AppTypography.scoreMedium(color: AppColors.pureBlack),

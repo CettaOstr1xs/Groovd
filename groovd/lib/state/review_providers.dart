@@ -228,6 +228,101 @@ final currentUserReviewLogIndexProvider = Provider.family<int, Review>((ref, rev
   return ref.watch(userReviewLogIndexProvider((userId: currentUserId, review: review)));
 });
 
+/// Calculates the automatic overall score for an album or EP based on the current user's
+/// ratings of all individual tracks on the release.
+///
+/// Returns null if:
+/// - The item is not an album or EP (`!item.isRelease`)
+/// - The release has no tracks (`item.tracks.isEmpty`)
+/// - NOT ALL tracks have been rated/reviewed by the user
+///
+/// When ALL tracks have been rated, returns the mathematical average of the user's
+/// track ratings rounded to 1 decimal place (0.0 to 10.0).
+final albumAutomaticOverallScoreProvider = Provider.family<double?, MusicItem>((ref, item) {
+  if (!item.isRelease || item.tracks.isEmpty) {
+    return null;
+  }
+
+  final currentUserId = ref.watch(currentUserIdProvider);
+  final userReviewsAsync = ref.watch(userReviewsProvider(currentUserId));
+  final reviews = userReviewsAsync.asData?.value ?? const [];
+
+  final List<double> trackRatings = [];
+
+  for (final track in item.tracks) {
+    final trackArtist = track.artist.isNotEmpty ? track.artist : item.artist;
+    final trackNormTitle = MusicItem.normalizeTitle(track.name);
+    final trackNormArtist = MusicItem.normalizeArtist(trackArtist);
+    final trackKey = 'song::$trackNormArtist::$trackNormTitle';
+
+    Review? matchedReview;
+    for (final r in reviews) {
+      if (track.id.isNotEmpty && r.musicItemId.isNotEmpty && r.musicItemId == track.id) {
+        matchedReview = r;
+        break;
+      }
+      final rType = r.itemType.toLowerCase();
+      if (rType == 'song' || rType == 'track') {
+        final rNormTitle = MusicItem.normalizeTitle(r.musicItemName);
+        final rNormArtist = MusicItem.normalizeArtist(r.artistName);
+        final rKey = 'song::$rNormArtist::$rNormTitle';
+        if (rKey == trackKey) {
+          matchedReview = r;
+          break;
+        }
+        if (rNormTitle == trackNormTitle &&
+            (trackNormArtist.contains(rNormArtist) || rNormArtist.contains(trackNormArtist))) {
+          matchedReview = r;
+          break;
+        }
+      }
+    }
+
+    if (matchedReview == null) {
+      // At least one track on the album/ep has not been rated
+      return null;
+    }
+
+    trackRatings.add(matchedReview.rating);
+  }
+
+  if (trackRatings.isEmpty) return null;
+  final avg = trackRatings.reduce((a, b) => a + b) / trackRatings.length;
+  return (avg * 10).round() / 10.0;
+});
+
+/// Provider to look up the current user's rating for a specific track, if rated.
+final trackUserRatingProvider = Provider.family<double?, ({TrackInfo track, String albumArtist})>((ref, arg) {
+  final currentUserId = ref.watch(currentUserIdProvider);
+  final userReviewsAsync = ref.watch(userReviewsProvider(currentUserId));
+  final reviews = userReviewsAsync.asData?.value ?? const [];
+
+  final trackArtist = arg.track.artist.isNotEmpty ? arg.track.artist : arg.albumArtist;
+  final trackNormTitle = MusicItem.normalizeTitle(arg.track.name);
+  final trackNormArtist = MusicItem.normalizeArtist(trackArtist);
+  final trackKey = 'song::$trackNormArtist::$trackNormTitle';
+
+  for (final r in reviews) {
+    if (arg.track.id.isNotEmpty && r.musicItemId.isNotEmpty && r.musicItemId == arg.track.id) {
+      return r.rating;
+    }
+    final rType = r.itemType.toLowerCase();
+    if (rType == 'song' || rType == 'track') {
+      final rNormTitle = MusicItem.normalizeTitle(r.musicItemName);
+      final rNormArtist = MusicItem.normalizeArtist(r.artistName);
+      final rKey = 'song::$rNormArtist::$rNormTitle';
+      if (rKey == trackKey) {
+        return r.rating;
+      }
+      if (rNormTitle == trackNormTitle &&
+          (trackNormArtist.contains(rNormArtist) || rNormArtist.contains(trackNormArtist))) {
+        return r.rating;
+      }
+    }
+  }
+  return null;
+});
+
 /// Review Action Controller
 class ReviewController {
   final Ref ref;

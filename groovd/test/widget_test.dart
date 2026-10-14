@@ -18,6 +18,7 @@ import 'package:groovd/data/models/artist.dart';
 import 'package:groovd/presentation/screens/artist/artist_detail_screen.dart';
 import 'package:groovd/presentation/screens/profile/all_rated_releases_screen.dart';
 import 'package:groovd/presentation/widgets/album_art_card.dart';
+import 'package:groovd/presentation/widgets/rating_spike_sign.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/presentation/screens/auth/landing_screen.dart';
 import 'package:groovd/presentation/screens/auth/login_screen.dart';
@@ -1770,7 +1771,331 @@ void main() {
     // Verify + FOLLOW BACK button is rendered in both AppBar and Header
     expect(find.text('+ FOLLOW BACK'), findsNWidgets(2));
   });
+
+  testWidgets('Album automatic overall score badge only appears when ALL tracks are rated', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final albumItem = MusicItem(
+      id: 'album_test_overall',
+      name: 'IN RAINBOWS',
+      artist: 'RADIOHEAD',
+      coverUrl: '',
+      type: MusicType.album,
+      releaseDate: '2007',
+      tracks: const [
+        TrackInfo(id: 'trk_1', name: '15 Step', trackNumber: 1, durationMs: 237000, artist: 'RADIOHEAD'),
+        TrackInfo(id: 'trk_2', name: 'Bodysnatchers', trackNumber: 2, durationMs: 242000, artist: 'RADIOHEAD'),
+      ],
+    );
+
+    final track1Review = Review(
+      id: 'rev_t1',
+      musicItemId: 'trk_1',
+      musicItemName: '15 Step',
+      artistName: 'RADIOHEAD',
+      coverUrl: '',
+      itemType: 'song',
+      userId: 'user_me',
+      userName: 'YOU',
+      userHandle: '@you',
+      rating: 8.0,
+      headline: 'Great opener',
+      body: 'Percussion is incredible.',
+      createdAt: DateTime.now(),
+    );
+
+    // Scenario 1: Only track 1 is rated -> OVERALL badge must NOT appear
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userReviewsProvider('user_me').overrideWith((ref) => Future.value([track1Review])),
+          itemReviewsProvider(ItemReviewQuery.fromItem(albumItem)).overrideWith((ref) => Future.value([])),
+        ],
+        child: MaterialApp(
+          home: MusicDetailScreen(item: albumItem),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.textContaining('OVERALL'), findsNothing);
+    // Track 1 should show its rating badge
+    expect(find.text('8.0'), findsOneWidget);
+
+    // Scenario 2: Both tracks are rated (8.0 and 9.4 -> avg 8.7)
+    final track2Review = Review(
+      id: 'rev_t2',
+      musicItemId: 'trk_2',
+      musicItemName: 'Bodysnatchers',
+      artistName: 'RADIOHEAD',
+      coverUrl: '',
+      itemType: 'song',
+      userId: 'user_me',
+      userName: 'YOU',
+      userHandle: '@you',
+      rating: 9.4,
+      headline: 'Raw guitars',
+      body: 'Thom Yorke at his finest.',
+      createdAt: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        key: UniqueKey(),
+        overrides: [
+          userReviewsProvider('user_me').overrideWith((ref) => Future.value([track1Review, track2Review])),
+          itemReviewsProvider(ItemReviewQuery.fromItem(albumItem)).overrideWith((ref) => Future.value([])),
+        ],
+        child: MaterialApp(
+          home: MusicDetailScreen(item: albumItem),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Average is (8.0 + 9.4)/2 = 8.7
+    // Verify OVERALL 8.7 badge appears in both metadata wrap and tracklist header
+    expect(find.text('OVERALL 8.7'), findsNWidgets(2));
+
+    // Now tap + LOG YOUR REVIEW to verify it opens WriteReviewModal with 8.7 auto-set
+    await tester.tap(find.text('+ LOG YOUR REVIEW'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // The modal's score live display should default to 8.7
+    expect(find.text('8.7'), findsWidgets);
+    // The TAP TO SET chip should be rendered
+    final tapToSetFinder = find.text('TRACKS OVERALL: 8.7 (TAP TO SET)');
+    expect(tapToSetFinder, findsOneWidget);
+
+    // Verify user can freely change rating via slider interaction
+    final sliderFinder = find.byType(Slider);
+    expect(sliderFinder, findsOneWidget);
+    await tester.tap(sliderFinder);
+    await tester.pump();
+
+    // Tap the TAP TO SET chip to snap back to the computed 8.7 overall score
+    await tester.tap(tapToSetFinder);
+    await tester.pump();
+    expect(find.text('8.7'), findsWidgets);
+  });
+
+  testWidgets('RatingSpikeSign renders hollow for <= 6.0, full for 6.1-9.4, and 8-point for 9.5-10.0', (WidgetTester tester) async {
+    // 1. Below / equal to 6.0 -> hollow tier
+    const signLow = RatingSpikeSign(rating: 5.5);
+    expect(signLow.tier, RatingSignTier.hollow);
+
+    // Boundary at 6.0
+    const signBoundaryLow = RatingSpikeSign(rating: 6.0);
+    expect(signBoundaryLow.tier, RatingSignTier.hollow);
+
+    // 2. 6.1 until 9.4 -> full tier
+    const signMid = RatingSpikeSign(rating: 8.5);
+    expect(signMid.tier, RatingSignTier.full);
+
+    const signMidLower = RatingSpikeSign(rating: 6.1);
+    expect(signMidLower.tier, RatingSignTier.full);
+
+    const signMidUpper = RatingSpikeSign(rating: 9.4);
+    expect(signMidUpper.tier, RatingSignTier.full);
+
+    // 3. 9.5 until 10.0 -> eightPoint tier
+    const signHigh = RatingSpikeSign(rating: 9.5);
+    expect(signHigh.tier, RatingSignTier.eightPoint);
+
+    const signPerfect = RatingSpikeSign(rating: 10.0);
+    expect(signPerfect.tier, RatingSignTier.eightPoint);
+
+    // Render in widget tree to verify CustomPaint drawing executes without errors
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              RatingSpikeSign(rating: 4.0, size: 20),
+              RatingSpikeSign(rating: 8.0, size: 24),
+              RatingSpikeSign(rating: 9.8, size: 28),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    expect(find.byType(RatingSpikeSign), findsNWidgets(3));
+    expect(find.byType(CustomPaint), findsWidgets);
+  });
+
+  testWidgets('ReviewCard renders RatingSpikeSign alongside score formatted', (WidgetTester tester) async {
+    final review = Review(
+      id: 'rev_spike_test',
+      musicItemId: 'song_spike',
+      musicItemName: 'PARANOID ANDROID',
+      artistName: 'RADIOHEAD',
+      coverUrl: '',
+      itemType: 'song',
+      userId: 'user_me',
+      userName: 'YOU',
+      userHandle: '@you',
+      rating: 9.8,
+      headline: 'Best song of the 90s',
+      body: 'Epic 3-part suite.',
+      createdAt: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: ReviewCard(review: review),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    // Verify RatingSpikeSign is present in the ReviewCard
+    final spikeFinder = find.byType(RatingSpikeSign);
+    expect(spikeFinder, findsOneWidget);
+    final spikeWidget = tester.widget<RatingSpikeSign>(spikeFinder);
+    expect(spikeWidget.rating, 9.8);
+    expect(spikeWidget.tier, RatingSignTier.eightPoint);
+  });
+
+  testWidgets('ProfileScreen renders RatingSpikeSign inside AVG SCORE stat box', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    final testReviews = [
+      Review(
+        id: 'rev_avg_1',
+        musicItemId: 'alb_1',
+        musicItemName: 'Discovery',
+        artistName: 'Daft Punk',
+        coverUrl: '',
+        itemType: 'album',
+        userId: 'user_me',
+        userName: 'YOU',
+        userHandle: '@you',
+        rating: 8.5,
+        headline: 'French touch classic',
+        body: 'Timeless masterpiece.',
+        createdAt: DateTime.now(),
+      ),
+      Review(
+        id: 'rev_avg_2',
+        musicItemId: 'alb_2',
+        musicItemName: 'Random Access Memories',
+        artistName: 'Daft Punk',
+        coverUrl: '',
+        itemType: 'album',
+        userId: 'user_me',
+        userName: 'YOU',
+        userHandle: '@you',
+        rating: 9.5,
+        headline: 'Audiophile dream',
+        body: 'Perfection.',
+        createdAt: DateTime.now(),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userReviewsProvider.overrideWith((ref, userId) async => testReviews),
+        ],
+        child: const MaterialApp(
+          home: ProfileScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Verify RatingSpikeSign is present inside the AVG score stat box
+    final selfSpikeFinder = find.descendant(
+      of: find.ancestor(
+        of: find.text('AVG SCORE'),
+        matching: find.byWidgetPredicate((w) => w.runtimeType.toString() == '_StatBox'),
+      ),
+      matching: find.byType(RatingSpikeSign),
+    );
+    expect(selfSpikeFinder, findsOneWidget);
+    final selfSpike = tester.widget<RatingSpikeSign>(selfSpikeFinder);
+    expect(selfSpike.rating, 9.0);
+    expect(selfSpike.tier, RatingSignTier.full);
+  });
+
+  testWidgets('FriendProfileScreen renders RatingSpikeSign inside AVG SCORE stat box', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    const testFriend = FriendProfile(
+      userId: 'friend_avg_tester',
+      userName: 'DISCO_CRITIC',
+      userHandle: 'discocritic',
+      bio: 'Lover of groove.',
+      reviewsCount: 1,
+      followersCount: 120,
+      followingCount: 50,
+      wantlistCount: 2,
+      listsCount: 1,
+      isFollowing: false,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          friendReviewsProvider.overrideWith(
+            (ref, friendId) async => [
+              Review(
+                id: 'rev_f_1',
+                musicItemId: 'alb_3',
+                musicItemName: 'Cross',
+                artistName: 'Justice',
+                coverUrl: '',
+                itemType: 'album',
+                userId: 'friend_avg_tester',
+                userName: 'DISCO_CRITIC',
+                userHandle: '@discocritic',
+                rating: 9.6,
+                headline: 'Distorted disco',
+                body: 'Electrifying.',
+                createdAt: DateTime.now(),
+              ),
+            ],
+          ),
+        ],
+        child: const MaterialApp(
+          home: FriendProfileScreen(initialProfile: testFriend),
+        ),
+      ),
+    );
+
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    final friendSpikeFinder = find.descendant(
+      of: find.ancestor(
+        of: find.text('AVG SCORE'),
+        matching: find.byWidgetPredicate((w) => w.runtimeType.toString() == '_StatBox'),
+      ),
+      matching: find.byType(RatingSpikeSign),
+    );
+    expect(friendSpikeFinder, findsOneWidget);
+    final friendSpike = tester.widget<RatingSpikeSign>(friendSpikeFinder);
+    expect(friendSpike.rating, 9.6);
+    expect(friendSpike.tier, RatingSignTier.eightPoint);
+  });
 }
-
-
-

@@ -7,6 +7,7 @@ import '../../../data/models/review.dart';
 import '../../../state/review_providers.dart';
 import '../../widgets/album_art_card.dart';
 import '../../widgets/brutalist_button.dart';
+import '../../widgets/rating_spike_sign.dart';
 import '../review/review_detail_screen.dart';
 
 enum RatedFilter { all, albums, eps, songs, perfect10s }
@@ -308,6 +309,7 @@ class _AllRatedReleasesScreenState extends ConsumerState<AllRatedReleasesScreen>
                                 label: 'AVG SCORE',
                                 value: avgScore.toStringAsFixed(1),
                                 accentColor: AppColors.acidLime,
+                                rating: avgScore > 0 ? avgScore : null,
                               ),
                               Container(width: 1, height: 24, color: AppColors.border),
                               _MiniStat(
@@ -638,11 +640,13 @@ class _MiniStat extends StatelessWidget {
   final String label;
   final String value;
   final Color accentColor;
+  final double? rating;
 
   const _MiniStat({
     required this.label,
     required this.value,
     required this.accentColor,
+    this.rating,
   });
 
   @override
@@ -650,12 +654,26 @@ class _MiniStat extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          value,
-          style: AppTypography.monoBadge(
-            color: accentColor,
-            fontSize: 13,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (rating != null && rating! > 0) ...[
+              RatingSpikeSign(
+                rating: rating!,
+                size: 11,
+                color: accentColor,
+              ),
+              const SizedBox(width: 3),
+            ],
+            Text(
+              value,
+              style: AppTypography.monoBadge(
+                color: accentColor,
+                fontSize: 13,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 1),
         Text(
@@ -815,12 +833,23 @@ class _RatedPosterCard extends ConsumerWidget {
                         BoxShadow(color: AppColors.pureBlack, offset: Offset(1.5, 1.5), blurRadius: 0),
                       ],
                     ),
-                    child: Text(
-                      review.rating.toStringAsFixed(1),
-                      style: AppTypography.monoBadge(
-                        color: AppColors.pureBlack,
-                        fontSize: 9,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        RatingSpikeSign(
+                          rating: review.rating,
+                          size: 9,
+                          color: AppColors.pureBlack,
+                        ),
+                        const SizedBox(width: 2.5),
+                        Text(
+                          review.rating.toStringAsFixed(1),
+                          style: AppTypography.monoBadge(
+                            color: AppColors.pureBlack,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -992,6 +1021,12 @@ class _RatedListCard extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  RatingSpikeSign(
+                    rating: review.rating,
+                    size: 13,
+                    color: AppColors.pureBlack,
+                  ),
+                  const SizedBox(height: 2),
                   Text(
                     review.rating.toStringAsFixed(1),
                     style: AppTypography.monoBadge(

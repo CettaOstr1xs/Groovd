@@ -5,6 +5,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../data/models/review.dart';
 import '../../widgets/album_art_card.dart';
 import '../../widgets/critic_avatar.dart';
+import '../../widgets/rating_spike_sign.dart';
 
 enum StoryTheme {
   darkMatrix,
@@ -302,14 +303,25 @@ class CritiqueStoryCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              '${review.scoreFormatted}/10',
-                              style: AppTypography.scoreLarge(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              RatingSpikeSign(
+                                rating: review.rating,
+                                size: 22,
                                 color: _accentColor,
                               ),
-                            ),
+                              const SizedBox(width: 6),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  '${review.scoreFormatted}/10',
+                                  style: AppTypography.scoreLarge(
+                                    color: _accentColor,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

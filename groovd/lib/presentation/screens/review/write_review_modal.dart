@@ -8,6 +8,7 @@ import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
 import 'package:groovd/presentation/widgets/critic_avatar.dart';
+import 'package:groovd/presentation/widgets/rating_spike_sign.dart';
 import 'package:groovd/state/auth_providers.dart';
 import 'package:groovd/state/review_providers.dart';
 import 'package:groovd/state/user_profile_provider.dart';
@@ -18,6 +19,7 @@ class WriteReviewModal extends ConsumerStatefulWidget {
   final bool isLogAgain;
   final int? previousLogCount;
   final double? initialRating;
+  final double? autoOverallScore;
 
   const WriteReviewModal({
     super.key,
@@ -26,6 +28,7 @@ class WriteReviewModal extends ConsumerStatefulWidget {
     this.isLogAgain = false,
     this.previousLogCount,
     this.initialRating,
+    this.autoOverallScore,
   });
 
   static Future<Review?> show(
@@ -35,6 +38,7 @@ class WriteReviewModal extends ConsumerStatefulWidget {
     bool isLogAgain = false,
     int? previousLogCount,
     double? initialRating,
+    double? autoOverallScore,
   }) {
     return showModalBottomSheet<Review>(
       context: context,
@@ -46,6 +50,7 @@ class WriteReviewModal extends ConsumerStatefulWidget {
         isLogAgain: isLogAgain,
         previousLogCount: previousLogCount,
         initialRating: initialRating,
+        autoOverallScore: autoOverallScore,
       ),
     );
   }
@@ -82,11 +87,15 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
   @override
   void initState() {
     super.initState();
-    if (widget.existingReview != null) {
+    final computedAutoScore = widget.autoOverallScore ??
+        ref.read(albumAutomaticOverallScoreProvider(widget.musicItem));
+    if (widget.existingReview != null && !widget.isLogAgain) {
       _rating = widget.existingReview!.rating;
       _headlineController.text = widget.existingReview!.headline;
       _bodyController.text = widget.existingReview!.body;
       _selectedTags.addAll(widget.existingReview!.tags);
+    } else if (computedAutoScore != null) {
+      _rating = computedAutoScore;
     } else if (widget.initialRating != null) {
       _rating = widget.initialRating!;
     }
@@ -403,20 +412,32 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Text(
-                            _rating.toStringAsFixed(1),
-                            style: AppTypography.scoreGiant(color: AppColors.pureBlack),
+                          RatingSpikeSign(
+                            rating: _rating,
+                            size: 28,
+                            color: AppColors.pureBlack,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '/10',
-                            style: AppTypography.monoBadge(
-                              color: AppColors.pureBlack.withValues(alpha: 0.7),
-                              fontSize: 14,
-                            ),
+                          const SizedBox(width: 10),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                _rating.toStringAsFixed(1),
+                                style: AppTypography.scoreGiant(color: AppColors.pureBlack),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '/10',
+                                style: AppTypography.monoBadge(
+                                  color: AppColors.pureBlack.withValues(alpha: 0.7),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -431,10 +452,63 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
                       border: Border.all(color: AppColors.border),
                       borderRadius: BorderRadius.circular(2),
                     ),
-                    child: Text(
-                      _descriptor,
-                      style: AppTypography.monoBadge(color: _scoreColor, fontSize: 10),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        RatingSpikeSign(
+                          rating: _rating,
+                          size: 13,
+                          color: _scoreColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _descriptor,
+                          style: AppTypography.monoBadge(color: _scoreColor, fontSize: 10),
+                        ),
+                      ],
                     ),
+                  ),
+                  Builder(
+                    builder: (context) {
+                      final effectiveAutoScore = widget.autoOverallScore ??
+                          ref.watch(albumAutomaticOverallScoreProvider(widget.musicItem));
+                      if (effectiveAutoScore == null) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() {
+                              _rating = effectiveAutoScore;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(2),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.cyberCyan.withValues(alpha: 0.15),
+                              border: Border.all(color: AppColors.cyberCyan, width: 1.0),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.calculate_outlined, size: 12, color: AppColors.cyberCyan),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'TRACKS OVERALL: ${effectiveAutoScore.toStringAsFixed(1)} (TAP TO SET)',
+                                  style: AppTypography.monoBadge(
+                                    color: AppColors.cyberCyan,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -633,7 +707,11 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
                             : (_hasWrittenText
                                 ? 'PUBLISH CRITIQUE'
                                 : 'LOG SCORE [${_rating.toStringAsFixed(1)}] // QUICK RATE')),
-                icon: Icons.check,
+                leading: RatingSpikeSign(
+                  rating: _rating,
+                  size: 16,
+                  color: AppColors.pureBlack,
+                ),
                 isFullWidth: true,
                 backgroundColor: AppColors.acidLime,
                 textColor: AppColors.pureBlack,

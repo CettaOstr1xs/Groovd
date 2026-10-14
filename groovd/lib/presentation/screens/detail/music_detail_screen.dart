@@ -13,6 +13,7 @@ import 'package:groovd/presentation/screens/review/write_review_modal.dart';
 import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
 import 'package:groovd/presentation/widgets/giant_score_badge.dart';
+import 'package:groovd/presentation/widgets/rating_spike_sign.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/state/music_providers.dart';
 import 'package:groovd/state/review_providers.dart';
@@ -200,6 +201,7 @@ class MusicDetailScreen extends ConsumerWidget {
     final avgScoreAsync = ref.watch(itemAverageScoreProvider(reviewQuery));
     final reviewCountAsync = ref.watch(itemReviewCountProvider(reviewQuery));
     final isWishlisted = ref.watch(isItemInWishlistProvider(activeItem));
+    final autoOverallScore = ref.watch(albumAutomaticOverallScoreProvider(activeItem));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -277,7 +279,8 @@ class MusicDetailScreen extends ConsumerWidget {
                       activeItem,
                       isLogAgain: true,
                       previousLogCount: userLogCount,
-                      initialRating: existingUserReview.rating,
+                      autoOverallScore: autoOverallScore,
+                      initialRating: autoOverallScore ?? existingUserReview.rating,
                     ),
                   ),
                 ),
@@ -287,6 +290,11 @@ class MusicDetailScreen extends ConsumerWidget {
                   child: BrutalistButton(
                     label: 'EDIT [${existingUserReview.rating.toStringAsFixed(1)}]',
                     icon: Icons.edit_note,
+                    leading: RatingSpikeSign(
+                      rating: existingUserReview.rating,
+                      size: 14,
+                      color: AppColors.textPrimary,
+                    ),
                     backgroundColor: AppColors.surfaceElevated,
                     textColor: AppColors.textPrimary,
                     borderColor: AppColors.borderBold,
@@ -295,6 +303,7 @@ class MusicDetailScreen extends ConsumerWidget {
                       context,
                       activeItem,
                       existingReview: existingUserReview,
+                      autoOverallScore: autoOverallScore,
                     ),
                   ),
                 ),
@@ -309,6 +318,8 @@ class MusicDetailScreen extends ConsumerWidget {
                     onPressed: () => WriteReviewModal.show(
                       context,
                       activeItem,
+                      autoOverallScore: autoOverallScore,
+                      initialRating: autoOverallScore,
                     ),
                   ),
                 ),
@@ -421,6 +432,30 @@ class MusicDetailScreen extends ConsumerWidget {
                               const SizedBox(width: 3),
                               Text(
                                 'HEARD ${userLogCount}X',
+                                style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (autoOverallScore != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.cyberCyan,
+                            border: Border.all(color: AppColors.pureBlack, width: 1.0),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              RatingSpikeSign(
+                                rating: autoOverallScore,
+                                size: 11,
+                                color: AppColors.pureBlack,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'OVERALL ${autoOverallScore.toStringAsFixed(1)}',
                                 style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
                               ),
                             ],
@@ -547,15 +582,46 @@ class MusicDetailScreen extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      detailAsync.isLoading && activeItem.tracks.isEmpty
-                          ? 'LOADING TRACKLIST...'
-                          : 'TRACKLIST [${activeItem.tracks.length}]',
-                      style: AppTypography.monoLabel(
-                        color: AppColors.textPrimary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          detailAsync.isLoading && activeItem.tracks.isEmpty
+                              ? 'LOADING TRACKLIST...'
+                              : 'TRACKLIST [${activeItem.tracks.length}]',
+                          style: AppTypography.monoLabel(
+                            color: AppColors.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (autoOverallScore != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.cyberCyan,
+                              border: Border.all(color: AppColors.pureBlack, width: 1.0),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                RatingSpikeSign(
+                                  rating: autoOverallScore,
+                                  size: 11,
+                                  color: AppColors.pureBlack,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'OVERALL ${autoOverallScore.toStringAsFixed(1)}',
+                                  style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     if (activeItem.tracks.isNotEmpty)
                       Text(
@@ -606,6 +672,9 @@ class MusicDetailScreen extends ConsumerWidget {
                   ),
                   itemBuilder: (context, index) {
                     final track = activeItem.tracks[index];
+                    final trackRating = ref.watch(
+                      trackUserRatingProvider((track: track, albumArtist: activeItem.artist)),
+                    );
                     final bool hasDuplicatedTrackNumbers = activeItem.tracks.length > 1 &&
                         activeItem.tracks[0].trackNumber == activeItem.tracks[1].trackNumber;
                     final trackNumber = (track.trackNumber > 0 && !hasDuplicatedTrackNumbers)
@@ -667,6 +736,35 @@ class MusicDetailScreen extends ConsumerWidget {
                               ],
                             ),
                           ),
+                          if (trackRating != null) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: AppColors.acidLime.withValues(alpha: 0.15),
+                                border: Border.all(color: AppColors.acidLime, width: 1.0),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  RatingSpikeSign(
+                                    rating: trackRating,
+                                    size: 10,
+                                    color: AppColors.acidLime,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    trackRating.toStringAsFixed(1),
+                                    style: AppTypography.monoBadge(
+                                      color: AppColors.acidLime,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
                           Text(
                             track.formattedDuration,
                             style: AppTypography.monoLabel(
@@ -722,10 +820,11 @@ class MusicDetailScreen extends ConsumerWidget {
                     onTap: () => WriteReviewModal.show(
                       context,
                       activeItem,
-                      existingReview: existingUserReview == null ? null : null,
+                      existingReview: null,
                       isLogAgain: existingUserReview != null,
                       previousLogCount: userLogCount,
-                      initialRating: existingUserReview?.rating,
+                      autoOverallScore: autoOverallScore,
+                      initialRating: autoOverallScore ?? existingUserReview?.rating,
                     ),
                     child: Text(
                       '+ WRITE YOURS',
@@ -768,6 +867,8 @@ class MusicDetailScreen extends ConsumerWidget {
                             context,
                             activeItem,
                             existingReview: existingUserReview,
+                            autoOverallScore: autoOverallScore,
+                            initialRating: autoOverallScore,
                           ),
                         ),
                       ],
@@ -1106,12 +1207,23 @@ class _MoreByArtistCard extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(1.5),
                         border: Border.all(color: AppColors.pureBlack, width: 1),
                       ),
-                      child: Text(
-                        s.toStringAsFixed(1),
-                        style: AppTypography.monoBadge(
-                          color: AppColors.pureBlack,
-                          fontSize: 8.5,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          RatingSpikeSign(
+                            rating: s,
+                            size: 9,
+                            color: AppColors.pureBlack,
+                          ),
+                          const SizedBox(width: 2.5),
+                          Text(
+                            s.toStringAsFixed(1),
+                            style: AppTypography.monoBadge(
+                              color: AppColors.pureBlack,
+                              fontSize: 8.5,
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },

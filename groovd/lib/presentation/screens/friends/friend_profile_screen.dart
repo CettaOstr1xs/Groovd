@@ -17,6 +17,7 @@ import 'package:groovd/presentation/screens/wishlist/wishlist_screen.dart';
 import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
 import 'package:groovd/presentation/widgets/critic_followers_stats_row.dart';
+import 'package:groovd/presentation/widgets/rating_spike_sign.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/state/friends_provider.dart';
 import 'package:groovd/state/review_providers.dart';
@@ -389,6 +390,7 @@ class FriendProfileScreen extends ConsumerWidget {
                           label: 'AVG SCORE',
                           value: avgScore > 0 ? avgScore.toStringAsFixed(1) : '—',
                           accentColor: AppColors.acidLime,
+                          rating: avgScore > 0 ? avgScore : null,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -866,11 +868,13 @@ class _StatBox extends StatelessWidget {
   final String label;
   final String value;
   final Color accentColor;
+  final double? rating;
 
   const _StatBox({
     required this.label,
     required this.value,
     required this.accentColor,
+    this.rating,
   });
 
   @override
@@ -884,9 +888,27 @@ class _StatBox extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(
-            value,
-            style: AppTypography.scoreLarge(color: accentColor),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (rating != null && rating! > 0) ...[
+                  RatingSpikeSign(
+                    rating: rating!,
+                    size: 18,
+                    color: accentColor,
+                  ),
+                  const SizedBox(width: 5),
+                ],
+                Text(
+                  value,
+                  style: AppTypography.scoreLarge(color: accentColor),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -1079,12 +1101,23 @@ class _RecentActivityCard extends StatelessWidget {
                           color: _scoreColor,
                           borderRadius: BorderRadius.circular(1),
                         ),
-                        child: Text(
-                          review.rating.toStringAsFixed(1),
-                          style: AppTypography.monoBadge(
-                            color: AppColors.pureBlack,
-                            fontSize: 9,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            RatingSpikeSign(
+                              rating: review.rating,
+                              size: 9,
+                              color: AppColors.pureBlack,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              review.rating.toStringAsFixed(1),
+                              style: AppTypography.monoBadge(
+                                color: AppColors.pureBlack,
+                                fontSize: 9,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 6),

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +23,7 @@ import 'package:groovd/presentation/screens/wishlist/wishlist_screen.dart';
 import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
 import 'package:groovd/presentation/widgets/critic_followers_stats_row.dart';
+import 'package:groovd/presentation/widgets/rating_spike_sign.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/state/auth_providers.dart';
 import 'package:groovd/state/dossier_top_picks_provider.dart';
@@ -47,7 +49,9 @@ class ProfileScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(20),
         decoration: const BoxDecoration(
           color: AppColors.surface,
-          border: Border(top: BorderSide(color: AppColors.acidLime, width: 2.0)),
+          border: Border(
+            top: BorderSide(color: AppColors.acidLime, width: 2.0),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -56,7 +60,10 @@ class ProfileScreen extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('CRITIC AVATAR // PHOTO', style: AppTypography.displaySmall()),
+                Text(
+                  'CRITIC AVATAR // PHOTO',
+                  style: AppTypography.displaySmall(),
+                ),
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.of(ctx).pop(),
@@ -82,9 +89,9 @@ class ProfileScreen extends ConsumerWidget {
                     .read(userProfileProvider.notifier)
                     .pickRawImageFromGallery();
                 if (rawFile != null && context.mounted) {
-                  final croppedPath = await Navigator.of(context).push<String?>(
-                    AdjustAvatarScreen.route(imageFile: rawFile),
-                  );
+                  final croppedPath = await Navigator.of(
+                    context,
+                  ).push<String?>(AdjustAvatarScreen.route(imageFile: rawFile));
                   if (croppedPath != null && context.mounted) {
                     await ref
                         .read(userProfileProvider.notifier)
@@ -94,7 +101,9 @@ class ProfileScreen extends ConsumerWidget {
                         SnackBar(
                           content: Text(
                             'CRITIC AVATAR UPDATED',
-                            style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                            style: AppTypography.monoBadge(
+                              color: AppColors.pureBlack,
+                            ),
                           ),
                           backgroundColor: AppColors.acidLime,
                         ),
@@ -117,9 +126,10 @@ class ProfileScreen extends ConsumerWidget {
                   Navigator.of(ctx).pop();
                   final currentFile = File(profile.avatarPath!);
                   if (await currentFile.exists() && context.mounted) {
-                    final croppedPath = await Navigator.of(context).push<String?>(
-                      AdjustAvatarScreen.route(imageFile: currentFile),
-                    );
+                    final croppedPath = await Navigator.of(context)
+                        .push<String?>(
+                          AdjustAvatarScreen.route(imageFile: currentFile),
+                        );
                     if (croppedPath != null && context.mounted) {
                       await ref
                           .read(userProfileProvider.notifier)
@@ -129,7 +139,9 @@ class ProfileScreen extends ConsumerWidget {
                           SnackBar(
                             content: Text(
                               'CRITIC AVATAR REPOSITIONED',
-                              style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                              style: AppTypography.monoBadge(
+                                color: AppColors.pureBlack,
+                              ),
                             ),
                             backgroundColor: AppColors.cyberCyan,
                           ),
@@ -155,7 +167,9 @@ class ProfileScreen extends ConsumerWidget {
                       SnackBar(
                         content: Text(
                           'AVATAR RESET TO MONOGRAM',
-                          style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                          style: AppTypography.monoBadge(
+                            color: AppColors.pureBlack,
+                          ),
                         ),
                         backgroundColor: AppColors.vermillion,
                       ),
@@ -197,7 +211,9 @@ class ProfileScreen extends ConsumerWidget {
               ),
               decoration: const BoxDecoration(
                 color: AppColors.surface,
-                border: Border(top: BorderSide(color: AppColors.borderBold, width: 2.0)),
+                border: Border(
+                  top: BorderSide(color: AppColors.borderBold, width: 2.0),
+                ),
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -229,7 +245,9 @@ class ProfileScreen extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: AppColors.surfaceCard,
                         border: Border.all(
-                          color: isProfileCustomizationExpanded ? AppColors.acidLime : AppColors.border,
+                          color: isProfileCustomizationExpanded
+                              ? AppColors.acidLime
+                              : AppColors.border,
                           width: 1.5,
                         ),
                         borderRadius: BorderRadius.circular(2),
@@ -241,13 +259,15 @@ class ProfileScreen extends ConsumerWidget {
                             onTap: () {
                               HapticFeedback.selectionClick();
                               setModalState(() {
-                                isProfileCustomizationExpanded = !isProfileCustomizationExpanded;
+                                isProfileCustomizationExpanded =
+                                    !isProfileCustomizationExpanded;
                               });
                             },
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Row(
                                     children: [
@@ -269,10 +289,15 @@ class ProfileScreen extends ConsumerWidget {
                                   Row(
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: AppColors.surfaceElevated,
-                                          border: Border.all(color: AppColors.border),
+                                          border: Border.all(
+                                            color: AppColors.border,
+                                          ),
                                         ),
                                         child: Text(
                                           '3 MODULES',
@@ -305,7 +330,8 @@ class ProfileScreen extends ConsumerWidget {
                                 children: [
                                   // 1. Critic Identity Module
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Row(
                                         children: [
@@ -325,10 +351,15 @@ class ProfileScreen extends ConsumerWidget {
                                         ],
                                       ),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 2.5,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: AppColors.surfaceElevated,
-                                          border: Border.all(color: AppColors.border),
+                                          border: Border.all(
+                                            color: AppColors.border,
+                                          ),
                                         ),
                                         child: Text(
                                           'GROOVD ID',
@@ -348,49 +379,96 @@ class ProfileScreen extends ConsumerWidget {
                                         height: 36,
                                         decoration: BoxDecoration(
                                           color: AppColors.acidLime,
-                                          border: Border.all(color: AppColors.pureBlack, width: 1.5),
-                                          borderRadius: BorderRadius.circular(2),
+                                          border: Border.all(
+                                            color: AppColors.pureBlack,
+                                            width: 1.5,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            2,
+                                          ),
                                         ),
                                         child: profile.avatarPath != null
                                             ? ClipRRect(
-                                                borderRadius: BorderRadius.circular(1),
-                                                child: (profile.avatarPath!.startsWith('http://') || profile.avatarPath!.startsWith('https://'))
+                                                borderRadius:
+                                                    BorderRadius.circular(1),
+                                                child:
+                                                    (profile.avatarPath!
+                                                            .startsWith(
+                                                              'http://',
+                                                            ) ||
+                                                        profile.avatarPath!
+                                                            .startsWith(
+                                                              'https://',
+                                                            ))
                                                     ? Image.network(
                                                         profile.avatarPath!,
                                                         fit: BoxFit.cover,
                                                         errorBuilder: (c, e, s) => Center(
                                                           child: Text(
-                                                            profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
-                                                            style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
+                                                            profile
+                                                                    .userName
+                                                                    .isNotEmpty
+                                                                ? profile
+                                                                      .userName[0]
+                                                                      .toUpperCase()
+                                                                : 'C',
+                                                            style: AppTypography.monoBadge(
+                                                              color: AppColors
+                                                                  .pureBlack,
+                                                              fontSize: 13,
+                                                            ),
                                                           ),
                                                         ),
                                                       )
                                                     : Image.file(
-                                                        File(profile.avatarPath!),
+                                                        File(
+                                                          profile.avatarPath!,
+                                                        ),
                                                         fit: BoxFit.cover,
                                                         errorBuilder: (c, e, s) => Center(
                                                           child: Text(
-                                                            profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
-                                                            style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
+                                                            profile
+                                                                    .userName
+                                                                    .isNotEmpty
+                                                                ? profile
+                                                                      .userName[0]
+                                                                      .toUpperCase()
+                                                                : 'C',
+                                                            style: AppTypography.monoBadge(
+                                                              color: AppColors
+                                                                  .pureBlack,
+                                                              fontSize: 13,
+                                                            ),
                                                           ),
                                                         ),
                                                       ),
                                               )
                                             : Center(
                                                 child: Text(
-                                                  profile.userName.isNotEmpty ? profile.userName[0].toUpperCase() : 'C',
-                                                  style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 13),
+                                                  profile.userName.isNotEmpty
+                                                      ? profile.userName[0]
+                                                            .toUpperCase()
+                                                      : 'C',
+                                                  style:
+                                                      AppTypography.monoBadge(
+                                                        color:
+                                                            AppColors.pureBlack,
+                                                        fontSize: 13,
+                                                      ),
                                                 ),
                                               ),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               profile.userName.toUpperCase(),
-                                              style: AppTypography.displaySmall(fontSize: 14),
+                                              style: AppTypography.displaySmall(
+                                                fontSize: 14,
+                                              ),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -408,18 +486,23 @@ class ProfileScreen extends ConsumerWidget {
                                                   Container(
                                                     width: 6,
                                                     height: 6,
-                                                    decoration: const BoxDecoration(
-                                                      color: AppColors.acidLime,
-                                                      shape: BoxShape.circle,
-                                                    ),
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                          color: AppColors
+                                                              .acidLime,
+                                                          shape:
+                                                              BoxShape.circle,
+                                                        ),
                                                   ),
                                                   const SizedBox(width: 5),
                                                   Text(
                                                     'CLOUD SYNC ACTIVE',
-                                                    style: AppTypography.monoBadge(
-                                                      color: AppColors.acidLime,
-                                                      fontSize: 9,
-                                                    ),
+                                                    style:
+                                                        AppTypography.monoBadge(
+                                                          color: AppColors
+                                                              .acidLime,
+                                                          fontSize: 9,
+                                                        ),
                                                   ),
                                                 ],
                                               ),
@@ -444,11 +527,15 @@ class ProfileScreen extends ConsumerWidget {
                                     },
                                   ),
 
-                                  const Divider(height: 28, color: AppColors.border),
+                                  const Divider(
+                                    height: 28,
+                                    color: AppColors.border,
+                                  ),
 
                                   // 2. Header Banner Photo Feature
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Row(
                                         children: [
@@ -468,13 +555,20 @@ class ProfileScreen extends ConsumerWidget {
                                         ],
                                       ),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 2.5,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: AppColors.surfaceElevated,
-                                          border: Border.all(color: AppColors.border),
+                                          border: Border.all(
+                                            color: AppColors.border,
+                                          ),
                                         ),
                                         child: Text(
-                                          profile.backdropPath != null ? 'ACTIVE' : 'NONE',
+                                          profile.backdropPath != null
+                                              ? 'ACTIVE'
+                                              : 'NONE',
                                           style: AppTypography.monoBadge(
                                             color: profile.backdropPath != null
                                                 ? AppColors.acidLime
@@ -500,7 +594,10 @@ class ProfileScreen extends ConsumerWidget {
                                       width: double.infinity,
                                       margin: const EdgeInsets.only(bottom: 12),
                                       decoration: BoxDecoration(
-                                        border: Border.all(color: AppColors.borderBold, width: 1.5),
+                                        border: Border.all(
+                                          color: AppColors.borderBold,
+                                          width: 1.5,
+                                        ),
                                         borderRadius: BorderRadius.circular(2),
                                       ),
                                       child: ClipRRect(
@@ -508,7 +605,8 @@ class ProfileScreen extends ConsumerWidget {
                                         child: Image.file(
                                           File(profile.backdropPath!),
                                           fit: BoxFit.cover,
-                                          errorBuilder: (ctx, err, stack) => const SizedBox.shrink(),
+                                          errorBuilder: (ctx, err, stack) =>
+                                              const SizedBox.shrink(),
                                         ),
                                       ),
                                     ),
@@ -518,22 +616,33 @@ class ProfileScreen extends ConsumerWidget {
                                           child: BrutalistButton(
                                             label: 'CHANGE PHOTO',
                                             icon: Icons.photo_library_outlined,
-                                            backgroundColor: AppColors.surfaceElevated,
+                                            backgroundColor:
+                                                AppColors.surfaceElevated,
                                             textColor: AppColors.textPrimary,
                                             borderColor: AppColors.borderBold,
                                             isSmall: true,
                                             onPressed: () async {
                                               final ok = await ref
-                                                  .read(userProfileProvider.notifier)
+                                                  .read(
+                                                    userProfileProvider
+                                                        .notifier,
+                                                  )
                                                   .pickBackdropFromGallery();
                                               if (context.mounted && ok) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
                                                   SnackBar(
                                                     content: Text(
                                                       'HEADER BANNER UPDATED',
-                                                      style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                                      style:
+                                                          AppTypography.monoBadge(
+                                                            color: AppColors
+                                                                .pureBlack,
+                                                          ),
                                                     ),
-                                                    backgroundColor: AppColors.acidLime,
+                                                    backgroundColor:
+                                                        AppColors.acidLime,
                                                   ),
                                                 );
                                               }
@@ -545,20 +654,33 @@ class ProfileScreen extends ConsumerWidget {
                                           child: BrutalistButton(
                                             label: 'REMOVE PHOTO',
                                             icon: Icons.delete_outline,
-                                            backgroundColor: AppColors.surfaceElevated,
+                                            backgroundColor:
+                                                AppColors.surfaceElevated,
                                             textColor: AppColors.vermillion,
                                             borderColor: AppColors.vermillion,
                                             isSmall: true,
                                             onPressed: () async {
-                                              await ref.read(userProfileProvider.notifier).removeBackdrop();
+                                              await ref
+                                                  .read(
+                                                    userProfileProvider
+                                                        .notifier,
+                                                  )
+                                                  .removeBackdrop();
                                               if (context.mounted) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
                                                   SnackBar(
                                                     content: Text(
                                                       'HEADER BANNER REMOVED',
-                                                      style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                                      style:
+                                                          AppTypography.monoBadge(
+                                                            color: AppColors
+                                                                .pureBlack,
+                                                          ),
                                                     ),
-                                                    backgroundColor: AppColors.acidLime,
+                                                    backgroundColor:
+                                                        AppColors.acidLime,
                                                   ),
                                                 );
                                               }
@@ -579,13 +701,18 @@ class ProfileScreen extends ConsumerWidget {
                                             .read(userProfileProvider.notifier)
                                             .pickBackdropFromGallery();
                                         if (context.mounted && ok) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             SnackBar(
                                               content: Text(
                                                 'HEADER BANNER PHOTO APPLIED',
-                                                style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                                style: AppTypography.monoBadge(
+                                                  color: AppColors.pureBlack,
+                                                ),
                                               ),
-                                              backgroundColor: AppColors.acidLime,
+                                              backgroundColor:
+                                                  AppColors.acidLime,
                                             ),
                                           );
                                         }
@@ -593,11 +720,15 @@ class ProfileScreen extends ConsumerWidget {
                                     ),
                                   ],
 
-                                  const Divider(height: 28, color: AppColors.border),
+                                  const Divider(
+                                    height: 28,
+                                    color: AppColors.border,
+                                  ),
 
                                   // 3. Critic Bio Feature
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Row(
                                         children: [
@@ -620,7 +751,9 @@ class ProfileScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    profile.bio.isNotEmpty ? profile.bio : 'No bio set yet.',
+                                    profile.bio.isNotEmpty
+                                        ? profile.bio
+                                        : 'No bio set yet.',
                                     style: AppTypography.bodySmall(
                                       color: AppColors.textSecondary,
                                       fontSize: 11.5,
@@ -669,9 +802,13 @@ class ProfileScreen extends ConsumerWidget {
                               Row(
                                 children: [
                                   Icon(
-                                    isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                                    isDarkMode
+                                        ? Icons.dark_mode
+                                        : Icons.light_mode,
                                     size: 18,
-                                    color: isDarkMode ? AppColors.acidLime : AppColors.cyberCyan,
+                                    color: isDarkMode
+                                        ? AppColors.acidLime
+                                        : AppColors.cyberCyan,
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
@@ -684,7 +821,10 @@ class ProfileScreen extends ConsumerWidget {
                                 ],
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppColors.surfaceElevated,
                                   border: Border.all(color: AppColors.border),
@@ -692,7 +832,9 @@ class ProfileScreen extends ConsumerWidget {
                                 child: Text(
                                   isDarkMode ? 'DARK (ACTIVE)' : 'LIGHT MODE',
                                   style: AppTypography.monoBadge(
-                                    color: isDarkMode ? AppColors.acidLime : AppColors.cyberCyan,
+                                    color: isDarkMode
+                                        ? AppColors.acidLime
+                                        : AppColors.cyberCyan,
                                     fontSize: 9,
                                   ),
                                 ),
@@ -706,9 +848,15 @@ class ProfileScreen extends ConsumerWidget {
                                 child: BrutalistButton(
                                   label: 'DARK MODE',
                                   icon: Icons.dark_mode,
-                                  backgroundColor: isDarkMode ? AppColors.acidLime : AppColors.surfaceElevated,
-                                  textColor: isDarkMode ? AppColors.pureBlack : AppColors.textSecondary,
-                                  borderColor: isDarkMode ? AppColors.pureBlack : AppColors.borderBold,
+                                  backgroundColor: isDarkMode
+                                      ? AppColors.acidLime
+                                      : AppColors.surfaceElevated,
+                                  textColor: isDarkMode
+                                      ? AppColors.pureBlack
+                                      : AppColors.textSecondary,
+                                  borderColor: isDarkMode
+                                      ? AppColors.pureBlack
+                                      : AppColors.borderBold,
                                   isSmall: true,
                                   onPressed: () {
                                     setModalState(() => isDarkMode = true);
@@ -720,9 +868,15 @@ class ProfileScreen extends ConsumerWidget {
                                 child: BrutalistButton(
                                   label: 'LIGHT MODE',
                                   icon: Icons.light_mode,
-                                  backgroundColor: !isDarkMode ? AppColors.cyberCyan : AppColors.surfaceElevated,
-                                  textColor: !isDarkMode ? AppColors.pureBlack : AppColors.textSecondary,
-                                  borderColor: !isDarkMode ? AppColors.pureBlack : AppColors.borderBold,
+                                  backgroundColor: !isDarkMode
+                                      ? AppColors.cyberCyan
+                                      : AppColors.surfaceElevated,
+                                  textColor: !isDarkMode
+                                      ? AppColors.pureBlack
+                                      : AppColors.textSecondary,
+                                  borderColor: !isDarkMode
+                                      ? AppColors.pureBlack
+                                      : AppColors.borderBold,
                                   isSmall: true,
                                   onPressed: () {
                                     setModalState(() => isDarkMode = false);
@@ -747,7 +901,9 @@ class ProfileScreen extends ConsumerWidget {
                           decoration: BoxDecoration(
                             color: AppColors.surfaceCard,
                             border: Border.all(
-                              color: isAuth ? AppColors.acidLime : AppColors.border,
+                              color: isAuth
+                                  ? AppColors.acidLime
+                                  : AppColors.border,
                               width: 1.5,
                             ),
                             borderRadius: BorderRadius.circular(2),
@@ -756,14 +912,19 @@ class ProfileScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Row(
                                     children: [
                                       Icon(
-                                        isAuth ? Icons.cloud_done : Icons.cloud_queue,
+                                        isAuth
+                                            ? Icons.cloud_done
+                                            : Icons.cloud_queue,
                                         size: 18,
-                                        color: isAuth ? AppColors.acidLime : AppColors.textSecondary,
+                                        color: isAuth
+                                            ? AppColors.acidLime
+                                            : AppColors.textSecondary,
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
@@ -776,19 +937,28 @@ class ProfileScreen extends ConsumerWidget {
                                     ],
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: isAuth
-                                          ? AppColors.acidLime.withValues(alpha: 0.15)
+                                          ? AppColors.acidLime.withValues(
+                                              alpha: 0.15,
+                                            )
                                           : AppColors.surfaceElevated,
                                       border: Border.all(
-                                        color: isAuth ? AppColors.acidLime : AppColors.border,
+                                        color: isAuth
+                                            ? AppColors.acidLime
+                                            : AppColors.border,
                                       ),
                                     ),
                                     child: Text(
                                       isAuth ? 'ACTIVE' : 'OFFLINE',
                                       style: AppTypography.monoBadge(
-                                        color: isAuth ? AppColors.acidLime : AppColors.textSecondary,
+                                        color: isAuth
+                                            ? AppColors.acidLime
+                                            : AppColors.textSecondary,
                                         fontSize: 9,
                                       ),
                                     ),
@@ -830,14 +1000,30 @@ class ProfileScreen extends ConsumerWidget {
                                   isFullWidth: true,
                                   onPressed: () async {
                                     final navigator = Navigator.of(context);
-                                    final messenger = ScaffoldMessenger.of(context);
-                                    final authService = ref.read(authServiceProvider);
-                                    final profileNotifier = ref.read(userProfileProvider.notifier);
-                                    final wishlistNotifier = ref.read(wishlistProvider.notifier);
-                                    final topPicksNotifier = ref.read(dossierTopPicksProvider.notifier);
-                                    final userListsNotifier = ref.read(userListsProvider.notifier);
-                                    final reviewRefreshNotifier = ref.read(reviewRefreshProvider.notifier);
-                                    final onboardingNotifier = ref.read(onboardingProvider.notifier);
+                                    final messenger = ScaffoldMessenger.of(
+                                      context,
+                                    );
+                                    final authService = ref.read(
+                                      authServiceProvider,
+                                    );
+                                    final profileNotifier = ref.read(
+                                      userProfileProvider.notifier,
+                                    );
+                                    final wishlistNotifier = ref.read(
+                                      wishlistProvider.notifier,
+                                    );
+                                    final topPicksNotifier = ref.read(
+                                      dossierTopPicksProvider.notifier,
+                                    );
+                                    final userListsNotifier = ref.read(
+                                      userListsProvider.notifier,
+                                    );
+                                    final reviewRefreshNotifier = ref.read(
+                                      reviewRefreshProvider.notifier,
+                                    );
+                                    final onboardingNotifier = ref.read(
+                                      onboardingProvider.notifier,
+                                    );
 
                                     navigator.pop();
 
@@ -862,7 +1048,8 @@ class ProfileScreen extends ConsumerWidget {
                                     } catch (_) {}
 
                                     try {
-                                      await onboardingNotifier.resetOnboarding();
+                                      await onboardingNotifier
+                                          .resetOnboarding();
                                     } catch (_) {}
 
                                     try {
@@ -871,7 +1058,9 @@ class ProfileScreen extends ConsumerWidget {
                                     reviewRefreshNotifier.notifyChanged();
 
                                     navigator.pushAndRemoveUntil(
-                                      MaterialPageRoute(builder: (_) => const LandingScreen()),
+                                      MaterialPageRoute(
+                                        builder: (_) => const LandingScreen(),
+                                      ),
                                       (route) => false,
                                     );
 
@@ -880,7 +1069,9 @@ class ProfileScreen extends ConsumerWidget {
                                         backgroundColor: AppColors.pureBlack,
                                         content: Text(
                                           'SESSION TERMINATED // REVERTED TO LOCAL GUEST MODE',
-                                          style: AppTypography.monoBadge(color: AppColors.acidLime),
+                                          style: AppTypography.monoBadge(
+                                            color: AppColors.acidLime,
+                                          ),
                                         ),
                                       ),
                                     );
@@ -907,7 +1098,8 @@ class ProfileScreen extends ConsumerWidget {
                                         isSmall: true,
                                         onPressed: () {
                                           Navigator.of(context).pop();
-                                          Navigator.of(context).push(LoginScreen.route());
+                                          Navigator.of(context)
+                                              .push(LoginScreen.route());
                                         },
                                       ),
                                     ),
@@ -916,13 +1108,15 @@ class ProfileScreen extends ConsumerWidget {
                                       child: BrutalistButton(
                                         label: 'REGISTER',
                                         icon: Icons.person_add_alt_1,
-                                        backgroundColor: AppColors.surfaceElevated,
+                                        backgroundColor:
+                                            AppColors.surfaceElevated,
                                         textColor: AppColors.pureWhite,
                                         borderColor: AppColors.pureWhite,
                                         isSmall: true,
                                         onPressed: () {
                                           Navigator.of(context).pop();
-                                          Navigator.of(context).push(RegisterScreen.route());
+                                          Navigator.of(context)
+                                              .push(RegisterScreen.route());
                                         },
                                       ),
                                     ),
@@ -967,7 +1161,9 @@ class ProfileScreen extends ConsumerWidget {
           ),
           decoration: const BoxDecoration(
             color: AppColors.surface,
-            border: Border(top: BorderSide(color: AppColors.acidLime, width: 2.0)),
+            border: Border(
+              top: BorderSide(color: AppColors.acidLime, width: 2.0),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -991,7 +1187,10 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               Text(
                 'DISPLAY NAME / USERNAME',
-                style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 10),
+                style: AppTypography.monoBadge(
+                  color: AppColors.acidLime,
+                  fontSize: 10,
+                ),
               ),
               const SizedBox(height: 6),
               TextField(
@@ -1007,7 +1206,10 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 14),
               Text(
                 'GROOVD HANDLE',
-                style: AppTypography.monoBadge(color: AppColors.cyberCyan, fontSize: 10),
+                style: AppTypography.monoBadge(
+                  color: AppColors.cyberCyan,
+                  fontSize: 10,
+                ),
               ),
               const SizedBox(height: 6),
               TextField(
@@ -1027,13 +1229,18 @@ class ProfileScreen extends ConsumerWidget {
                 isFullWidth: true,
                 onPressed: () async {
                   final newName = nameController.text.trim();
-                  final rawH = handleController.text.trim().replaceAll('@', '').replaceAll(' ', '_');
+                  final rawH = handleController.text
+                      .trim()
+                      .replaceAll('@', '')
+                      .replaceAll(' ', '_');
                   if (newName.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
                           'USERNAME CANNOT BE EMPTY',
-                          style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                          style: AppTypography.monoBadge(
+                            color: AppColors.pureBlack,
+                          ),
                         ),
                         backgroundColor: AppColors.vermillion,
                       ),
@@ -1042,13 +1249,14 @@ class ProfileScreen extends ConsumerWidget {
                   }
                   final newHandle = '@${rawH.isEmpty ? "critic" : rawH}';
 
-                  await ref.read(userProfileProvider.notifier).updateCriticIdentity(
-                        name: newName,
-                        handle: newHandle,
-                      );
+                  await ref
+                      .read(userProfileProvider.notifier)
+                      .updateCriticIdentity(name: newName, handle: newHandle);
 
                   final userId = ref.read(userProfileProvider).userId;
-                  await ref.read(reviewControllerProvider).updateUserIdentity(userId, newName, newHandle);
+                  await ref
+                      .read(reviewControllerProvider)
+                      .updateUserIdentity(userId, newName, newHandle);
 
                   if (ctx.mounted) {
                     Navigator.of(ctx).pop();
@@ -1056,7 +1264,9 @@ class ProfileScreen extends ConsumerWidget {
                       SnackBar(
                         content: Text(
                           'CRITIC IDENTITY UPDATED',
-                          style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                          style: AppTypography.monoBadge(
+                            color: AppColors.pureBlack,
+                          ),
                         ),
                         backgroundColor: AppColors.acidLime,
                       ),
@@ -1089,7 +1299,9 @@ class ProfileScreen extends ConsumerWidget {
           ),
           decoration: const BoxDecoration(
             color: AppColors.surface,
-            border: Border(top: BorderSide(color: AppColors.acidLime, width: 2.0)),
+            border: Border(
+              top: BorderSide(color: AppColors.acidLime, width: 2.0),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1135,7 +1347,9 @@ class ProfileScreen extends ConsumerWidget {
                       SnackBar(
                         content: Text(
                           'BIO SAVED',
-                          style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                          style: AppTypography.monoBadge(
+                            color: AppColors.pureBlack,
+                          ),
                         ),
                         backgroundColor: AppColors.acidLime,
                       ),
@@ -1158,7 +1372,9 @@ class ProfileScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(20),
         decoration: const BoxDecoration(
           color: AppColors.surface,
-          border: Border(top: BorderSide(color: AppColors.acidLime, width: 2.0)),
+          border: Border(
+            top: BorderSide(color: AppColors.acidLime, width: 2.0),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1177,13 +1393,17 @@ class ProfileScreen extends ConsumerWidget {
               isFullWidth: true,
               onPressed: () async {
                 Navigator.of(ctx).pop();
-                final ok = await ref.read(userProfileProvider.notifier).pickBackdropFromGallery();
+                final ok = await ref
+                    .read(userProfileProvider.notifier)
+                    .pickBackdropFromGallery();
                 if (context.mounted && ok) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
                         'HEADER BANNER UPDATED',
-                        style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                        style: AppTypography.monoBadge(
+                          color: AppColors.pureBlack,
+                        ),
                       ),
                       backgroundColor: AppColors.acidLime,
                     ),
@@ -1207,7 +1427,9 @@ class ProfileScreen extends ConsumerWidget {
                     SnackBar(
                       content: Text(
                         'HEADER BANNER REMOVED',
-                        style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                        style: AppTypography.monoBadge(
+                          color: AppColors.pureBlack,
+                        ),
                       ),
                       backgroundColor: AppColors.acidLime,
                     ),
@@ -1239,19 +1461,24 @@ class ProfileScreen extends ConsumerWidget {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final userId = ref.read(currentUserIdProvider);
-            final userReviews = ref.read(userReviewsProvider(userId)).value ?? [];
+            final userReviews =
+                ref.read(userReviewsProvider(userId)).value ?? [];
 
             // Reviewed items
             final reviewedCandidates = userReviews
-                .where((r) => isAlbum ? r.itemType == 'album' : r.itemType == 'song')
-                .map((r) => MusicItem(
-                      id: r.musicItemId,
-                      name: r.musicItemName,
-                      artist: r.artistName,
-                      type: isAlbum ? MusicType.album : MusicType.song,
-                      coverUrl: r.coverUrl,
-                      releaseDate: '',
-                    ))
+                .where(
+                  (r) => isAlbum ? r.itemType == 'album' : r.itemType == 'song',
+                )
+                .map(
+                  (r) => MusicItem(
+                    id: r.musicItemId,
+                    name: r.musicItemName,
+                    artist: r.artistName,
+                    type: isAlbum ? MusicType.album : MusicType.song,
+                    coverUrl: r.coverUrl,
+                    releaseDate: '',
+                  ),
+                )
                 .toList();
 
             // Curated catalogue candidates
@@ -1269,7 +1496,9 @@ class ProfileScreen extends ConsumerWidget {
               ),
               decoration: const BoxDecoration(
                 color: AppColors.surface,
-                border: Border(top: BorderSide(color: AppColors.borderBold, width: 2.0)),
+                border: Border(
+                  top: BorderSide(color: AppColors.borderBold, width: 2.0),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1286,7 +1515,10 @@ class ProfileScreen extends ConsumerWidget {
                           ),
                           Text(
                             'CHOOSE FROM LOGGED REVIEWS OR CATALOG',
-                            style: AppTypography.monoLabel(fontSize: 9, color: AppColors.textMuted),
+                            style: AppTypography.monoLabel(
+                              fontSize: 9,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ],
                       ),
@@ -1304,8 +1536,13 @@ class ProfileScreen extends ConsumerWidget {
                     style: AppTypography.headline(fontSize: 14),
                     cursorColor: AppColors.acidLime,
                     decoration: InputDecoration(
-                      hintText: 'Search ${isAlbum ? "album" : "song"} to pin...',
-                      prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textSecondary),
+                      hintText:
+                          'Search ${isAlbum ? "album" : "song"} to pin...',
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        size: 18,
+                        color: AppColors.textSecondary,
+                      ),
                       suffixIcon: searchController.text.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear, size: 16),
@@ -1321,7 +1558,9 @@ class ProfileScreen extends ConsumerWidget {
                     onSubmitted: (val) async {
                       if (val.trim().isEmpty) return;
                       setModalState(() => isSearching = true);
-                      final res = await ref.read(spotifyRepositoryProvider).search(
+                      final res = await ref
+                          .read(spotifyRepositoryProvider)
+                          .search(
                             val,
                             type: isAlbum ? MusicType.album : MusicType.song,
                           );
@@ -1336,33 +1575,49 @@ class ProfileScreen extends ConsumerWidget {
                   // Selection list
                   Expanded(
                     child: isSearching
-                        ? const Center(child: CircularProgressIndicator(color: AppColors.acidLime))
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.acidLime,
+                            ),
+                          )
                         : () {
-                            Future<void> pinSelectedItem(MusicItem rawItem) async {
+                            Future<void> pinSelectedItem(
+                              MusicItem rawItem,
+                            ) async {
                               var itemToPin = rawItem.copyWith(
                                 type: isAlbum
-                                    ? (rawItem.isEp ? MusicType.ep : MusicType.album)
+                                    ? (rawItem.isEp
+                                          ? MusicType.ep
+                                          : MusicType.album)
                                     : MusicType.song,
                               );
                               if (itemToPin.tracks.isEmpty) {
                                 try {
-                                  final repo = ref.read(spotifyRepositoryProvider);
+                                  final repo = ref.read(
+                                    spotifyRepositoryProvider,
+                                  );
                                   final detailed = await repo.getItemById(
                                     itemToPin.id,
                                     type: itemToPin.type,
                                     name: itemToPin.name,
                                     artist: itemToPin.artist,
                                   );
-                                  if (detailed != null && (detailed.tracks.isNotEmpty || detailed.id.isNotEmpty)) {
+                                  if (detailed != null &&
+                                      (detailed.tracks.isNotEmpty ||
+                                          detailed.id.isNotEmpty)) {
                                     itemToPin = detailed.copyWith(
                                       type: isAlbum
-                                          ? (detailed.isEp ? MusicType.ep : MusicType.album)
+                                          ? (detailed.isEp
+                                                ? MusicType.ep
+                                                : MusicType.album)
                                           : MusicType.song,
                                     );
                                   }
                                 } catch (_) {}
                               }
-                              await ref.read(dossierTopPicksProvider.notifier).pinItem(
+                              await ref
+                                  .read(dossierTopPicksProvider.notifier)
+                                  .pinItem(
                                     isAlbum: isAlbum,
                                     slotIndex: slotIndex,
                                     item: itemToPin,
@@ -1373,7 +1628,8 @@ class ProfileScreen extends ConsumerWidget {
                             return searchResults.isNotEmpty
                                 ? ListView.separated(
                                     itemCount: searchResults.length,
-                                    separatorBuilder: (context, index) => const Divider(height: 1),
+                                    separatorBuilder: (context, index) =>
+                                        const Divider(height: 1),
                                     itemBuilder: (context, idx) {
                                       final item = searchResults[idx];
                                       return _CandidateTile(
@@ -1386,29 +1642,44 @@ class ProfileScreen extends ConsumerWidget {
                                     children: [
                                       if (reviewedCandidates.isNotEmpty) ...[
                                         Padding(
-                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 8,
+                                          ),
                                           child: Text(
                                             'FROM YOUR RECENT CRITIQUES',
-                                            style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 10),
+                                            style: AppTypography.monoBadge(
+                                              color: AppColors.acidLime,
+                                              fontSize: 10,
+                                            ),
                                           ),
                                         ),
-                                        ...reviewedCandidates.map((item) => _CandidateTile(
-                                              item: item,
-                                              onSelect: () => pinSelectedItem(item),
-                                            )),
+                                        ...reviewedCandidates.map(
+                                          (item) => _CandidateTile(
+                                            item: item,
+                                            onSelect: () =>
+                                                pinSelectedItem(item),
+                                          ),
+                                        ),
                                         const Divider(height: 24),
                                       ],
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                        ),
                                         child: Text(
                                           'SUGGESTED CANON',
-                                          style: AppTypography.monoBadge(color: AppColors.cyberCyan, fontSize: 10),
+                                          style: AppTypography.monoBadge(
+                                            color: AppColors.cyberCyan,
+                                            fontSize: 10,
+                                          ),
                                         ),
                                       ),
-                                      ...curatedCandidates.map((item) => _CandidateTile(
-                                            item: item,
-                                            onSelect: () => pinSelectedItem(item),
-                                          )),
+                                      ...curatedCandidates.map(
+                                        (item) => _CandidateTile(
+                                          item: item,
+                                          onSelect: () => pinSelectedItem(item),
+                                        ),
+                                      ),
                                     ],
                                   );
                           }(),
@@ -1423,10 +1694,9 @@ class ProfileScreen extends ConsumerWidget {
                     borderColor: AppColors.border,
                     isFullWidth: true,
                     onPressed: () async {
-                      await ref.read(dossierTopPicksProvider.notifier).unpinItem(
-                            isAlbum: isAlbum,
-                            slotIndex: slotIndex,
-                          );
+                      await ref
+                          .read(dossierTopPicksProvider.notifier)
+                          .unpinItem(isAlbum: isAlbum, slotIndex: slotIndex);
                       if (context.mounted) Navigator.of(context).pop();
                     },
                   ),
@@ -1467,16 +1737,23 @@ class ProfileScreen extends ConsumerWidget {
         title: Text('CRITIC DOSSIER', style: AppTypography.displaySmall()),
         actions: [
           IconButton(
-            icon: const Icon(Icons.queue_music_outlined, color: AppColors.cyberCyan),
+            icon: const Icon(
+              Icons.queue_music_outlined,
+              color: AppColors.cyberCyan,
+            ),
             tooltip: 'Curated Lists',
-            onPressed: () => Navigator.of(context).push(UserListsScreen.route()),
+            onPressed: () =>
+                Navigator.of(context).push(UserListsScreen.route()),
           ),
           IconButton(
-            icon: const Icon(Icons.bookmark_outline, color: AppColors.textPrimary),
-            tooltip: 'Wantlist // Wishlist',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const WishlistScreen()),
+            icon: const Icon(
+              Icons.bookmark_outline,
+              color: AppColors.textPrimary,
             ),
+            tooltip: 'Wantlist // Wishlist',
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const WishlistScreen())),
           ),
           IconButton(
             icon: const Icon(Icons.settings, color: AppColors.textPrimary),
@@ -1499,7 +1776,10 @@ class ProfileScreen extends ConsumerWidget {
                   decoration: const BoxDecoration(
                     color: AppColors.pureBlack,
                     border: Border(
-                      bottom: BorderSide(color: AppColors.borderBold, width: 2.0),
+                      bottom: BorderSide(
+                        color: AppColors.borderBold,
+                        width: 2.0,
+                      ),
                     ),
                   ),
                   child: Stack(
@@ -1510,7 +1790,8 @@ class ProfileScreen extends ConsumerWidget {
                         width: double.infinity,
                         height: 165,
                         fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) => const SizedBox.shrink(),
+                        errorBuilder: (ctx, err, stack) =>
+                            const SizedBox.shrink(),
                       ),
                       DecoratedBox(
                         decoration: BoxDecoration(
@@ -1556,7 +1837,10 @@ class ProfileScreen extends ConsumerWidget {
                               height: 71,
                               decoration: BoxDecoration(
                                 color: AppColors.acidLime,
-                                border: Border.all(color: AppColors.pureBlack, width: 2.0),
+                                border: Border.all(
+                                  color: AppColors.pureBlack,
+                                  width: 2.0,
+                                ),
                                 borderRadius: BorderRadius.circular(2),
                                 boxShadow: const [
                                   BoxShadow(
@@ -1569,36 +1853,48 @@ class ProfileScreen extends ConsumerWidget {
                               child: profile.avatarPath != null
                                   ? ClipRRect(
                                       borderRadius: BorderRadius.circular(1),
-                                      child: (profile.avatarPath!.startsWith('http://') || profile.avatarPath!.startsWith('https://'))
+                                      child:
+                                          (profile.avatarPath!.startsWith(
+                                                'http://',
+                                              ) ||
+                                              profile.avatarPath!.startsWith(
+                                                'https://',
+                                              ))
                                           ? Image.network(
                                               profile.avatarPath!,
                                               width: 71,
                                               height: 71,
                                               fit: BoxFit.cover,
-                                              errorBuilder: (ctx, err, stack) => Center(
-                                                child: Text(
-                                                  'YOU',
-                                                  style: AppTypography.monoBadge(
-                                                    color: AppColors.pureBlack,
-                                                    fontSize: 15,
+                                              errorBuilder: (ctx, err, stack) =>
+                                                  Center(
+                                                    child: Text(
+                                                      'YOU',
+                                                      style:
+                                                          AppTypography.monoBadge(
+                                                            color: AppColors
+                                                                .pureBlack,
+                                                            fontSize: 15,
+                                                          ),
+                                                    ),
                                                   ),
-                                                ),
-                                              ),
                                             )
                                           : Image.file(
                                               File(profile.avatarPath!),
                                               width: 71,
                                               height: 71,
                                               fit: BoxFit.cover,
-                                              errorBuilder: (ctx, err, stack) => Center(
-                                                child: Text(
-                                                  'YOU',
-                                                  style: AppTypography.monoBadge(
-                                                    color: AppColors.pureBlack,
-                                                    fontSize: 15,
+                                              errorBuilder: (ctx, err, stack) =>
+                                                  Center(
+                                                    child: Text(
+                                                      'YOU',
+                                                      style:
+                                                          AppTypography.monoBadge(
+                                                            color: AppColors
+                                                                .pureBlack,
+                                                            fontSize: 15,
+                                                          ),
+                                                    ),
                                                   ),
-                                                ),
-                                              ),
                                             ),
                                     )
                                   : Center(
@@ -1618,7 +1914,10 @@ class ProfileScreen extends ConsumerWidget {
                                 padding: const EdgeInsets.all(3.5),
                                 decoration: BoxDecoration(
                                   color: AppColors.pureBlack,
-                                  border: Border.all(color: AppColors.acidLime, width: 1.5),
+                                  border: Border.all(
+                                    color: AppColors.acidLime,
+                                    width: 1.5,
+                                  ),
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                                 child: const Icon(
@@ -1646,7 +1945,9 @@ class ProfileScreen extends ConsumerWidget {
                                   Flexible(
                                     child: Text(
                                       userName.toUpperCase(),
-                                      style: AppTypography.displayMedium(fontSize: 20),
+                                      style: AppTypography.displayMedium(
+                                        fontSize: 20,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -1655,7 +1956,9 @@ class ProfileScreen extends ConsumerWidget {
                                   Icon(
                                     Icons.edit_outlined,
                                     size: 13,
-                                    color: AppColors.acidLime.withValues(alpha: 0.8),
+                                    color: AppColors.acidLime.withValues(
+                                      alpha: 0.8,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1681,7 +1984,10 @@ class ProfileScreen extends ConsumerWidget {
                     onTap: () => _showEditBioDialog(context, ref),
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceCard.withValues(alpha: 0.7),
                         border: Border.all(color: AppColors.border, width: 1.0),
@@ -1692,9 +1998,7 @@ class ProfileScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              profile.bio.isNotEmpty
-                                  ? profile.bio
-                                  : 'Add your critic bio // express yourself...',
+                              profile.bio.isNotEmpty ? profile.bio : 'Add your critic bio // express yourself...',
                               style: AppTypography.bodySmall(
                                 color: profile.bio.isNotEmpty
                                     ? AppColors.textPrimary
@@ -1721,14 +2025,12 @@ class ProfileScreen extends ConsumerWidget {
                     followersCount: followersCount,
                     followingCount: followingCount,
                     onFollowersTap: () {
-                      Navigator.of(context).push(
-                        FriendsScreen.route(initialTabIndex: 1),
-                      );
+                      Navigator.of(context)
+                          .push(FriendsScreen.route(initialTabIndex: 1));
                     },
                     onFollowingTap: () {
-                      Navigator.of(context).push(
-                        FriendsScreen.route(initialTabIndex: 1),
-                      );
+                      Navigator.of(context)
+                          .push(FriendsScreen.route(initialTabIndex: 1));
                     },
                   ),
                 ],
@@ -1758,10 +2060,16 @@ class ProfileScreen extends ConsumerWidget {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.acidLime,
-                              border: Border.all(color: AppColors.pureBlack, width: 1),
+                              border: Border.all(
+                                color: AppColors.pureBlack,
+                                width: 1,
+                              ),
                             ),
                             child: Text(
                               'CLOUD BACKUP // GUEST MODE',
@@ -1773,18 +2081,28 @@ class ProfileScreen extends ConsumerWidget {
                             ),
                           ),
                           const Spacer(),
-                          const Icon(Icons.cloud_off_outlined, color: AppColors.acidLime, size: 18),
+                          const Icon(
+                            Icons.cloud_off_outlined,
+                            color: AppColors.acidLime,
+                            size: 18,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'BACK UP & SYNC YOUR CRITIC DOSSIER',
-                        style: AppTypography.displaySmall(fontSize: 13, color: AppColors.pureWhite),
+                        style: AppTypography.displaySmall(
+                          fontSize: 13,
+                          color: AppColors.pureWhite,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Retain your reviews, ratings, vinyl wantlist, and curated lists across devices with Cloud Firestore.',
-                        style: AppTypography.bodySmall(color: AppColors.textSecondary, fontSize: 11),
+                        style: AppTypography.bodySmall(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -1797,7 +2115,9 @@ class ProfileScreen extends ConsumerWidget {
                               textColor: AppColors.pureBlack,
                               borderColor: AppColors.pureBlack,
                               isSmall: true,
-                              onPressed: () => Navigator.of(context).push(LoginScreen.route()),
+                              onPressed: () =>
+                                  Navigator.of(context)
+                                      .push(LoginScreen.route()),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -1809,7 +2129,9 @@ class ProfileScreen extends ConsumerWidget {
                               textColor: AppColors.pureWhite,
                               borderColor: AppColors.pureWhite,
                               isSmall: true,
-                              onPressed: () => Navigator.of(context).push(RegisterScreen.route()),
+                              onPressed: () =>
+                                  Navigator.of(context)
+                                      .push(RegisterScreen.route()),
                             ),
                           ),
                         ],
@@ -1824,9 +2146,12 @@ class ProfileScreen extends ConsumerWidget {
               data: (reviews) {
                 final totalLogged = reviews.length;
                 final avgScore = totalLogged > 0
-                    ? (reviews.fold<double>(0.0, (acc, r) => acc + r.rating) / totalLogged)
+                    ? (reviews.fold<double>(0.0, (acc, r) => acc + r.rating) /
+                          totalLogged)
                     : 0.0;
-                final perfectTens = reviews.where((r) => r.rating >= 10.0).length;
+                final perfectTens = reviews
+                    .where((r) => r.rating >= 10.0)
+                    .length;
 
                 return Container(
                   padding: const EdgeInsets.all(20),
@@ -1834,9 +2159,9 @@ class ProfileScreen extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: InkWell(
-                          onTap: () => Navigator.of(context).push(
-                            AllRatedReleasesScreen.route(),
-                          ),
+                          onTap: () =>
+                              Navigator.of(context)
+                                  .push(AllRatedReleasesScreen.route()),
                           borderRadius: BorderRadius.circular(2),
                           child: _StatBox(
                             label: 'LOGGED',
@@ -1849,8 +2174,11 @@ class ProfileScreen extends ConsumerWidget {
                       Expanded(
                         child: _StatBox(
                           label: 'AVG SCORE',
-                          value: avgScore > 0 ? avgScore.toStringAsFixed(1) : '—',
+                          value: avgScore > 0
+                              ? avgScore.toStringAsFixed(1)
+                              : '—',
                           accentColor: AppColors.acidLime,
+                          rating: avgScore > 0 ? avgScore : null,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -1894,7 +2222,10 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       Text(
                         'YOUR HIGHEST RATED & PINNED RELEASES',
-                        style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 9),
+                        style: AppTypography.monoLabel(
+                          color: AppColors.textMuted,
+                          fontSize: 9,
+                        ),
                       ),
                     ],
                   ),
@@ -1911,7 +2242,12 @@ class ProfileScreen extends ConsumerWidget {
               badgeColor: AppColors.acidLime,
               isAlbum: true,
               items: topPicks.topAlbums,
-              onSelectSlot: (slot) => _showTopPickSelector(context, ref, isAlbum: true, slotIndex: slot),
+              onSelectSlot: (slot) => _showTopPickSelector(
+                context,
+                ref,
+                isAlbum: true,
+                slotIndex: slot,
+              ),
             ),
 
             const SizedBox(height: 24),
@@ -1923,7 +2259,12 @@ class ProfileScreen extends ConsumerWidget {
               badgeColor: AppColors.cyberCyan,
               isAlbum: false,
               items: topPicks.topSongs,
-              onSelectSlot: (slot) => _showTopPickSelector(context, ref, isAlbum: false, slotIndex: slot),
+              onSelectSlot: (slot) => _showTopPickSelector(
+                context,
+                ref,
+                isAlbum: false,
+                slotIndex: slot,
+              ),
             ),
 
             const SizedBox(height: 24),
@@ -1939,9 +2280,8 @@ class ProfileScreen extends ConsumerWidget {
 
             // Logged Written Reviews Header & Redirect Button
             InkWell(
-              onTap: () => Navigator.of(context).push(
-                LoggedReviewsScreen.route(),
-              ),
+              onTap: () =>
+                  Navigator.of(context).push(LoggedReviewsScreen.route()),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                 child: Row(
@@ -1953,13 +2293,18 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     userReviewsAsync.when(
                       data: (r) {
-                        final count = r.where((review) => review.hasWrittenReview).length;
+                        final count = r
+                            .where((review) => review.hasWrittenReview)
+                            .length;
                         return Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               '$count CRITIQUES',
-                              style: AppTypography.monoLabel(fontSize: 10, color: AppColors.acidLime),
+                              style: AppTypography.monoLabel(
+                                fontSize: 10,
+                                color: AppColors.acidLime,
+                              ),
                             ),
                             const SizedBox(width: 4),
                             const Icon(
@@ -1989,7 +2334,9 @@ class ProfileScreen extends ConsumerWidget {
 
             userReviewsAsync.when(
               data: (reviews) {
-                final writtenReviews = reviews.where((r) => r.hasWrittenReview).toList();
+                final writtenReviews = reviews
+                    .where((r) => r.hasWrittenReview)
+                    .toList();
                 if (writtenReviews.isEmpty) {
                   return Container(
                     margin: const EdgeInsets.all(20),
@@ -2001,16 +2348,25 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     child: Column(
                       children: [
-                        const Icon(Icons.rate_review_outlined, size: 36, color: AppColors.textMuted),
+                        const Icon(
+                          Icons.rate_review_outlined,
+                          size: 36,
+                          color: AppColors.textMuted,
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           'NO WRITTEN REVIEWS LOGGED YET',
-                          style: AppTypography.monoBadge(color: AppColors.textPrimary, fontSize: 12),
+                          style: AppTypography.monoBadge(
+                            color: AppColors.textPrimary,
+                            fontSize: 12,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           'Drop your in-depth written impressions on any album or track to file it here.',
-                          style: AppTypography.bodyMedium(color: AppColors.textSecondary),
+                          style: AppTypography.bodyMedium(
+                            color: AppColors.textSecondary,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -2018,7 +2374,9 @@ class ProfileScreen extends ConsumerWidget {
                   );
                 }
 
-                return _ReviewStackDeck(reviews: writtenReviews.take(10).toList());
+                return _ReviewStackDeck(
+                  reviews: writtenReviews.take(10).toList(),
+                );
               },
               loading: () => const Padding(
                 padding: EdgeInsets.all(32),
@@ -2052,9 +2410,8 @@ class ProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: _ListsShortcutBanner(
                 count: ref.watch(userListsCountProvider),
-                onTap: () => Navigator.of(context).push(
-                  UserListsScreen.route(),
-                ),
+                onTap: () =>
+                    Navigator.of(context).push(UserListsScreen.route()),
               ),
             ),
 
@@ -2095,11 +2452,7 @@ class _TopPicksPodiumSection extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 4,
-                    height: 14,
-                    color: badgeColor,
-                  ),
+                  Container(width: 4, height: 14, color: badgeColor),
                   const SizedBox(width: 8),
                   Text(
                     title,
@@ -2120,7 +2473,10 @@ class _TopPicksPodiumSection extends StatelessWidget {
                 ),
                 child: Text(
                   badgeLabel,
-                  style: AppTypography.monoBadge(color: badgeColor, fontSize: 8),
+                  style: AppTypography.monoBadge(
+                    color: badgeColor,
+                    fontSize: 8,
+                  ),
                 ),
               ),
             ],
@@ -2147,7 +2503,8 @@ class _TopPicksPodiumSection extends StatelessWidget {
                           MaterialPageRoute(
                             builder: (_) => MusicDetailScreen(
                               item: configuredItem,
-                              heroTag: 'podium_${isAlbum ? "album" : "song"}_$i',
+                              heroTag:
+                                  'podium_${isAlbum ? "album" : "song"}_$i',
                             ),
                           ),
                         );
@@ -2219,7 +2576,9 @@ class _PodiumSlotCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 6),
               decoration: BoxDecoration(
                 color: _rankColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(1)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(1),
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2266,7 +2625,10 @@ class _PodiumSlotCard extends StatelessWidget {
                       item!.artist.toUpperCase(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTypography.monoLabel(fontSize: 8, color: AppColors.textMuted),
+                      style: AppTypography.monoLabel(
+                        fontSize: 8,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -2306,7 +2668,10 @@ class _PodiumSlotCard extends StatelessWidget {
                   'EMPTY // TAP TO PIN',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.monoLabel(fontSize: 8, color: AppColors.textMuted),
+                  style: AppTypography.monoLabel(
+                    fontSize: 8,
+                    color: AppColors.textMuted,
+                  ),
                 ),
               ),
             ],
@@ -2321,10 +2686,7 @@ class _CandidateTile extends StatelessWidget {
   final MusicItem item;
   final VoidCallback onSelect;
 
-  const _CandidateTile({
-    required this.item,
-    required this.onSelect,
-  });
+  const _CandidateTile({required this.item, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
@@ -2346,7 +2708,10 @@ class _CandidateTile extends StatelessWidget {
         item.artist.toUpperCase(),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: AppTypography.bodySmall(color: AppColors.textMuted, fontSize: 10),
+        style: AppTypography.bodySmall(
+          color: AppColors.textMuted,
+          fontSize: 10,
+        ),
       ),
       trailing: BrutalistButton(
         label: 'PIN',
@@ -2364,11 +2729,13 @@ class _StatBox extends StatelessWidget {
   final String label;
   final String value;
   final Color accentColor;
+  final double? rating;
 
   const _StatBox({
     required this.label,
     required this.value,
     required this.accentColor,
+    this.rating,
   });
 
   @override
@@ -2382,14 +2749,35 @@ class _StatBox extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(
-            value,
-            style: AppTypography.scoreLarge(color: accentColor),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (rating != null && rating! > 0) ...[
+                  RatingSpikeSign(
+                    rating: rating!,
+                    size: 18,
+                    color: accentColor,
+                  ),
+                  const SizedBox(width: 5),
+                ],
+                Text(
+                  value,
+                  style: AppTypography.scoreLarge(color: accentColor),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: AppTypography.monoBadge(color: AppColors.textMuted, fontSize: 9),
+            style: AppTypography.monoBadge(
+              color: AppColors.textMuted,
+              fontSize: 9,
+            ),
           ),
         ],
       ),
@@ -2414,11 +2802,7 @@ class _RecentActivitySection extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 4,
-                    height: 14,
-                    color: AppColors.white,
-                  ),
+                  Container(width: 4, height: 14, color: AppColors.white),
                   const SizedBox(width: 8),
                   Text(
                     'RECENT ACTIVITY',
@@ -2431,15 +2815,19 @@ class _RecentActivitySection extends StatelessWidget {
                 ],
               ),
               InkWell(
-                onTap: () => Navigator.of(context).push(
-                  AllRatedReleasesScreen.route(),
-                ),
+                onTap: () =>
+                    Navigator.of(context).push(AllRatedReleasesScreen.route()),
                 borderRadius: BorderRadius.circular(2),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceElevated,
-                    border: Border.all(color: AppColors.acidLime.withValues(alpha: 0.6)),
+                    border: Border.all(
+                      color: AppColors.acidLime.withValues(alpha: 0.6),
+                    ),
                     borderRadius: BorderRadius.circular(2),
                   ),
                   child: Row(
@@ -2447,10 +2835,17 @@ class _RecentActivitySection extends StatelessWidget {
                     children: [
                       Text(
                         'ALL ${reviews.length} RATED',
-                        style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 8),
+                        style: AppTypography.monoBadge(
+                          color: AppColors.acidLime,
+                          fontSize: 8,
+                        ),
                       ),
                       const SizedBox(width: 3),
-                      const Icon(Icons.chevron_right, size: 12, color: AppColors.acidLime),
+                      const Icon(
+                        Icons.chevron_right,
+                        size: 12,
+                        color: AppColors.acidLime,
+                      ),
                     ],
                   ),
                 ),
@@ -2478,12 +2873,17 @@ class _RecentActivitySection extends StatelessWidget {
                     children: [
                       Text(
                         'NO RECENT ACTIVITY RECORDED',
-                        style: AppTypography.monoBadge(color: AppColors.textPrimary, fontSize: 10),
+                        style: AppTypography.monoBadge(
+                          color: AppColors.textPrimary,
+                          fontSize: 10,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Rate any album or single to start building your chronological timeline.',
-                        style: AppTypography.bodySmall(color: AppColors.textSecondary),
+                        style: AppTypography.bodySmall(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -2530,9 +2930,7 @@ class _RecentActivityCard extends ConsumerWidget {
     return InkWell(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ReviewDetailScreen(review: review),
-          ),
+          MaterialPageRoute(builder: (_) => ReviewDetailScreen(review: review)),
         );
       },
       borderRadius: BorderRadius.circular(2),
@@ -2561,34 +2959,63 @@ class _RecentActivityCard extends ConsumerWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
-                          color: isAlbum ? AppColors.acidLime : AppColors.cyberCyan,
+                          color: isAlbum
+                              ? AppColors.acidLime
+                              : AppColors.cyberCyan,
                           borderRadius: BorderRadius.circular(2),
                         ),
                         child: Text(
                           isAlbum ? 'LP' : 'SONG',
-                          style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 7.5),
+                          style: AppTypography.monoBadge(
+                            color: AppColors.pureBlack,
+                            fontSize: 7.5,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 5),
-                      Text(
-                        review.timeAgo,
-                        style: AppTypography.monoLabel(fontSize: 8, color: AppColors.textMuted),
+                      Expanded(
+                        child: Text(
+                          review.timeAgo,
+                          style: AppTypography.monoLabel(
+                            fontSize: 8,
+                            color: AppColors.textMuted,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: _scoreColor,
                           borderRadius: BorderRadius.circular(2),
                         ),
-                        child: Text(
-                          review.scoreFormatted,
-                          style: AppTypography.monoBadge(
-                            color: AppColors.pureBlack,
-                            fontSize: 9,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            RatingSpikeSign(
+                              rating: review.rating,
+                              size: 9,
+                              color: AppColors.pureBlack,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              review.scoreFormatted,
+                              style: AppTypography.monoBadge(
+                                color: AppColors.pureBlack,
+                                fontSize: 9,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -2604,11 +3031,17 @@ class _RecentActivityCard extends ConsumerWidget {
                     review.artistName.toUpperCase(),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.monoLabel(fontSize: 8, color: AppColors.textMuted),
+                    style: AppTypography.monoLabel(
+                      fontSize: 8,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceElevated,
                       borderRadius: BorderRadius.circular(1.5),
@@ -2617,7 +3050,9 @@ class _RecentActivityCard extends ConsumerWidget {
                     child: Text(
                       review.hasWrittenReview ? 'CRITIQUE' : 'RATING ONLY',
                       style: AppTypography.monoBadge(
-                        color: review.hasWrittenReview ? AppColors.electricPink : AppColors.textMuted,
+                        color: review.hasWrittenReview
+                            ? AppColors.electricPink
+                            : AppColors.textMuted,
                         fontSize: 7.5,
                       ),
                     ),
@@ -2636,10 +3071,7 @@ class _WishlistShortcutBanner extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
 
-  const _WishlistShortcutBanner({
-    required this.count,
-    required this.onTap,
-  });
+  const _WishlistShortcutBanner({required this.count, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -2686,7 +3118,10 @@ class _WishlistShortcutBanner extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     'ALBUMS & TRACKS QUEUED TO SPIN',
-                    style: AppTypography.monoLabel(color: AppColors.textSecondary, fontSize: 9),
+                    style: AppTypography.monoLabel(
+                      color: AppColors.textSecondary,
+                      fontSize: 9,
+                    ),
                   ),
                 ],
               ),
@@ -2700,11 +3135,18 @@ class _WishlistShortcutBanner extends StatelessWidget {
               ),
               child: Text(
                 '$count QUEUED',
-                style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 9),
+                style: AppTypography.monoBadge(
+                  color: AppColors.acidLime,
+                  fontSize: 9,
+                ),
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
+            const Icon(
+              Icons.chevron_right,
+              color: AppColors.textSecondary,
+              size: 18,
+            ),
           ],
         ),
       ),
@@ -2716,10 +3158,7 @@ class _ListsShortcutBanner extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
 
-  const _ListsShortcutBanner({
-    required this.count,
-    required this.onTap,
-  });
+  const _ListsShortcutBanner({required this.count, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -2766,7 +3205,10 @@ class _ListsShortcutBanner extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     'CUSTOM TRACK & ALBUM COLLECTIONS',
-                    style: AppTypography.monoLabel(color: AppColors.textSecondary, fontSize: 9),
+                    style: AppTypography.monoLabel(
+                      color: AppColors.textSecondary,
+                      fontSize: 9,
+                    ),
                   ),
                 ],
               ),
@@ -2780,11 +3222,18 @@ class _ListsShortcutBanner extends StatelessWidget {
               ),
               child: Text(
                 '$count ${count == 1 ? 'LIST' : 'LISTS'}',
-                style: AppTypography.monoBadge(color: AppColors.cyberCyan, fontSize: 9),
+                style: AppTypography.monoBadge(
+                  color: AppColors.cyberCyan,
+                  fontSize: 9,
+                ),
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
+            const Icon(
+              Icons.chevron_right,
+              color: AppColors.textSecondary,
+              size: 18,
+            ),
           ],
         ),
       ),
@@ -2855,9 +3304,7 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
 
   void _openDetail(Review review) {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ReviewDetailScreen(review: review),
-      ),
+      MaterialPageRoute(builder: (_) => ReviewDetailScreen(review: review)),
     );
   }
 
@@ -2887,7 +3334,10 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceElevated,
                       border: Border.all(color: AppColors.border),
@@ -2895,31 +3345,49 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
                     ),
                     child: Text(
                       'CARD ${(_currentIndex + 1).toString().padLeft(2, '0')} / ${widget.reviews.length.toString().padLeft(2, '0')}',
-                      style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 9),
+                      style: AppTypography.monoBadge(
+                        color: AppColors.acidLime,
+                        fontSize: 9,
+                      ),
                     ),
                   ),
                   if (hasMultiple) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: _isHolding ? AppColors.electricPink.withValues(alpha: 0.15) : AppColors.surface,
-                        border: Border.all(color: _isHolding ? AppColors.electricPink : AppColors.borderSubtle),
+                        color: _isHolding
+                            ? AppColors.electricPink.withValues(alpha: 0.15)
+                            : AppColors.surface,
+                        border: Border.all(
+                          color: _isHolding
+                              ? AppColors.electricPink
+                              : AppColors.borderSubtle,
+                        ),
                         borderRadius: BorderRadius.circular(2),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            _isHolding ? Icons.pause_circle_outline : Icons.autorenew,
+                            _isHolding
+                                ? Icons.pause_circle_outline
+                                : Icons.autorenew,
                             size: 10,
-                            color: _isHolding ? AppColors.electricPink : AppColors.textMuted,
+                            color: _isHolding
+                                ? AppColors.electricPink
+                                : AppColors.textMuted,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             _isHolding ? 'HOLDING // PAUSED' : 'AUTO-CYCLE 5S',
                             style: AppTypography.monoBadge(
-                              color: _isHolding ? AppColors.electricPink : AppColors.textMuted,
+                              color: _isHolding
+                                  ? AppColors.electricPink
+                                  : AppColors.textMuted,
                               fontSize: 7.5,
                             ),
                           ),
@@ -2936,7 +3404,9 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
                       onTap: () {
                         HapticFeedback.selectionClick();
                         setState(() {
-                          _currentIndex = (_currentIndex - 1 + widget.reviews.length) % widget.reviews.length;
+                          _currentIndex =
+                              (_currentIndex - 1 + widget.reviews.length) %
+                              widget.reviews.length;
                         });
                       },
                       borderRadius: BorderRadius.circular(2),
@@ -2947,7 +3417,11 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
                           border: Border.all(color: AppColors.border),
                           borderRadius: BorderRadius.circular(2),
                         ),
-                        child: const Icon(Icons.chevron_left, size: 14, color: AppColors.textPrimary),
+                        child: const Icon(
+                          Icons.chevron_left,
+                          size: 14,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -2955,7 +3429,8 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
                       onTap: () {
                         HapticFeedback.selectionClick();
                         setState(() {
-                          _currentIndex = (_currentIndex + 1) % widget.reviews.length;
+                          _currentIndex =
+                              (_currentIndex + 1) % widget.reviews.length;
                         });
                       },
                       borderRadius: BorderRadius.circular(2),
@@ -2966,7 +3441,11 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
                           border: Border.all(color: AppColors.border),
                           borderRadius: BorderRadius.circular(2),
                         ),
-                        child: const Icon(Icons.chevron_right, size: 14, color: AppColors.textPrimary),
+                        child: const Icon(
+                          Icons.chevron_right,
+                          size: 14,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
                   ],
@@ -2979,7 +3458,12 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
 
         // Stacked Card Pile Container with Illusion Behind Front Card
         Padding(
-          padding: EdgeInsets.fromLTRB(20, 0, 20 + totalExtraX, totalExtraY + 12),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            0,
+            20 + totalExtraX,
+            totalExtraY + 12,
+          ),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -2995,7 +3479,9 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
                       decoration: BoxDecoration(
                         color: AppColors.surfaceElevated,
                         border: Border.all(
-                          color: AppColors.acidLime.withValues(alpha: (1.0 - (i - 1) * 0.22).clamp(0.45, 1.0)),
+                          color: AppColors.acidLime.withValues(
+                            alpha: (1.0 - (i - 1) * 0.22).clamp(0.45, 1.0),
+                          ),
                           width: 1.5,
                         ),
                         borderRadius: BorderRadius.circular(2),
@@ -3020,16 +3506,19 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 380),
                   transitionBuilder: (child, animation) {
-                    final slideIn = Tween<Offset>(
-                      begin: const Offset(0.04, 0.03),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+                    final slideIn =
+                        Tween<Offset>(
+                          begin: const Offset(0.04, 0.03),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        );
                     return FadeTransition(
                       opacity: animation,
-                      child: SlideTransition(
-                        position: slideIn,
-                        child: child,
-                      ),
+                      child: SlideTransition(position: slideIn, child: child),
                     );
                   },
                   child: KeyedSubtree(
@@ -3042,7 +3531,9 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
                           maxHeadlineLines: 2,
                           maxBodyLines: 3,
                           onLike: () {
-                            ref.read(reviewControllerProvider).likeReview(activeReview.id);
+                            ref
+                                .read(reviewControllerProvider)
+                                .likeReview(activeReview.id);
                           },
                           onTap: () => _openDetail(activeReview),
                         );
@@ -3058,4 +3549,3 @@ class _ReviewStackDeckState extends State<_ReviewStackDeck> {
     );
   }
 }
-
