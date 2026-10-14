@@ -96,11 +96,13 @@ void main() {
       expect(songResults.any((item) => item.name.contains('BIRDS')), true);
     });
 
-    test('Live Deezer search works and retrieves real results', () async {
-      final repo = SpotifyRepository(
-        deezerService: DeezerApiService(),
-        enableLiveCatalog: true,
-      );
+    test(
+      'Live Deezer search works and retrieves real results',
+      () async {
+        final repo = SpotifyRepository(
+          deezerService: DeezerApiService(),
+          enableLiveCatalog: true,
+        );
       expect(repo.isLiveMode, true);
 
       final results = await repo.search('GNX', type: MusicType.album);
@@ -113,7 +115,9 @@ void main() {
       expect(albumDetail, isNotNull);
       expect(albumDetail!.tracks.isNotEmpty, true);
       expect(albumDetail.durationMs > 0, true);
-    });
+      },
+      timeout: const Timeout(Duration(seconds: 90)),
+    );
 
     test('Live search for slowdive returns both albums and tracks with artwork', () async {
       final repo = SpotifyRepository(

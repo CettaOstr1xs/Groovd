@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:groovd/main.dart';
@@ -2164,6 +2165,92 @@ void main() {
 
     final kinokoTranslits = DeezerApiService.getTransliterations('kinoko teikoku');
     expect(kinokoTranslits, contains('きのこ帝国'));
+  });
+
+  testWidgets('Tracklist section renders DURATION and RATING headers, rating badge on corner right, and - for unrated tracks', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final albumItem = MusicItem(
+      id: 'album_test_tracklist_rate',
+      name: 'ПОСЛЕДНИЙ ГЕРОЙ',
+      artist: 'КИНО',
+      coverUrl: '',
+      type: MusicType.album,
+      releaseDate: '1989',
+      tracks: const [
+        TrackInfo(id: 'trk_1', name: 'Хочу перемен', trackNumber: 1, durationMs: 292000, artist: 'КИНО'),
+        TrackInfo(id: 'trk_2', name: 'Электричка', trackNumber: 2, durationMs: 284000, artist: 'КИНО'),
+      ],
+    );
+
+    // Track 1 is rated 8.8, Track 2 is unrated
+    final track1Review = Review(
+      id: 'rev_t1',
+      musicItemId: 'trk_1',
+      musicItemName: 'Хочу перемен',
+      artistName: 'КИНО',
+      coverUrl: '',
+      itemType: 'song',
+      userId: 'user_me',
+      userName: 'YOU',
+      userHandle: '@you',
+      rating: 8.8,
+      headline: 'Peremen',
+      body: 'Classic anthem',
+      createdAt: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserIdProvider.overrideWithValue('user_me'),
+          userReviewsProvider('user_me').overrideWith((ref) async => [track1Review]),
+          itemReviewsProvider(ItemReviewQuery.fromItem(albumItem)).overrideWith((ref) async => []),
+        ],
+        child: MaterialApp(
+          home: MusicDetailScreen(item: albumItem),
+        ),
+      ),
+    );
+
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // Verify DURATION and RATING headers exist
+    expect(find.text('DURATION'), findsOneWidget);
+    expect(find.text('RATING'), findsOneWidget);
+
+    // Verify track 1 displays its 8.8 rating badge
+    expect(find.text('8.8'), findsOneWidget);
+
+    // Verify unrated track displays '-' placeholder
+    expect(find.text('-'), findsOneWidget);
+
+    final durationHeaderBox = tester.getRect(find.text('DURATION'));
+    final durationRow1Box = tester.getRect(find.text('4:52'));
+    final ratingHeaderBox = tester.getRect(find.text('RATING'));
+    final ratingBadgeBox = tester.getRect(find.text('8.8'));
+    final ratingDashBox = tester.getRect(find.text('-'));
+
+    expect(durationHeaderBox.right, equals(durationRow1Box.right));
+
+    final RenderParagraph durParagraph = tester.renderObject(find.text('DURATION'));
+    final durBoxes = durParagraph.getBoxesForSelection(const TextSelection(baseOffset: 7, extentOffset: 8));
+    final globalDurNRight = durParagraph.localToGlobal(Offset(durBoxes.first.right, 0)).dx;
+
+    final RenderParagraph numParagraph = tester.renderObject(find.text('4:52'));
+    final numBoxes = numParagraph.getBoxesForSelection(const TextSelection(baseOffset: 3, extentOffset: 4));
+    final globalNum2Right = numParagraph.localToGlobal(Offset(numBoxes.first.right, 0)).dx;
+
+    // The letter 'N' from DURATION aligns straight with the track duration numbers below it
+    expect((globalDurNRight - globalNum2Right).abs(), lessThan(0.5));
+
+    // Rating column header and badge centers align closely
+    expect((ratingHeaderBox.center.dx - ratingDashBox.center.dx).abs(), lessThan(1.0));
+    expect((ratingHeaderBox.center.dx - ratingBadgeBox.center.dx).abs(), lessThan(8.0));
   });
 }
 

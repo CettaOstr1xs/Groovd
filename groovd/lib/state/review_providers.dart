@@ -282,32 +282,30 @@ final albumAutomaticOverallScoreProvider = Provider.family<double?, MusicItem>((
   final currentUserId = ref.watch(currentUserIdProvider);
   final userReviewsAsync = ref.watch(userReviewsProvider(currentUserId));
   final reviews = userReviewsAsync.asData?.value ?? const [];
+  final guestReviews = currentUserId != 'user_me'
+      ? (ref.watch(userReviewsProvider('user_me')).asData?.value ?? const [])
+      : const <Review>[];
+  final allReviews = [...reviews, ...guestReviews];
 
   final List<double> trackRatings = [];
 
   for (final track in item.tracks) {
     final trackArtist = track.artist.isNotEmpty ? track.artist : item.artist;
-    final trackNormTitle = MusicItem.normalizeTitle(track.name);
-    final trackNormArtist = MusicItem.normalizeArtist(trackArtist);
-    final trackKey = 'song::$trackNormArtist::$trackNormTitle';
 
     Review? matchedReview;
-    for (final r in reviews) {
+    for (final r in allReviews) {
       if (track.id.isNotEmpty && r.musicItemId.isNotEmpty && r.musicItemId == track.id) {
         matchedReview = r;
         break;
       }
       final rType = r.itemType.toLowerCase();
       if (rType == 'song' || rType == 'track') {
-        final rNormTitle = MusicItem.normalizeTitle(r.musicItemName);
-        final rNormArtist = MusicItem.normalizeArtist(r.artistName);
-        final rKey = 'song::$rNormArtist::$rNormTitle';
-        if (rKey == trackKey) {
-          matchedReview = r;
-          break;
-        }
-        if (rNormTitle == trackNormTitle &&
-            (trackNormArtist.contains(rNormArtist) || rNormArtist.contains(trackNormArtist))) {
+        if (r.matchesItem(
+          id: track.id,
+          name: track.name,
+          artist: trackArtist,
+          type: 'song',
+        )) {
           matchedReview = r;
           break;
         }
@@ -332,26 +330,25 @@ final trackUserRatingProvider = Provider.family<double?, ({TrackInfo track, Stri
   final currentUserId = ref.watch(currentUserIdProvider);
   final userReviewsAsync = ref.watch(userReviewsProvider(currentUserId));
   final reviews = userReviewsAsync.asData?.value ?? const [];
+  final guestReviews = currentUserId != 'user_me'
+      ? (ref.watch(userReviewsProvider('user_me')).asData?.value ?? const [])
+      : const <Review>[];
+  final allReviews = [...reviews, ...guestReviews];
 
   final trackArtist = arg.track.artist.isNotEmpty ? arg.track.artist : arg.albumArtist;
-  final trackNormTitle = MusicItem.normalizeTitle(arg.track.name);
-  final trackNormArtist = MusicItem.normalizeArtist(trackArtist);
-  final trackKey = 'song::$trackNormArtist::$trackNormTitle';
 
-  for (final r in reviews) {
+  for (final r in allReviews) {
     if (arg.track.id.isNotEmpty && r.musicItemId.isNotEmpty && r.musicItemId == arg.track.id) {
       return r.rating;
     }
     final rType = r.itemType.toLowerCase();
     if (rType == 'song' || rType == 'track') {
-      final rNormTitle = MusicItem.normalizeTitle(r.musicItemName);
-      final rNormArtist = MusicItem.normalizeArtist(r.artistName);
-      final rKey = 'song::$rNormArtist::$rNormTitle';
-      if (rKey == trackKey) {
-        return r.rating;
-      }
-      if (rNormTitle == trackNormTitle &&
-          (trackNormArtist.contains(rNormArtist) || rNormArtist.contains(trackNormArtist))) {
+      if (r.matchesItem(
+        id: arg.track.id,
+        name: arg.track.name,
+        artist: trackArtist,
+        type: 'song',
+      )) {
         return r.rating;
       }
     }

@@ -695,9 +695,32 @@ class MusicDetailScreen extends ConsumerWidget {
                       ],
                     ),
                     if (activeItem.tracks.isNotEmpty)
-                      Text(
-                        'DURATION',
-                        style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 90,
+                            child: Text(
+                              'DURATION',
+                              textAlign: TextAlign.right,
+                              maxLines: 1,
+                              softWrap: false,
+                              style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted, letterSpacing: 0.8),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          SizedBox(
+                            width: 58,
+                            child: Text(
+                              'RATING',
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              softWrap: false,
+                              style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted, letterSpacing: 0.8),
+                            ),
+                          ),
+                          const SizedBox(width: 22),
+                        ],
                       ),
                   ],
                 ),
@@ -807,43 +830,62 @@ class MusicDetailScreen extends ConsumerWidget {
                               ],
                             ),
                           ),
-                          if (trackRating != null) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                              decoration: BoxDecoration(
-                                color: AppColors.acidLime.withValues(alpha: 0.15),
-                                border: Border.all(color: AppColors.acidLime, width: 1.0),
-                                borderRadius: BorderRadius.circular(2),
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            width: 90,
+                            child: Text(
+                              track.formattedDuration,
+                              textAlign: TextAlign.right,
+                              maxLines: 1,
+                              softWrap: false,
+                              style: AppTypography.monoLabel(
+                                fontSize: 11,
+                                color: AppColors.textSecondary,
+                                letterSpacing: 0.8,
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  RatingSpikeSign(
-                                    rating: trackRating,
-                                    size: 10,
-                                    color: AppColors.acidLime,
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    trackRating.toStringAsFixed(1),
-                                    style: AppTypography.monoBadge(
-                                      color: AppColors.acidLime,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                          Text(
-                            track.formattedDuration,
-                            style: AppTypography.monoLabel(
-                              fontSize: 11,
-                              color: AppColors.textSecondary,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 14),
+                          SizedBox(
+                            width: 58,
+                            child: Center(
+                              child: trackRating != null
+                                  ? Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.acidLime.withValues(alpha: 0.15),
+                                        border: Border.all(color: AppColors.acidLime, width: 1.0),
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          RatingSpikeSign(
+                                            rating: trackRating,
+                                            size: 10,
+                                            color: AppColors.acidLime,
+                                          ),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            trackRating.toStringAsFixed(1),
+                                            style: AppTypography.monoBadge(
+                                              color: AppColors.acidLime,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : Text(
+                                      '-',
+                                      style: AppTypography.monoBadge(
+                                        color: AppColors.textMuted,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
                           const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
                         ],
                       ),
