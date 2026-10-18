@@ -413,6 +413,16 @@ class MusicItem {
       return true;
     }
 
+    // Check parenthesized alias extraction e.g. 東京酒吐座(Tokyo Shoegazer)
+    final p1 = RegExp(r'\(([^)]+)\)').firstMatch(a1)?.group(1)?.trim();
+    if (p1 != null && p1.isNotEmpty && (p1 == a2 || p1.contains(a2) || a2.contains(p1))) {
+      return true;
+    }
+    final p2 = RegExp(r'\(([^)]+)\)').firstMatch(a2)?.group(1)?.trim();
+    if (p2 != null && p2.isNotEmpty && (p2 == a1 || p2.contains(a1) || a1.contains(p2))) {
+      return true;
+    }
+
     // Check alias mapping
     final aliases1 = _artistAliases[a1] ?? const [];
     if (aliases1.any((alias) {

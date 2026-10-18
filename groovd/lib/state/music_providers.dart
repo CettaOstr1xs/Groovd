@@ -20,12 +20,17 @@ final spotifyApiServiceProvider = Provider<SpotifyApiService>((ref) {
   );
 });
 
-/// Music Repository provider backed by Deezer API for free live music metadata
+/// Music Repository provider backed by hybrid Deezer & Spotify APIs with circuit-breaker failover
 final spotifyRepositoryProvider = Provider<SpotifyRepository>((ref) {
   final deezer = ref.watch(deezerApiServiceProvider);
   final api = ref.watch(spotifyApiServiceProvider);
   // Reactively track settings changes
-  ref.watch(spotifySettingsProvider);
+  final settings = ref.watch(spotifySettingsProvider);
+  if (settings.clientId.isNotEmpty && settings.clientSecret.isNotEmpty) {
+    api.updateCredentials(settings.clientId, settings.clientSecret);
+  } else if (SpotifyConfig.isConfigured) {
+    api.updateCredentials(SpotifyConfig.clientId, SpotifyConfig.clientSecret);
+  }
   return SpotifyRepository(
     apiService: api,
     deezerService: deezer,

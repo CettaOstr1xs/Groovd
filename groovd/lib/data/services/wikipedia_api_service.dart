@@ -40,6 +40,24 @@ class WikipediaApiService {
           await _fetchSummary('$clean (rapper)');
     }
 
+    // If name contains parentheses e.g. '東京酒吐座(Tokyo Shoegazer)'
+    if (summary == null || (summary.description?.toLowerCase().contains('disambiguation') ?? false)) {
+      final parenMatch = RegExp(r'\(([^)]+)\)').firstMatch(clean);
+      if (parenMatch != null) {
+        final insideParen = parenMatch.group(1)?.trim();
+        final outsideParen = clean.replaceAll(RegExp(r'\s*\([^)]*\)'), '').trim();
+        if (insideParen != null && insideParen.isNotEmpty) {
+          summary = await _fetchSummary(insideParen) ??
+              await _fetchSummary('$insideParen (band)') ??
+              await _fetchSummary('$insideParen (musician)');
+        }
+        if (summary == null && outsideParen.isNotEmpty && outsideParen != clean) {
+          summary = await _fetchSummary(outsideParen) ??
+              await _fetchSummary('$outsideParen (band)');
+        }
+      }
+    }
+
     // Try transliterated English titles if still not found
     if (summary == null || (summary.description?.toLowerCase().contains('disambiguation') ?? false)) {
       const transliterations = <String, String>{
