@@ -1862,8 +1862,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     // Average is (8.0 + 9.4)/2 = 8.7
-    // Verify OVERALL 8.7 badge appears in both metadata wrap and tracklist header
-    expect(find.text('OVERALL 8.7'), findsNWidgets(2));
+    // Verify OVERALL 8.7 badge appears in the tracklist header
+    expect(find.text('OVERALL 8.7'), findsOneWidget);
 
     // Now tap + LOG YOUR REVIEW to verify it opens WriteReviewModal with 8.7 auto-set
     await tester.tap(find.text('+ LOG YOUR REVIEW'));

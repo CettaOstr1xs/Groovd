@@ -466,50 +466,6 @@ class MusicDetailScreen extends ConsumerWidget {
                           '• ${activeItem.formattedDuration}',
                           style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted),
                         ),
-                      if (userLogCount > 1)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.acidLime,
-                            border: Border.all(color: AppColors.pureBlack, width: 1.0),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.repeat, size: 10, color: AppColors.pureBlack),
-                              const SizedBox(width: 3),
-                              Text(
-                                'HEARD ${userLogCount}X',
-                                style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
-                              ),
-                            ],
-                          ),
-                        ),
-                      if (autoOverallScore != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.cyberCyan,
-                            border: Border.all(color: AppColors.pureBlack, width: 1.0),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              RatingSpikeSign(
-                                rating: autoOverallScore,
-                                size: 11,
-                                color: AppColors.pureBlack,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'OVERALL ${autoOverallScore.toStringAsFixed(1)}',
-                                style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
-                              ),
-                            ],
-                          ),
-                        ),
                     ],
                   ),
 

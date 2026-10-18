@@ -26,6 +26,8 @@
 **/.pub/
 **/build/
 **/coverage/
+*.apk
+**/download/*.apk
 
 # IDE & Editor
 .idea/

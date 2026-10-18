@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GROOVD // The Music Critic's Notebook (Official Android Download)</title>
+
+  <!-- SEO & Social Metadata -->
+  <meta name="description" content="Download Groovd for Android. The uncompromising editorial music rating and cataloging application with 10.0 decimal precision, critic dossiers, and neo-brutalist aesthetics.">
+  <meta name="keywords" content="Groovd, music critic, music rating app, album reviews, 10.0 decimal rating, android apk, brutalist music app">
+  <meta name="author" content="Groovd Editorial">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://groovd-43b81.web.app/">
+  <meta property="og:title" content="GROOVD // The Music Critic's Notebook">
+  <meta property="og:description" content="Uncompromising music rating and discography archive for Android. 10.0 decimal precision, zero soft shadows.">
+  <meta property="og:image" content="assets/icon/groovd-logo.png">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="GROOVD // The Music Critic's Notebook">
+  <meta name="twitter:description" content="Uncompromising music rating and discography archive for Android. Download official APK.">
+  <meta name="twitter:image" content="assets/icon/groovd-logo.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="assets/icon/groovd-logo.png">
+
+  <!-- Stylesheet (versioned to ensure instant browser cache refresh) -->
+  <link rel="stylesheet" href="css/styles.css?v=3.6">
+</head>
+<body>
+
+  <!-- In-App Authentic Splash Screen (Same as Flutter App, runs on access & refresh) -->
+  <div id="splash-screen" class="splash-screen" role="dialog" aria-modal="true" aria-label="Groovd Launch Screen">
+    <!-- Concentric Vinyl Grooves (Directly from app _VinylGroovesPainter) -->
+    <svg class="splash-vinyl-grooves" viewBox="0 0 800 800" aria-hidden="true">
+      <circle cx="400" cy="400" r="90" fill="none" stroke="#26262F" stroke-width="1.2" />
+      <circle cx="400" cy="400" r="140" fill="none" stroke="#26262F" stroke-width="1.2" />
+      <circle cx="400" cy="400" r="190" fill="none" stroke="#26262F" stroke-width="1.2" />
+      <circle cx="400" cy="400" r="240" fill="none" stroke="#26262F" stroke-width="1.2" />
+      <circle cx="400" cy="400" r="290" fill="none" stroke="#26262F" stroke-width="1.2" />
+      <circle cx="400" cy="400" r="340" fill="none" stroke="#26262F" stroke-width="1.2" />
+    </svg>
+
+    <div class="splash-brand-container">
+      <div class="splash-brand-row">
+        <span class="splash-brand-text">GROOVD</span>
+        <span class="splash-brand-block" aria-hidden="true"></span>
+      </div>
+
+      <div class="splash-tagline">
+        <span class="splash-dash"></span>
+        <span class="splash-tagline-text">THE MUSIC CRITIC'S NOTEBOOK</span>
+        <span class="splash-dash"></span>
+      </div>
+    </div>
+
+    <div class="splash-footer">
+      GROOVD // ARCHIVE v1.0
+    </div>
+  </div>
+
+  <!-- Top Marquee Ticker (Dual identical tracks for 100% seamless infinite loop) -->
+  <div class="marquee-wrapper" aria-hidden="true">
+    <div class="marquee-content">
+      <span>GROOVD // THE MUSIC CRITIC'S NOTEBOOK</span>
+      <span>//</span>
+      <span>UNCOMPROMISING MUSIC ARCHIVE</span>
+      <span>//</span>
+      <span>10.0 DECIMAL RATING PRECISION</span>
+      <span>//</span>
+      <span>ZERO SOFT SHADOWS</span>
+      <span>//</span>
+      <span>OFFICIAL ANDROID V1.0.0 RELEASE</span>
+      <span>//</span>
+      <span>DIRECT APK DOWNLOAD</span>
+      <span>//</span>
+      <span>GROOVD // THE MUSIC CRITIC'S NOTEBOOK</span>
+      <span>//</span>
+      <span>UNCOMPROMISING MUSIC ARCHIVE</span>
+      <span>//</span>
+      <span>10.0 DECIMAL RATING PRECISION</span>
+      <span>//</span>
+      <span>ZERO SOFT SHADOWS</span>
+      <span>//</span>
+      <span>OFFICIAL ANDROID V1.0.0 RELEASE</span>
+      <span>//</span>
+      <span>DIRECT APK DOWNLOAD</span>
+      <span>//</span>
+    </div>
+    <div class="marquee-content" aria-hidden="true">
+      <span>GROOVD // THE MUSIC CRITIC'S NOTEBOOK</span>
+      <span>//</span>
+      <span>UNCOMPROMISING MUSIC ARCHIVE</span>
+      <span>//</span>
+      <span>10.0 DECIMAL RATING PRECISION</span>
+      <span>//</span>
+      <span>ZERO SOFT SHADOWS</span>
+      <span>//</span>
+      <span>OFFICIAL ANDROID V1.0.0 RELEASE</span>
+      <span>//</span>
+      <span>DIRECT APK DOWNLOAD</span>
+      <span>//</span>
+      <span>GROOVD // THE MUSIC CRITIC'S NOTEBOOK</span>
+      <span>//</span>
+      <span>UNCOMPROMISING MUSIC ARCHIVE</span>
+      <span>//</span>
+      <span>10.0 DECIMAL RATING PRECISION</span>
+      <span>//</span>
+      <span>ZERO SOFT SHADOWS</span>
+      <span>//</span>
+      <span>OFFICIAL ANDROID V1.0.0 RELEASE</span>
+      <span>//</span>
+      <span>DIRECT APK DOWNLOAD</span>
+      <span>//</span>
+    </div>
+  </div>
+
+  <!-- Sticky Navigation Header (In-App Logo Style: GROOVD ▪) -->
+  <header class="site-nav">
+    <div class="container nav-inner">
+      <a href="#hero" class="nav-brand" aria-label="GROOVD Archive Home">
+        <span class="brand-text">GROOVD</span>
+        <span class="brand-square" aria-hidden="true"></span>
+      </a>
+
+      <nav class="nav-links">
+        <a href="#features">FEATURES</a>
+        <a href="#rating-demo">RATING DIAL</a>
+        <a href="#showcase">REAL ARCHIVE</a>
+        <a href="#install-guide">INSTALL GUIDE</a>
+        <a href="#specs">SPECS</a>
+      </nav>
+
+      <a href="#download" class="btn-nav-download js-download-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        GET APK v1.0.0
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero Section with Animated Album Covers Wall Background -->
+  <section id="hero" class="hero">
+    
+    <!-- Animated Multi-Row Background of Real Album Covers Covering ALL of the Top Section Background -->
+    <div class="hero-covers-bg" aria-hidden="true">
+      <div class="covers-track track-1">
+        <img src="assets/covers/in_rainbows.jpg" alt="">
+        <img src="assets/covers/blonde.jpg" alt="">
+        <img src="assets/covers/currents.jpg" alt="">
+        <img src="assets/covers/igor.jpg" alt="">
+        <img src="assets/covers/unknown_pleasures.jpg" alt="">
+        <img src="assets/covers/after_hours.jpg" alt="">
+        <img src="assets/covers/brat.jpg" alt="">
+        <img src="assets/covers/good_kid_maad_city.jpg" alt="">
+        <img src="assets/covers/am.jpg" alt="">
+        <img src="assets/covers/kid_a.jpg" alt="">
+        <img src="assets/covers/in_rainbows.jpg" alt="">
+        <img src="assets/covers/blonde.jpg" alt="">
+        <img src="assets/covers/currents.jpg" alt="">
+        <img src="assets/covers/igor.jpg" alt="">
+        <img src="assets/covers/unknown_pleasures.jpg" alt="">
+        <img src="assets/covers/after_hours.jpg" alt="">
+      </div>
+
+      <div class="covers-track track-2">
+        <img src="assets/covers/ok_computer.jpg" alt="">
+        <img src="assets/covers/ctrl.jpg" alt="">
+        <img src="assets/covers/nevermind.jpg" alt="">
+        <img src="assets/covers/starboy.jpg" alt="">
+        <img src="assets/covers/to_pimp_a_butterfly.jpg" alt="">
+        <img src="assets/covers/discovery.jpg" alt="">
+        <img src="assets/covers/the_dark_side_of_the_moon.jpg" alt="">
+        <img src="assets/covers/in_utero.jpg" alt="">
+        <img src="assets/covers/flower_boy.jpg" alt="">
+        <img src="assets/covers/punisher.jpg" alt="">
+        <img src="assets/covers/ok_computer.jpg" alt="">
+        <img src="assets/covers/ctrl.jpg" alt="">
+        <img src="assets/covers/nevermind.jpg" alt="">
+        <img src="assets/covers/starboy.jpg" alt="">
+        <img src="assets/covers/to_pimp_a_butterfly.jpg" alt="">
+        <img src="assets/covers/discovery.jpg" alt="">
+      </div>
+
+      <div class="covers-track track-3">
+        <img src="assets/covers/melodrama.jpg" alt="">
+        <img src="assets/covers/lonerism.jpg" alt="">
+        <img src="assets/covers/vespertine.jpg" alt="">
+        <img src="assets/covers/sos.jpg" alt="">
+        <img src="assets/covers/rumours.jpg" alt="">
+        <img src="assets/covers/abbey_road.jpg" alt="">
+        <img src="assets/covers/the_bends.jpg" alt="">
+        <img src="assets/covers/born_to_die.jpg" alt="">
+        <img src="assets/covers/damn.jpg" alt="">
+        <img src="assets/covers/is_this_it.jpg" alt="">
+        <img src="assets/covers/melodrama.jpg" alt="">
+        <img src="assets/covers/lonerism.jpg" alt="">
+        <img src="assets/covers/vespertine.jpg" alt="">
+        <img src="assets/covers/sos.jpg" alt="">
+        <img src="assets/covers/rumours.jpg" alt="">
+        <img src="assets/covers/abbey_road.jpg" alt="">
+      </div>
+
+      <div class="covers-track track-4">
+        <img src="assets/covers/channel_orange.jpg" alt="">
+        <img src="assets/covers/flower_boy.jpg" alt="">
+        <img src="assets/covers/gemini_rights.jpg" alt="">
+        <img src="assets/covers/hit_me_hard_and_soft.jpg" alt="">
+        <img src="assets/covers/pure_heroine.jpg" alt="">
+        <img src="assets/covers/random_access_memories.jpg" alt="">
+        <img src="assets/covers/wish_you_were_here.jpg" alt="">
+        <img src="assets/covers/wwafawdwg.jpg" alt="">
+        <img src="assets/covers/short_n_sweet.jpg" alt="">
+        <img src="assets/covers/lover.jpg" alt="">
+        <img src="assets/covers/channel_orange.jpg" alt="">
+        <img src="assets/covers/flower_boy.jpg" alt="">
+        <img src="assets/covers/gemini_rights.jpg" alt="">
+        <img src="assets/covers/hit_me_hard_and_soft.jpg" alt="">
+        <img src="assets/covers/pure_heroine.jpg" alt="">
+        <img src="assets/covers/random_access_memories.jpg" alt="">
+      </div>
+
+      <div class="covers-track track-5">
+        <img src="assets/covers/good_kid_maad_city.jpg" alt="">
+        <img src="assets/covers/am.jpg" alt="">
+        <img src="assets/covers/kid_a.jpg" alt="">
+        <img src="assets/covers/in_utero.jpg" alt="">
+        <img src="assets/covers/punisher.jpg" alt="">
+        <img src="assets/covers/in_rainbows.jpg" alt="">
+        <img src="assets/covers/ok_computer.jpg" alt="">
+        <img src="assets/covers/discovery.jpg" alt="">
+        <img src="assets/covers/the_dark_side_of_the_moon.jpg" alt="">
+        <img src="assets/covers/blonde.jpg" alt="">
+        <img src="assets/covers/good_kid_maad_city.jpg" alt="">
+        <img src="assets/covers/am.jpg" alt="">
+        <img src="assets/covers/kid_a.jpg" alt="">
+        <img src="assets/covers/in_utero.jpg" alt="">
+        <img src="assets/covers/punisher.jpg" alt="">
+        <img src="assets/covers/in_rainbows.jpg" alt="">
+      </div>
+
+      <div class="covers-track track-6">
+        <img src="assets/covers/starboy.jpg" alt="">
+        <img src="assets/covers/to_pimp_a_butterfly.jpg" alt="">
+        <img src="assets/covers/after_hours.jpg" alt="">
+        <img src="assets/covers/brat.jpg" alt="">
+        <img src="assets/covers/ctrl.jpg" alt="">
+        <img src="assets/covers/nevermind.jpg" alt="">
+        <img src="assets/covers/damn.jpg" alt="">
+        <img src="assets/covers/melodrama.jpg" alt="">
+        <img src="assets/covers/lonerism.jpg" alt="">
+        <img src="assets/covers/abbey_road.jpg" alt="">
+        <img src="assets/covers/starboy.jpg" alt="">
+        <img src="assets/covers/to_pimp_a_butterfly.jpg" alt="">
+        <img src="assets/covers/after_hours.jpg" alt="">
+        <img src="assets/covers/brat.jpg" alt="">
+        <img src="assets/covers/ctrl.jpg" alt="">
+        <img src="assets/covers/nevermind.jpg" alt="">
+      </div>
+
+      <div class="covers-track track-7">
+        <img src="assets/covers/wish_you_were_here.jpg" alt="">
+        <img src="assets/covers/short_n_sweet.jpg" alt="">
+        <img src="assets/covers/pure_heroine.jpg" alt="">
+        <img src="assets/covers/the_dark_side_of_the_moon.jpg" alt="">
+        <img src="assets/covers/the_bends.jpg" alt="">
+        <img src="assets/covers/am.jpg" alt="">
+        <img src="assets/covers/discovery.jpg" alt="">
+        <img src="assets/covers/in_rainbows.jpg" alt="">
+        <img src="assets/covers/ctrl.jpg" alt="">
+        <img src="assets/covers/igor.jpg" alt="">
+        <img src="assets/covers/wish_you_were_here.jpg" alt="">
+        <img src="assets/covers/short_n_sweet.jpg" alt="">
+        <img src="assets/covers/pure_heroine.jpg" alt="">
+        <img src="assets/covers/the_dark_side_of_the_moon.jpg" alt="">
+        <img src="assets/covers/the_bends.jpg" alt="">
+        <img src="assets/covers/am.jpg" alt="">
+      </div>
+
+      <div class="hero-covers-overlay"></div>
+    </div>
+
+    <div class="container hero-container">
+      
+      <!-- Hero Content (Open, unboxed typography & actions) -->
+      <div class="hero-content">
+        
+        <!-- Header Strip / Badges & Issue Code -->
+        <div class="hero-meta-bar">
+          <div class="hero-tags">
+            <span class="tag-badge cyan">ANDROID 8.0+</span>
+            <span class="tag-badge lime">v1.0.0 STABLE</span>
+            <span class="tag-badge muted">OPEN CRITIQUE</span>
+          </div>
+          <div class="hero-edition-code">
+            ISS. 2026 // VOL. 01
+          </div>
+        </div>
+
+        <!-- Headline -->
+        <h1 class="hero-title">
+          <span class="hero-title-line">UNCOMPROMISING</span>
+          <span class="hero-title-line">MUSIC ARCHIVE.</span>
+          <span class="hero-title-line highlight-lime">ZERO SOFT SHADOWS.</span>
+        </h1>
+
+        <!-- Subtitle Mission -->
+        <p class="hero-subtitle">
+          The music critic's notebook. Ditch 5-star approximations, score releases with 10.0 decimal precision, track your vinyl grail wantlist, and curate your definitive canon.
+        </p>
+
+        <!-- Action Buttons & Device Status -->
+        <div class="hero-actions-container">
+          <div class="download-cta-row" id="download">
+            <a href="download/groovd-latest.apk" class="btn-primary-download js-download-link" download="groovd-v1.0.0.apk">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              DOWNLOAD APK // ANDROID
+            </a>
+
+            <a href="#install-guide" class="btn-secondary-guide">
+              INSTALL GUIDE →
+            </a>
+          </div>
+
+          <div id="device-notice"></div>
+        </div>
+
+        <!-- Structured Specs Strip -->
+        <div class="hero-specs-strip">
+          <div class="spec-chip">
+            <span class="spec-k">PACKAGE</span>
+            <span class="spec-v">~45 MB</span>
+          </div>
+          <div class="spec-chip">
+            <span class="spec-k">ARCHITECTURE</span>
+            <span class="spec-v">UNIVERSAL</span>
+          </div>
+          <div class="spec-chip">
+            <span class="spec-k">OFFLINE</span>
+            <span class="spec-v">FAIL-SAFE</span>
+          </div>
+          <div class="spec-chip">
+            <span class="spec-k">PRIVACY</span>
+            <span class="spec-v">ZERO ADS</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Secondary Ticker (Dual identical tracks for 100% seamless infinite loop) -->
+  <div class="marquee-wrapper marquee-alt" aria-hidden="true">
+    <div class="marquee-content">
+      <span>[10.0 DECIMAL PRECISION]</span>
+      <span>//</span>
+      <span>[CRITIC DOSSIER]</span>
+      <span>//</span>
+      <span>[GLOBAL MUSIC ARCHIVE]</span>
+      <span>//</span>
+      <span>[ZERO TRACKERS]</span>
+      <span>//</span>
+      <span>[COMPLETE DISCOGRAPHY]</span>
+      <span>//</span>
+      <span>[HAPTIC SLIDERS]</span>
+      <span>//</span>
+      <span>[10.0 DECIMAL PRECISION]</span>
+      <span>//</span>
+      <span>[CRITIC DOSSIER]</span>
+      <span>//</span>
+      <span>[GLOBAL MUSIC ARCHIVE]</span>
+      <span>//</span>
+      <span>[ZERO TRACKERS]</span>
+      <span>//</span>
+      <span>[COMPLETE DISCOGRAPHY]</span>
+      <span>//</span>
+      <span>[HAPTIC SLIDERS]</span>
+      <span>//</span>
+    </div>
+    <div class="marquee-content" aria-hidden="true">
+      <span>[10.0 DECIMAL PRECISION]</span>
+      <span>//</span>
+      <span>[CRITIC DOSSIER]</span>
+      <span>//</span>
+      <span>[GLOBAL MUSIC ARCHIVE]</span>
+      <span>//</span>
+      <span>[ZERO TRACKERS]</span>
+      <span>//</span>
+      <span>[COMPLETE DISCOGRAPHY]</span>
+      <span>//</span>
+      <span>[HAPTIC SLIDERS]</span>
+      <span>//</span>
+      <span>[10.0 DECIMAL PRECISION]</span>
+      <span>//</span>
+      <span>[CRITIC DOSSIER]</span>
+      <span>//</span>
+      <span>[GLOBAL MUSIC ARCHIVE]</span>
+      <span>//</span>
+      <span>[ZERO TRACKERS]</span>
+      <span>//</span>
+      <span>[COMPLETE DISCOGRAPHY]</span>
+      <span>//</span>
+      <span>[HAPTIC SLIDERS]</span>
+      <span>//</span>
+    </div>
+  </div>
+
+  <!-- Interactive Rating Playground -->
+  <section id="rating-demo" class="section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">[INTERACTIVE DEMO]</span>
+        <h2 class="section-title">THE 10.0 DECIMAL RATING DIAL</h2>
+        <p class="section-desc">
+          Groovd replaces vague 5-star ratings with uncompromising 10.0 decimal precision. Drag the slider below to preview how live descriptor badges react in real time.
+        </p>
+      </div>
+
+      <div class="playground-grid">
+        <!-- Interactive Card -->
+        <div class="rating-demo-card" id="demo-rating-card">
+          <div class="rating-demo-display">
+            <div class="score-huge-wrap">
+              <span class="score-huge-number" id="demo-score-value">9.6</span>
+              <span class="score-huge-max">/10.0</span>
+            </div>
+
+            <div class="rating-badge-combo">
+              <div id="demo-spike-sign"></div>
+              <div class="descriptor-chip" id="demo-descriptor">MASTERPIECE</div>
+            </div>
+          </div>
+
+          <div class="slider-container">
+            <div class="slider-label-row">
+              <span>0.0 // CRITICAL SKIP</span>
+              <span>5.0 // MEDIOCRE</span>
+              <span>10.0 // MASTERPIECE</span>
+            </div>
+            <input type="range" id="demo-rating-slider" min="0.0" max="10.0" step="0.1" value="9.6" aria-label="Interactive rating score slider">
+          </div>
+        </div>
+
+        <!-- Explanatory Points -->
+        <div class="playground-info">
+          <div class="feature-point">
+            <div class="point-index">01</div>
+            <div class="point-body">
+              <h4>Granular Decimal Precision</h4>
+              <p>Distinguish between an 8.4 and an 8.9. Every decimal reflects exact nuance in production, songwriting, and sequencing.</p>
+            </div>
+          </div>
+
+          <div class="feature-point">
+            <div class="point-index">02</div>
+            <div class="point-body">
+              <h4>Adaptive Editorial Badges</h4>
+              <p>Live descriptors react instantly: from <em>Critical Skip</em>, <em>Mediocre</em>, <em>Decent Listen</em>, to <em>Critic's Essential</em> and <em>Masterpiece</em>.</p>
+            </div>
+          </div>
+
+          <div class="feature-point">
+            <div class="point-index">03</div>
+            <div class="point-body">
+              <h4>Automated Tracklist Scoring</h4>
+              <p>Rate releases track-by-track. Groovd computes the overall album consensus directly from your individual track evaluations.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Real In-App Screenshots Showcase Section -->
+  <section id="showcase" class="section" style="background-color: #0E0E0E; border-top: 2px solid var(--border-dark); border-bottom: 2px solid var(--border-dark);">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">[ACTUAL APP CAPTURES]</span>
+        <h2 class="section-title">REAL IN-APP EXPERIENCE</h2>
+        <p class="section-desc">Zero simulated graphics. Authentic captures directly from Groovd running on Android.</p>
+      </div>
+
+      <div class="real-screens-showcase">
+        <div class="real-screen-card">
+          <div class="real-screen-img-box">
+            <img src="assets/screenshots/groovd_landing.jpg" alt="Groovd Notebook Entry Screen" loading="lazy">
+          </div>
+          <div class="real-screen-caption">
+            <span>// 01. CRITIC'S NOTEBOOK</span>
+            <span class="tag-badge cyan" style="font-size: 0.7rem;">GATEWAY</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-top: 4px;">
+            Score releases from 0.0 to 10.0, track your vinyl grail wantlist, and curate your definitive canon.
+          </p>
+        </div>
+
+        <div class="real-screen-card">
+          <div class="real-screen-img-box">
+            <img src="assets/screenshots/groovd_dossier.jpg" alt="Groovd Critic Dossier Screen" loading="lazy">
+          </div>
+          <div class="real-screen-caption">
+            <span>// 02. CRITIC DOSSIER</span>
+            <span class="tag-badge pink" style="font-size: 0.7rem;">DOSSIER</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-top: 4px;">
+            Your personal critique archive: 156 logged records, 8.6 average score, perfect 10s counter, and pinned Critic's Canon albums.
+          </p>
+        </div>
+
+        <div class="real-screen-card">
+          <div class="real-screen-img-box">
+            <img src="assets/screenshots/groovd_album.jpg" alt="Groovd Album Archive Screen" loading="lazy">
+          </div>
+          <div class="real-screen-caption">
+            <span>// 03. FULL ALBUM ARCHIVE</span>
+            <span class="tag-badge cyan" style="font-size: 0.7rem;">INSPECTION</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-top: 4px;">
+            Comprehensive tracklist inspection, track durations, decimal community scores, and repeat listen logging.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Core Features Section -->
+  <section id="features" class="section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">[ARCHIVE CAPABILITIES]</span>
+        <h2 class="section-title">BUILT FOR CRITICAL DISCOVERY</h2>
+        <p class="section-desc">Designed from the ground up for listeners who treat music curation with intention.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon-box">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polygon points="10 8 16 12 10 16 10 8"></polygon>
+            </svg>
+          </div>
+          <h3>Global Music Discography</h3>
+          <p>Instant search across millions of releases. Inspect complete tracklists, track durations, release years, and full discographies without leaving the notebook.</p>
+          <div class="chip-preview">
+            <span class="tag-badge cyan">DISCOGRAPHY</span>
+            <span class="tag-badge muted">TRACKLISTS</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-box">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          </div>
+          <h3>Critic Dossier & Canon</h3>
+          <p>Showcase your four cornerstone records on your personal podium. Curate customized lists, track wantlists, and build a lasting critical legacy.</p>
+          <div class="chip-preview">
+            <span class="tag-badge pink">CANON PODIUM</span>
+            <span class="tag-badge muted">DOSSIER</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-box">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+          </div>
+          <h3>Neo-Brutalist Motion Suite</h3>
+          <p>Raw 2px high-contrast borders, physical drop shadows, electric color palettes, and fluid 60fps micro-animations that feel hyper-tactile on Android.</p>
+          <div class="chip-preview">
+            <span class="tag-badge cyan" style="background-color: var(--acid-lime);">60 FPS</span>
+            <span class="tag-badge muted">NEO-BRUTALIST</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-box">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <h3>Privacy-First & Offline Engine</h3>
+          <p>Zero advertisements, zero third-party tracking scripts. All your ratings and logs are cached locally with instant offline fail-safe retrieval.</p>
+          <div class="chip-preview">
+            <span class="tag-badge muted">NO ADS</span>
+            <span class="tag-badge muted">OFFLINE FIRST</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Android Sideloading Walkthrough (No Emojis) -->
+  <section id="install-guide" class="section" style="background-color: #0E0E0E; border-top: 2px solid var(--border-dark);">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">[STEP-BY-STEP INSTRUCTIONS]</span>
+        <h2 class="section-title">HOW TO INSTALL ON ANDROID</h2>
+        <p class="section-desc">
+          Because Groovd is distributed directly as an independent APK, Android will ask for standard confirmation. Follow these 3 simple steps:
+        </p>
+      </div>
+
+      <div class="sideload-accordion">
+        <!-- Step 1 -->
+        <div class="sideload-step active">
+          <div class="step-header">
+            <div class="step-header-left">
+              <span class="step-num">[01]</span>
+              <span class="step-title">Download the APK File</span>
+            </div>
+            <span class="step-indicator">+</span>
+          </div>
+          <div class="step-body">
+            <p>Tap the <strong>DOWNLOAD APK</strong> button on this website or scan the QR code using your phone camera. Your browser (Chrome, Firefox, or Brave) will begin downloading <code>groovd-v1.0.0.apk</code>.</p>
+            <div class="step-alert-box">
+              // FILE: <strong>groovd-v1.0.0.apk</strong> • Verify the download completes in your notifications drawer.
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="sideload-step">
+          <div class="step-header">
+            <div class="step-header-left">
+              <span class="step-num">[02]</span>
+              <span class="step-title">Permit "Install Unknown Apps"</span>
+            </div>
+            <span class="step-indicator">+</span>
+          </div>
+          <div class="step-body">
+            <p>Tap the completed download notification. If this is your first time sideloading an app from your browser, Android will display: <em>"For your security, your phone is not allowed to install unknown apps from this source."</em></p>
+            <p style="margin-top: 8px;">Tap <strong>Settings</strong> in that popup, and toggle <strong>"Allow from this source"</strong> to ON.</p>
+            <div class="step-alert-box">
+              // NOTICE: This is standard Android security for all apps downloaded directly from websites rather than the Play Store.
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="sideload-step">
+          <div class="step-header">
+            <div class="step-header-left">
+              <span class="step-num">[03]</span>
+              <span class="step-title">Complete Installation & Launch</span>
+            </div>
+            <span class="step-indicator">+</span>
+          </div>
+          <div class="step-body">
+            <p>Return to the installer screen and tap <strong>INSTALL</strong>. Once installed, tap <strong>OPEN</strong> to launch Groovd, build your Critic Dossier, and start logging releases.</p>
+            <div class="step-alert-box" style="border-left-color: var(--acid-lime); color: var(--acid-lime); background-color: rgba(204, 255, 0, 0.05);">
+              // READY: All future releases and updates can be installed over the existing app without losing your reviews.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Technical Specifications Table -->
+  <section id="specs" class="section" style="border-top: 2px solid var(--border-dark);">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">[SYSTEM REQUIREMENTS]</span>
+        <h2 class="section-title">TECHNICAL SPECIFICATIONS</h2>
+      </div>
+
+      <div class="specs-table-wrapper">
+        <table class="specs-table">
+          <thead>
+            <tr>
+              <th>SPECIFICATION</th>
+              <th>DETAILS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>APPLICATION NAME</td>
+              <td>GROOVD // THE MUSIC CRITIC'S NOTEBOOK</td>
+            </tr>
+            <tr>
+              <td>CURRENT VERSION</td>
+              <td>v1.0.0 (Build 1)</td>
+            </tr>
+            <tr>
+              <td>OPERATING SYSTEM</td>
+              <td>Android 8.0 (API Level 26) or higher</td>
+            </tr>
+            <tr>
+              <td>SUPPORTED ARCHITECTURES</td>
+              <td>arm64-v8a, armeabi-v7a, x86_64 (Universal Package)</td>
+            </tr>
+            <tr>
+              <td>DOWNLOAD SIZE</td>
+              <td>~45 MB</td>
+            </tr>
+            <tr>
+              <td>PERMISSIONS REQUIRED</td>
+              <td>Internet Access (Catalog search, album art retrieval, dossier sync)</td>
+            </tr>
+            <tr>
+              <td>TRACKERS / ADS</td>
+              <td>Zero (100% telemetry-free & ad-free)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Site Footer (Neat Brutalist Architecture matching reference layout) -->
+  <footer class="site-footer" id="footer">
+    <div class="container footer-inner">
+      
+      <!-- Top: Inquiry Headline -->
+      <div class="footer-header">
+        <span class="footer-badge">[CRITIC INVITATION]</span>
+        <h2 class="footer-headline">
+          Interested in scoring releases, building your vinyl grail wantlist, or exploring the archive?
+        </h2>
+      </div>
+
+      <!-- Action Row: Contact Info on Left, Navigation Links on Right (matching reference image) -->
+      <div class="footer-action-row">
+        <div class="footer-contact-block">
+          <span class="contact-label">CONTACT CRITIC DESK:</span>
+          <a href="mailto:critic@groovd.fm" class="contact-link">critic@groovd.fm ↗</a>
+        </div>
+
+        <nav class="footer-nav-bar" aria-label="Footer Navigation">
+          <a href="#hero">TOP</a>
+          <a href="#features">FEATURES</a>
+          <a href="#rating-demo">RATING DIAL</a>
+          <a href="#showcase">REAL ARCHIVE</a>
+          <a href="#install-guide">INSTALL GUIDE</a>
+          <a href="#specs">SPECS</a>
+        </nav>
+      </div>
+
+      <!-- Monumental GROOVD Wordmark: Scales to full width with zero clipping on any screen -->
+      <div class="footer-wordmark-wrapper" aria-label="GROOVD Archive">
+        <svg class="footer-wordmark-svg" viewBox="0 0 1520 220" width="100%" height="auto" preserveAspectRatio="xMinYMid meet">
+          <text x="0" y="165" class="footer-svg-text">GROOVD</text>
+          <rect x="1445" y="28" width="30" height="30" class="footer-svg-square" />
+        </svg>
+      </div>
+
+      <!-- Bottom Row: Copyright & Technical Status -->
+      <div class="footer-bottom-row">
+        <div class="footer-copyright-text">
+          © 2026 GROOVD ARCHIVE. ALL RIGHTS RESERVED.
+        </div>
+        <div class="footer-tech-specs">
+          <span>ANDROID 8.0+ UNIVERSAL</span>
+          <span class="tech-sep">//</span>
+          <span>ZERO ADS & TRACKERS</span>
+          <span class="tech-sep">//</span>
+          <span>FIREBASE HOSTED</span>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Sticky Mobile Download Bar (No Emojis) -->
+  <div class="sticky-download-bar" id="sticky-download-bar">
+    <div class="sticky-meta">
+      <span class="sticky-title">GROOVD FOR ANDROID</span>
+      <span class="sticky-sub">v1.0.0 // ~45 MB</span>
+    </div>
+    <a href="download/groovd-latest.apk" class="btn-sticky-download js-download-link" download="groovd-v1.0.0.apk">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+      </svg>
+      DOWNLOAD
+    </a>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/qrcode.js"></script>
+  <script src="js/main.js?v=3.6"></script>
+</body>
+</html>
