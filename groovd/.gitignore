@@ -67,3 +67,8 @@ key.properties
 # Widget Preview related
 .widget_preview/
 
+# Vendor raw archives
+gsap-public/
+**/gsap-public/
+__MACOSX/
+

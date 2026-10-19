@@ -41,41 +41,27 @@ function initSplashScreen() {
    ========================================================================= */
 function initDownload() {
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const baseUrl = isLocal ? window.location.origin : 'https://groovd-43b81.web.app';
+  const baseUrl = isLocal ? window.location.origin : 'https://groovd.web.app';
   const downloadUrl = `${baseUrl}/download/groovd-latest.apk`;
 
-  // Update download link hrefs
-  const downloadBtns = document.querySelectorAll('.js-download-link');
-  downloadBtns.forEach(btn => {
+  // On homepage, ensure all download CTA buttons route to the download portal page
+  const downloadCtaBtns = document.querySelectorAll('.btn-primary-download, .btn-nav-download, .btn-sticky-download');
+  downloadCtaBtns.forEach(btn => {
+    btn.href = 'download.html';
+  });
+
+  // Direct APK download links (e.g. manual fallback buttons)
+  const directApkLinks = document.querySelectorAll('.js-direct-apk-link');
+  directApkLinks.forEach(btn => {
     btn.href = downloadUrl;
   });
 }
 
 /* =========================================================================
-   2. Device Detection (Android-Specific Prompts)
+   2. Device Detection
    ========================================================================= */
 function initDeviceBadge() {
-  const isAndroid = /android/i.test(navigator.userAgent);
-  const deviceNotice = document.getElementById('device-notice');
-
-  if (isAndroid) {
-    if (deviceNotice) {
-      deviceNotice.innerHTML = `
-        <span class="badge-android">
-          <span class="dot-live"></span>
-          ANDROID DETECTED — READY FOR DIRECT INSTALL
-        </span>
-      `;
-    }
-  } else {
-    if (deviceNotice) {
-      deviceNotice.innerHTML = `
-        <span class="badge-desktop">
-          DIRECT APK DOWNLOAD AVAILABLE // READY FOR INSTALL
-        </span>
-      `;
-    }
-  }
+  // Device notice text removed per minimalist redesign
 }
 
 /* =========================================================================

@@ -39,3 +39,9 @@
 # OS files
 .DS_Store
 Thumbs.db
+__MACOSX/
+
+# Vendor raw archives
+gsap-public/
+**/gsap-public/
+

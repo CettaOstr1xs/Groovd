@@ -12,7 +12,7 @@
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://groovd-43b81.web.app/">
+  <meta property="og:url" content="https://groovd.web.app/">
   <meta property="og:title" content="GROOVD // The Music Critic's Notebook">
   <meta property="og:description" content="Uncompromising music rating and discography archive for Android. 10.0 decimal precision, zero soft shadows.">
   <meta property="og:image" content="assets/icon/groovd-logo.png">
@@ -27,9 +27,27 @@
   <link rel="icon" type="image/png" href="assets/icon/groovd-logo.png">
 
   <!-- Stylesheet (versioned to ensure instant browser cache refresh) -->
-  <link rel="stylesheet" href="css/styles.css?v=3.6">
+  <link rel="stylesheet" href="css/styles.css?v=5.2">
 </head>
 <body>
+
+  <!-- Neo-Brutalist Aperture Shutter Blade Transition -->
+  <div id="groovd-shutter" class="groovd-shutter" aria-hidden="true">
+    <div class="shutter-blade blade-1"></div>
+    <div class="shutter-blade blade-2"></div>
+    <div class="shutter-blade blade-3"></div>
+    <div class="shutter-blade blade-4"></div>
+    <div class="shutter-badge">
+      <span class="shutter-badge-text">GROOVD // ROUTING DISPATCH</span>
+      <span class="shutter-badge-bar"></span>
+    </div>
+  </div>
+
+  <!-- Neo-Brutalist Block Cursor -->
+  <div id="groovd-cursor" class="groovd-cursor" aria-hidden="true">
+    <div class="cursor-block"></div>
+    <div class="cursor-title-hud" id="cursor-title-hud"></div>
+  </div>
 
   <!-- In-App Authentic Splash Screen (Same as Flutter App, runs on access & refresh) -->
   <div id="splash-screen" class="splash-screen" role="dialog" aria-modal="true" aria-label="Groovd Launch Screen">
@@ -133,14 +151,21 @@
         <a href="#specs">SPECS</a>
       </nav>
 
-      <a href="#download" class="btn-nav-download js-download-link">
+      <a href="download.html" class="btn-nav-download">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
           <polyline points="7 10 12 15 17 10"></polyline>
           <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
-        GET APK v1.0.0
+        GET APK <span class="nav-v-hide">v1.0.0</span>
       </a>
+    </div>
+
+    <!-- Neo-Brutalist Slide Progress Indicator (Placed right below navbar border) -->
+    <div class="nav-slide-indicator" id="nav-slide-indicator" role="progressbar" aria-label="Slide Indicator" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+      <div class="nav-slide-track">
+        <div class="nav-slide-fill" id="nav-slide-fill"></div>
+      </div>
     </div>
   </header>
 
@@ -290,35 +315,23 @@
       <!-- Hero Content (Open, unboxed typography & actions) -->
       <div class="hero-content">
         
-        <!-- Header Strip / Badges & Issue Code -->
-        <div class="hero-meta-bar">
-          <div class="hero-tags">
-            <span class="tag-badge cyan">ANDROID 8.0+</span>
-            <span class="tag-badge lime">v1.0.0 STABLE</span>
-            <span class="tag-badge muted">OPEN CRITIQUE</span>
-          </div>
-          <div class="hero-edition-code">
-            ISS. 2026 // VOL. 01
-          </div>
-        </div>
-
-        <!-- Headline -->
-        <h1 class="hero-title">
+        <!-- Headline: Interactive Proximity Glitch on Cursor Hover -->
+        <h1 class="hero-title" id="hero-title">
           <span class="hero-title-line">UNCOMPROMISING</span>
-          <span class="hero-title-line">MUSIC ARCHIVE.</span>
-          <span class="hero-title-line highlight-lime">ZERO SOFT SHADOWS.</span>
+          <span class="hero-title-line highlight-lime">MUSIC ARCHIVE.</span>
         </h1>
 
-        <!-- Subtitle Mission -->
+        <!-- Subtitle: Editorial Tagline & Description -->
         <p class="hero-subtitle">
-          The music critic's notebook. Ditch 5-star approximations, score releases with 10.0 decimal precision, track your vinyl grail wantlist, and curate your definitive canon.
+          <span class="hero-subtitle-lead">THE MUSIC CRITIC'S NOTEBOOK.</span>
+          <span class="hero-subtitle-body">Rate with 10.0 decimal precision, archive full discographies, and curate your definitive canon.</span>
         </p>
 
-        <!-- Action Buttons & Device Status -->
+        <!-- Primary CTA + Secondary Link -->
         <div class="hero-actions-container">
           <div class="download-cta-row" id="download">
-            <a href="download/groovd-latest.apk" class="btn-primary-download js-download-link" download="groovd-v1.0.0.apk">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <a href="download.html" class="btn-primary-download">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -330,28 +343,17 @@
               INSTALL GUIDE →
             </a>
           </div>
-
-          <div id="device-notice"></div>
         </div>
 
-        <!-- Structured Specs Strip -->
+        <!-- Minimalist Typographic Specs Strip -->
         <div class="hero-specs-strip">
-          <div class="spec-chip">
-            <span class="spec-k">PACKAGE</span>
-            <span class="spec-v">~45 MB</span>
-          </div>
-          <div class="spec-chip">
-            <span class="spec-k">ARCHITECTURE</span>
-            <span class="spec-v">UNIVERSAL</span>
-          </div>
-          <div class="spec-chip">
-            <span class="spec-k">OFFLINE</span>
-            <span class="spec-v">FAIL-SAFE</span>
-          </div>
-          <div class="spec-chip">
-            <span class="spec-k">PRIVACY</span>
-            <span class="spec-v">ZERO ADS</span>
-          </div>
+          <span class="spec-item"><span class="spec-bullet">▪</span> ~45 MB APK</span>
+          <span class="spec-sep" aria-hidden="true">//</span>
+          <span class="spec-item"><span class="spec-bullet">▪</span> UNIVERSAL ARCH</span>
+          <span class="spec-sep" aria-hidden="true">//</span>
+          <span class="spec-item"><span class="spec-bullet">▪</span> OFFLINE FAIL-SAFE</span>
+          <span class="spec-sep" aria-hidden="true">//</span>
+          <span class="spec-item"><span class="spec-bullet">▪</span> ZERO ADS</span>
         </div>
 
       </div>
@@ -449,6 +451,40 @@
             </div>
             <input type="range" id="demo-rating-slider" min="0.0" max="10.0" step="0.1" value="9.6" aria-label="Interactive rating score slider">
           </div>
+
+          <!-- Hardware Oscilloscope Equalizer Spectrum -->
+          <div class="rating-oscilloscope" aria-hidden="true">
+            <div class="osc-header">
+              <span>HARMONIC DENSITY SPECTRUM</span>
+              <span class="osc-tag" id="osc-status-tag">ACTIVE // 9.6 SPIKE</span>
+            </div>
+            <div class="osc-spectrum" id="osc-spectrum-bars">
+              <span class="spectrum-bar active" style="height: 45%;"></span>
+              <span class="spectrum-bar active" style="height: 60%;"></span>
+              <span class="spectrum-bar active" style="height: 75%;"></span>
+              <span class="spectrum-bar active" style="height: 90%;"></span>
+              <span class="spectrum-bar active" style="height: 80%;"></span>
+              <span class="spectrum-bar active" style="height: 95%;"></span>
+              <span class="spectrum-bar active spike-peak" style="height: 100%;"></span>
+              <span class="spectrum-bar active spike-peak" style="height: 100%;"></span>
+              <span class="spectrum-bar active" style="height: 85%;"></span>
+              <span class="spectrum-bar active" style="height: 90%;"></span>
+              <span class="spectrum-bar active" style="height: 70%;"></span>
+              <span class="spectrum-bar active" style="height: 65%;"></span>
+              <span class="spectrum-bar active" style="height: 55%;"></span>
+              <span class="spectrum-bar active" style="height: 40%;"></span>
+              <span class="spectrum-bar active" style="height: 50%;"></span>
+              <span class="spectrum-bar active" style="height: 75%;"></span>
+              <span class="spectrum-bar active" style="height: 85%;"></span>
+              <span class="spectrum-bar active spike-peak" style="height: 95%;"></span>
+              <span class="spectrum-bar active spike-peak" style="height: 100%;"></span>
+              <span class="spectrum-bar active" style="height: 80%;"></span>
+              <span class="spectrum-bar active" style="height: 60%;"></span>
+              <span class="spectrum-bar active" style="height: 45%;"></span>
+              <span class="spectrum-bar active" style="height: 35%;"></span>
+              <span class="spectrum-bar active" style="height: 25%;"></span>
+            </div>
+          </div>
         </div>
 
         <!-- Explanatory Points -->
@@ -490,40 +526,54 @@
         <p class="section-desc">Zero simulated graphics. Authentic captures directly from Groovd running on Android.</p>
       </div>
 
-      <div class="real-screens-showcase">
-        <div class="real-screen-card">
+      <div class="real-screens-showcase" id="real-screens-showcase">
+        <div class="real-screen-card slot-left" data-index="0" role="button" tabindex="0" aria-label="Screen 1: Critic's Notebook">
           <div class="real-screen-img-box">
             <img src="assets/screenshots/groovd_landing.jpg" alt="Groovd Notebook Entry Screen" loading="lazy">
           </div>
           <div class="real-screen-caption">
             <span>// 01. CRITIC'S NOTEBOOK</span>
-            <span class="tag-badge cyan" style="font-size: 0.7rem;">GATEWAY</span>
+            <span class="tag-badge cyan">GATEWAY</span>
           </div>
           <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-top: 4px;">
             Score releases from 0.0 to 10.0, track your vinyl grail wantlist, and curate your definitive canon.
           </p>
         </div>
 
-        <div class="real-screen-card">
+        <!-- Left Block-Shaped Arrow Button (In between left and center images) -->
+        <button type="button" class="showcase-nav-btn btn-prev" id="showcase-prev-btn" aria-label="Previous screenshot">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square" stroke-linejoin="miter">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+
+        <div class="real-screen-card slot-center" data-index="1" role="button" tabindex="0" aria-label="Screen 2: Critic Dossier">
           <div class="real-screen-img-box">
             <img src="assets/screenshots/groovd_dossier.jpg" alt="Groovd Critic Dossier Screen" loading="lazy">
           </div>
           <div class="real-screen-caption">
             <span>// 02. CRITIC DOSSIER</span>
-            <span class="tag-badge pink" style="font-size: 0.7rem;">DOSSIER</span>
+            <span class="tag-badge pink">DOSSIER</span>
           </div>
           <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-top: 4px;">
             Your personal critique archive: 156 logged records, 8.6 average score, perfect 10s counter, and pinned Critic's Canon albums.
           </p>
         </div>
 
-        <div class="real-screen-card">
+        <!-- Right Block-Shaped Arrow Button (In between center and right images) -->
+        <button type="button" class="showcase-nav-btn btn-next" id="showcase-next-btn" aria-label="Next screenshot">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square" stroke-linejoin="miter">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+
+        <div class="real-screen-card slot-right" data-index="2" role="button" tabindex="0" aria-label="Screen 3: Full Album Archive">
           <div class="real-screen-img-box">
             <img src="assets/screenshots/groovd_album.jpg" alt="Groovd Album Archive Screen" loading="lazy">
           </div>
           <div class="real-screen-caption">
             <span>// 03. FULL ALBUM ARCHIVE</span>
-            <span class="tag-badge cyan" style="font-size: 0.7rem;">INSPECTION</span>
+            <span class="tag-badge cyan">INSPECTION</span>
           </div>
           <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-top: 4px;">
             Comprehensive tracklist inspection, track durations, decimal community scores, and repeat listen logging.
@@ -583,7 +633,7 @@
           <h3>Neo-Brutalist Motion Suite</h3>
           <p>Raw 2px high-contrast borders, physical drop shadows, electric color palettes, and fluid 60fps micro-animations that feel hyper-tactile on Android.</p>
           <div class="chip-preview">
-            <span class="tag-badge cyan" style="background-color: var(--acid-lime);">60 FPS</span>
+            <span class="tag-badge lime">60 FPS</span>
             <span class="tag-badge muted">NEO-BRUTALIST</span>
           </div>
         </div>
@@ -783,7 +833,7 @@
       <span class="sticky-title">GROOVD FOR ANDROID</span>
       <span class="sticky-sub">v1.0.0 // ~45 MB</span>
     </div>
-    <a href="download/groovd-latest.apk" class="btn-sticky-download js-download-link" download="groovd-v1.0.0.apk">
+    <a href="download.html" class="btn-sticky-download">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="7 10 12 15 17 10"></polyline>
@@ -794,7 +844,17 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/qrcode.js"></script>
-  <script src="js/main.js?v=3.6"></script>
+  <script src="js/vendor/gsap.min.js"></script>
+  <script src="js/vendor/ScrollTrigger.min.js"></script>
+  <script src="js/vendor/CustomEase.min.js"></script>
+  <script src="js/vendor/CustomBounce.min.js"></script>
+  <script src="js/vendor/CustomWiggle.min.js"></script>
+  <script src="js/vendor/InertiaPlugin.min.js"></script>
+  <script src="js/vendor/Observer.min.js"></script>
+  <script src="js/vendor/ScrambleTextPlugin.min.js"></script>
+  <script src="js/vendor/SplitText.min.js"></script>
+  <script src="js/qrcode.js?v=4.4"></script>
+  <script src="js/animations.js?v=4.8"></script>
+  <script src="js/main.js?v=4.4"></script>
 </body>
 </html>

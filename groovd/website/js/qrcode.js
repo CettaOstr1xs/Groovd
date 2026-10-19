@@ -5,7 +5,7 @@
 (function(window) {
   'use strict';
 
-  var QRMode = { NUMBER: 1, ALPHA_NUM: 2, 8BIT_BYTE: 4 };
+  var QRMode = { NUMBER: 1, ALPHA_NUM: 2, '8BIT_BYTE': 4 };
   var QRErrorCorrectLevel = { L: 1, M: 0, Q: 3, H: 2 };
 
   function QR8bitByte(data) {

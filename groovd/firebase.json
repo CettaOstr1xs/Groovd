@@ -3,29 +3,35 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "hosting": {
-    "public": "website",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "headers": [
-      {
-        "source": "**/*.@(apk)",
-        "headers": [
-          {
-            "key": "Content-Disposition",
-            "value": "attachment"
-          },
-          {
-            "key": "Content-Type",
-            "value": "application/vnd.android.package-archive"
-          }
-        ]
-      }
-    ]
-  },
+  "hosting": [
+    {
+      "site": "groovd",
+      "public": "website",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**",
+        "**/*.apk"
+      ]
+    },
+    {
+      "site": "groovd-43b81",
+      "public": "website",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**",
+        "**/*.apk"
+      ],
+      "redirects": [
+        {
+          "source": "/**",
+          "destination": "https://groovd.web.app/:splat",
+          "type": 301
+        }
+      ]
+    }
+  ],
   "flutter": {
     "platforms": {
       "android": {
