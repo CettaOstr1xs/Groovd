@@ -587,6 +587,13 @@ class _SearchItemTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scoreAsync = ref.watch(itemAverageScoreProvider(ItemReviewQuery.fromItem(item)));
 
+    // Granular Last.fm & MusicBrainz genres
+    final queryKey = '${item.artist.trim().toLowerCase()}:::${item.name.trim().toLowerCase()}:::${item.isAlbum || item.isEp}';
+    final enrichedAsync = ref.watch(itemEnrichedGenresByKeyProvider(queryKey));
+    final genres = (item.genres.length > 1)
+        ? item.genres
+        : (enrichedAsync.asData?.value ?? (item.genres.isNotEmpty ? item.genres : const <String>[]));
+
     return InkWell(
       onTap: () {
         Navigator.of(context).push(
@@ -606,12 +613,13 @@ class _SearchItemTile extends ConsumerWidget {
           border: Border.all(color: AppColors.border, width: 1.5),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Artwork Thumbnail
             AlbumArtCard(
               imageUrl: item.coverUrl,
               musicItem: item,
-              size: 64,
+              size: 68,
               showShadow: false,
               heroTag: 'search_${item.id}',
             ),
@@ -635,11 +643,13 @@ class _SearchItemTile extends ConsumerWidget {
                           style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 8),
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        item.formattedYear,
-                        style: AppTypography.monoLabel(fontSize: 9, color: AppColors.textMuted),
-                      ),
+                      if (item.formattedReleaseDateCompact.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          item.formattedReleaseDateCompact,
+                          style: AppTypography.monoLabel(fontSize: 9, color: AppColors.textMuted),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -667,6 +677,30 @@ class _SearchItemTile extends ConsumerWidget {
                       style: AppTypography.bodySmall(color: AppColors.cyberCyan),
                     ),
                   ),
+                  if (genres.isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 3,
+                      children: genres.take(3).map((g) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(color: AppColors.border, width: 1),
+                          ),
+                          child: Text(
+                            g.toUpperCase(),
+                            style: AppTypography.monoBadge(
+                              color: AppColors.textSecondary,
+                              fontSize: 7.5,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -674,7 +708,10 @@ class _SearchItemTile extends ConsumerWidget {
             // Score
             scoreAsync.when(
               data: (score) => score > 0
-                  ? GiantScoreBadge(score: score, compact: true)
+                  ? Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: GiantScoreBadge(score: score, compact: true),
+                    )
                   : const SizedBox.shrink(),
               loading: () => const SizedBox.shrink(),
               error: (err, stack) => const SizedBox.shrink(),

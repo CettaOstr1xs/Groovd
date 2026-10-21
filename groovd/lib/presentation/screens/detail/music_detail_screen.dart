@@ -198,13 +198,6 @@ class MusicDetailScreen extends ConsumerWidget {
           )
         : item;
 
-    // Granular Last.fm & MusicBrainz community genre tags
-    final enrichedGenresAsync = ref.watch(itemEnrichedGenresProvider(activeItem));
-    final enrichedTags = enrichedGenresAsync.asData?.value ?? enrichedGenresAsync.value;
-    final displayGenres = (enrichedTags != null && enrichedTags.isNotEmpty)
-        ? enrichedTags
-        : activeItem.genres;
-
     final reviewQuery = ItemReviewQuery.fromItem(activeItem);
     final reviewsAsync = ref.watch(itemReviewsProvider(reviewQuery));
     final currentUserId = ref.watch(currentUserIdProvider);
@@ -459,10 +452,16 @@ class MusicDetailScreen extends ConsumerWidget {
                           style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
                         ),
                       ),
-                      Text(
-                        'REL. ${activeItem.formattedYear}',
-                        style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted),
-                      ),
+                      if (activeItem.formattedReleaseDate.isNotEmpty)
+                        Text(
+                          'REL. ${activeItem.formattedReleaseDate}',
+                          style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted),
+                        )
+                      else if (activeItem.formattedYear.isNotEmpty)
+                        Text(
+                          'REL. ${activeItem.formattedYear}',
+                          style: AppTypography.monoLabel(fontSize: 10, color: AppColors.textMuted),
+                        ),
                       if (activeItem.trackCount > 1)
                         Text(
                           '• ${activeItem.trackCount} TRACKS',
@@ -539,45 +538,7 @@ class MusicDetailScreen extends ConsumerWidget {
                     ),
                   ),
 
-                  if (displayGenres.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: displayGenres.map((g) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceElevated,
-                            border: Border.all(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                          child: Text(
-                            g.toUpperCase(),
-                            style: AppTypography.monoBadge(color: AppColors.textSecondary, fontSize: 9),
-                          ),
-                        );
-                      }).toList(),
-                    ).animate().fadeIn(duration: 300.ms),
-                  ] else if (enrichedGenresAsync.isLoading) ...[
-                    const SizedBox(height: 20),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: List.generate(
-                        3,
-                        (index) => Container(
-                          width: 55.0 + (index * 14),
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceElevated.withValues(alpha: 0.5),
-                            border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  _EnrichedGenreTagsSection(item: activeItem),
                 ],
               ),
             ),
@@ -1390,4 +1351,80 @@ class _MoreByArtistCard extends ConsumerWidget {
     );
   }
 }
+
+/// Dedicated isolated widget that renders enriched community genre tags.
+/// Scoping tag observation to this widget guarantees that MusicDetailScreen's
+/// heavy layout (scores, tracklists, critique lists) does not rebuild or lag.
+class _EnrichedGenreTagsSection extends ConsumerWidget {
+  final MusicItem item;
+
+  const _EnrichedGenreTagsSection({required this.item});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // If the item already has resolved sub-genres, display them immediately with 0 lag
+    if (item.genres.length > 1) {
+      return _buildGenreWrap(item.genres);
+    }
+
+    final queryKey = '${item.artist.trim().toLowerCase()}:::${item.name.trim().toLowerCase()}:::${item.isAlbum || item.isEp}';
+    final enrichedAsync = ref.watch(itemEnrichedGenresByKeyProvider(queryKey));
+
+    final tags = enrichedAsync.asData?.value ?? enrichedAsync.value;
+    final displayGenres = (tags != null && tags.isNotEmpty) ? tags : item.genres;
+
+    if (displayGenres.isNotEmpty) {
+      return _buildGenreWrap(displayGenres);
+    }
+
+    if (enrichedAsync.isLoading) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 20),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: List.generate(
+            3,
+            (index) => Container(
+              width: 55.0 + (index * 14),
+              height: 20,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated.withValues(alpha: 0.5),
+                border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildGenreWrap(List<String> genres) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        children: genres.map((g) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceElevated,
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Text(
+              g.toUpperCase(),
+              style: AppTypography.monoBadge(color: AppColors.textSecondary, fontSize: 9),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
 

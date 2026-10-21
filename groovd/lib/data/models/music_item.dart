@@ -94,6 +94,17 @@ class TrackInfo {
       artist: artistName,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TrackInfo &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name;
+
+  @override
+  int get hashCode => id.hashCode ^ name.hashCode;
 }
 
 class MusicItem {
@@ -160,12 +171,115 @@ class MusicItem {
     return AppColors.cyberCyan;
   }
 
+  static const List<String> _fullMonthNames = [
+    'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+    'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
+  ];
+
+  static const List<String> _shortMonthNames = [
+    'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+    'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'
+  ];
+
+  /// Accurate release year (e.g. '2008'). Does NOT default to fake '2024' when date is missing.
   String get formattedYear {
-    if (releaseDate.isEmpty) return '2024';
-    if (releaseDate.length >= 4) {
-      return releaseDate.substring(0, 4);
+    final clean = releaseDate.trim();
+    if (clean.isEmpty) return '';
+    final yearMatch = RegExp(r'\b(19\d{2}|20\d{2})\b').firstMatch(clean);
+    if (yearMatch != null) {
+      return yearMatch.group(1)!;
     }
-    return releaseDate;
+    if (clean.length >= 4) {
+      return clean.substring(0, 4);
+    }
+    return clean;
+  }
+
+  /// Full formatted release date with day, month, and year (e.g. '5 OCTOBER 2023' or '24 JANUARY 2008').
+  String get formattedReleaseDate {
+    final clean = releaseDate.trim();
+    if (clean.isEmpty) return '';
+
+    // Format 1: YYYY-MM-DD or YYYY/MM/DD
+    final ymdMatch = RegExp(r'^(\d{4})[-/](\d{1,2})[-/](\d{1,2})').firstMatch(clean);
+    if (ymdMatch != null) {
+      final year = ymdMatch.group(1)!;
+      final month = int.tryParse(ymdMatch.group(2)!) ?? 1;
+      final day = int.tryParse(ymdMatch.group(3)!) ?? 1;
+      final monthName = (month >= 1 && month <= 12) ? _fullMonthNames[month - 1] : '';
+      if (monthName.isNotEmpty) {
+        return '$day $monthName $year';
+      }
+      return '$day/$month/$year';
+    }
+
+    // Format 2: YYYY-MM
+    final ymMatch = RegExp(r'^(\d{4})[-/](\d{1,2})$').firstMatch(clean);
+    if (ymMatch != null) {
+      final year = ymMatch.group(1)!;
+      final month = int.tryParse(ymMatch.group(2)!) ?? 1;
+      final monthName = (month >= 1 && month <= 12) ? _fullMonthNames[month - 1] : '';
+      if (monthName.isNotEmpty) {
+        return '$monthName $year';
+      }
+      return '$month/$year';
+    }
+
+    // Format 3: DD-MM-YYYY
+    final dmyMatch = RegExp(r'^(\d{1,2})[-/](\d{1,2})[-/](\d{4})').firstMatch(clean);
+    if (dmyMatch != null) {
+      final day = int.tryParse(dmyMatch.group(1)!) ?? 1;
+      final month = int.tryParse(dmyMatch.group(2)!) ?? 1;
+      final year = dmyMatch.group(3)!;
+      final monthName = (month >= 1 && month <= 12) ? _fullMonthNames[month - 1] : '';
+      if (monthName.isNotEmpty) {
+        return '$day $monthName $year';
+      }
+      return '$day/$month/$year';
+    }
+
+    // Standard DateTime parsing fallback
+    final parsed = DateTime.tryParse(clean);
+    if (parsed != null) {
+      final monthName = _fullMonthNames[parsed.month - 1];
+      return '${parsed.day} $monthName ${parsed.year}';
+    }
+
+    // Single year e.g. '2008'
+    if (RegExp(r'^\d{4}$').hasMatch(clean)) {
+      return clean;
+    }
+
+    return clean.toUpperCase();
+  }
+
+  /// Compact formatted release date for cards and list tiles (e.g. '5 OCT 2023', '24 JAN 2008', or '2008').
+  String get formattedReleaseDateCompact {
+    final clean = releaseDate.trim();
+    if (clean.isEmpty) return '';
+
+    final ymdMatch = RegExp(r'^(\d{4})[-/](\d{1,2})[-/](\d{1,2})').firstMatch(clean);
+    if (ymdMatch != null) {
+      final year = ymdMatch.group(1)!;
+      final month = int.tryParse(ymdMatch.group(2)!) ?? 1;
+      final day = int.tryParse(ymdMatch.group(3)!) ?? 1;
+      final monthName = (month >= 1 && month <= 12) ? _shortMonthNames[month - 1] : '';
+      if (monthName.isNotEmpty) {
+        return '$day $monthName $year';
+      }
+    }
+
+    final ymMatch = RegExp(r'^(\d{4})[-/](\d{1,2})$').firstMatch(clean);
+    if (ymMatch != null) {
+      final year = ymMatch.group(1)!;
+      final month = int.tryParse(ymMatch.group(2)!) ?? 1;
+      final monthName = (month >= 1 && month <= 12) ? _shortMonthNames[month - 1] : '';
+      if (monthName.isNotEmpty) {
+        return '$monthName $year';
+      }
+    }
+
+    return formattedYear;
   }
 
   String get formattedDuration {
@@ -226,6 +340,25 @@ class MusicItem {
       popularity: (map['popularity'] as num?)?.toInt() ?? 0,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MusicItem &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          artist == other.artist &&
+          type == other.type &&
+          releaseDate == other.releaseDate;
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      artist.hashCode ^
+      type.hashCode ^
+      releaseDate.hashCode;
 
   /// Detects whether a release qualifies as an EP (Extended Play).
   ///

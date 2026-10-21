@@ -191,17 +191,32 @@ final moreByArtistProvider = FutureProvider.family<List<MusicItem>, MoreByArtist
   return repo.getMoreByArtist(query.artist, currentItemId: query.currentItemId);
 });
 
+/// Provider for granular community-enriched genre tags using a stable query key.
+/// Key format: 'artist:::title:::isAlbum'
+final itemEnrichedGenresByKeyProvider = FutureProvider.family<List<String>, String>((ref, queryKey) async {
+  final parts = queryKey.split(':::');
+  if (parts.length < 2) return const [];
+  final artist = parts[0];
+  final title = parts[1];
+  final isAlbum = parts.length > 2 ? parts[2] == 'true' : true;
+
+  final tagService = ref.watch(genreTagServiceProvider);
+  return tagService.getTags(
+    artist: artist,
+    title: title,
+    isAlbum: isAlbum,
+  );
+});
+
 /// Provider for granular community-enriched genre tags (Last.fm & MusicBrainz).
 /// Returns real-time community tags (e.g. ['SHOEAZE', 'DREAM POP', 'POST-PUNK']).
 final itemEnrichedGenresProvider = FutureProvider.family<List<String>, MusicItem>((ref, item) async {
-  final tagService = ref.watch(genreTagServiceProvider);
-  final tags = await tagService.getTags(
-    artist: item.artist,
-    title: item.name,
-    isAlbum: item.isAlbum || item.isEp,
-  );
+  if (item.genres.length > 1) return item.genres;
+  final queryKey = '${item.artist.trim().toLowerCase()}:::${item.name.trim().toLowerCase()}:::${item.isAlbum || item.isEp}';
+  final tags = await ref.watch(itemEnrichedGenresByKeyProvider(queryKey).future);
   if (tags.isNotEmpty) return tags;
   return item.genres;
 });
+
 
 

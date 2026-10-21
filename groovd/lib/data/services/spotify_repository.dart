@@ -318,20 +318,34 @@ class SpotifyRepository {
     return merged;
   }
 
-  /// Enriches music item with rich, granular Last.fm & MusicBrainz genre tags.
+  /// Enriches music item with rich, granular Last.fm & MusicBrainz genre tags and verified original release date.
   Future<MusicItem> _enrichItemWithTags(MusicItem item) async {
-    if (item.genres.isEmpty || item.genres.length <= 1) {
-      try {
-        final tags = await tagService.getTags(
-          artist: item.artist,
-          title: item.name,
-          isAlbum: item.isAlbum || item.isEp,
-        );
-        if (tags.isNotEmpty) {
-          return item.copyWith(genres: tags);
+    try {
+      final tags = (item.genres.isEmpty || item.genres.length <= 1)
+          ? await tagService.getTags(
+              artist: item.artist,
+              title: item.name,
+              isAlbum: item.isAlbum || item.isEp,
+            )
+          : item.genres;
+
+      String updatedDate = item.releaseDate;
+      final cachedOriginalDate = tagService.getCachedReleaseDate(item.artist, item.name);
+      if (cachedOriginalDate != null && cachedOriginalDate.isNotEmpty) {
+        if (updatedDate.isEmpty ||
+            (cachedOriginalDate.length > updatedDate.length && cachedOriginalDate.startsWith(updatedDate)) ||
+            (cachedOriginalDate.compareTo(updatedDate) < 0 && cachedOriginalDate.length >= 4)) {
+          updatedDate = cachedOriginalDate;
         }
-      } catch (_) {}
-    }
+      }
+
+      if (tags.isNotEmpty || updatedDate != item.releaseDate) {
+        return item.copyWith(
+          genres: tags.isNotEmpty ? tags : item.genres,
+          releaseDate: updatedDate,
+        );
+      }
+    } catch (_) {}
     return item;
   }
 

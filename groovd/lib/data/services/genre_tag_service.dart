@@ -10,6 +10,12 @@ class GenreTagService {
   final String? lastFmApiKey;
 
   final Map<String, List<String>> _cache = {};
+  final Map<String, String> _releaseDateCache = {};
+
+  /// Retrieves cached original release date for an artist and title, if previously resolved.
+  String? getCachedReleaseDate(String artist, String title) {
+    return _releaseDateCache['${artist.trim().toLowerCase()}:::${title.trim().toLowerCase()}'];
+  }
 
   // Non-genre community noise tags to filter out
   static const Set<String> _ignoredTags = {
@@ -304,6 +310,11 @@ class GenreTagService {
       if (groups == null || groups.isEmpty) return const [];
 
       final first = groups.first as Map<String, dynamic>;
+      final firstReleaseDate = first['first-release-date'] as String?;
+      if (firstReleaseDate != null && firstReleaseDate.trim().isNotEmpty) {
+        _releaseDateCache['${cleanArtist.toLowerCase()}:::${cleanTitle.toLowerCase()}'] = firstReleaseDate.trim();
+      }
+
       final tags = first['tags'] as List?;
       if (tags == null) return const [];
 
@@ -323,6 +334,54 @@ class GenreTagService {
     } catch (_) {
       return const [];
     }
+  }
+
+  /// Retrieves the accurate encyclopedic original release date from MusicBrainz release-group.
+  Future<String?> getOriginalReleaseDate({
+    required String artist,
+    required String title,
+  }) async {
+    final cleanArtist = artist.trim();
+    final cleanTitle = title.trim();
+    if (cleanArtist.isEmpty && cleanTitle.isEmpty) return null;
+
+    final cacheKey = '${cleanArtist.toLowerCase()}:::${cleanTitle.toLowerCase()}';
+    if (_releaseDateCache.containsKey(cacheKey)) {
+      return _releaseDateCache[cacheKey];
+    }
+
+    try {
+      final cleanTitleSanitized = _sanitizeForQuery(cleanTitle);
+      final cleanArtistSanitized = _sanitizeForQuery(cleanArtist);
+      final query = 'releasegroup:$cleanTitleSanitized AND artist:$cleanArtistSanitized';
+
+      final uri = Uri.https('musicbrainz.org', '/ws/2/release-group', {
+        'query': query,
+        'fmt': 'json',
+      });
+
+      final response = await _client.get(
+        uri,
+        headers: {
+          'User-Agent': 'GroovdMusicApp/1.0.0 (contact@groovd.fm)',
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode != 200) return null;
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final groups = data['release-groups'] as List?;
+      if (groups == null || groups.isEmpty) return null;
+
+      final first = groups.first as Map<String, dynamic>;
+      final date = first['first-release-date'] as String?;
+      if (date != null && date.trim().isNotEmpty) {
+        _releaseDateCache[cacheKey] = date.trim();
+        return date.trim();
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<List<String>> _fetchMusicBrainzArtistTags(String artist) async {

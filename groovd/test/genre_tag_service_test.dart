@@ -1,8 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/services/genre_tag_service.dart';
 
 void main() {
-  group('GenreTagService', () {
+  group('GenreTagService & MusicItem Release Date Formatting', () {
     test('initializes and cleans/deduplicates tags appropriately', () async {
       final service = GenreTagService();
 
@@ -19,6 +20,56 @@ void main() {
       final service = GenreTagService();
       final artistTags = await service.getArtistTags('Tame Impala');
       expect(artistTags, isNotEmpty);
+    });
+
+    test('extracts verified original release date from MusicBrainz for Deathconsciousness', () async {
+      final service = GenreTagService();
+      final date = await service.getOriginalReleaseDate(
+        artist: 'Have a Nice Life',
+        title: 'Deathconsciousness',
+      );
+      expect(date, equals('2008-01-24'));
+    });
+
+    test('MusicItem formats release dates with day, month, and year accurately', () {
+      final item1 = MusicItem(
+        id: '1',
+        name: 'Test Album',
+        artist: 'Test Artist',
+        type: MusicType.album,
+        coverUrl: '',
+        releaseDate: '2023-10-05',
+        genres: const [],
+      );
+      expect(item1.formattedReleaseDate, equals('5 OCTOBER 2023'));
+      expect(item1.formattedReleaseDateCompact, equals('5 OCT 2023'));
+      expect(item1.formattedYear, equals('2023'));
+
+      final item2 = MusicItem(
+        id: '2',
+        name: 'Deathconsciousness',
+        artist: 'Have a Nice Life',
+        type: MusicType.album,
+        coverUrl: '',
+        releaseDate: '2008-01-24',
+        genres: const [],
+      );
+      expect(item2.formattedReleaseDate, equals('24 JANUARY 2008'));
+      expect(item2.formattedReleaseDateCompact, equals('24 JAN 2008'));
+      expect(item2.formattedYear, equals('2008'));
+
+      // Empty release date should not return fake 2024
+      final item3 = MusicItem(
+        id: '3',
+        name: 'Unknown',
+        artist: 'Unknown',
+        type: MusicType.song,
+        coverUrl: '',
+        releaseDate: '',
+        genres: const [],
+      );
+      expect(item3.formattedReleaseDate, isEmpty);
+      expect(item3.formattedYear, isEmpty);
     });
   });
 }
