@@ -1,6 +1,7 @@
 import '../models/artist.dart';
 import '../models/music_item.dart';
 import 'deezer_api_service.dart';
+import 'genre_tag_service.dart';
 import 'spotify_api_service.dart';
 import 'spotify_mock_data.dart';
 import 'wikipedia_api_service.dart';
@@ -62,10 +63,12 @@ class ProviderCircuitBreaker {
 /// - Active Failover: If Deezer or Spotify is degraded or offline, the other is seamlessly used.
 /// - Rich Cross-Catalog Resolution: Retains Deezer 30s audio previews while utilizing Spotify's
 ///   exhaustive catalog (e.g. albums like Tokyo Shoegazer's "Moonworld Playground").
+/// - Granular Community Tags: Enriches albums, tracks, and artists with Last.fm & MusicBrainz genres.
 class SpotifyRepository {
   final SpotifyApiService? apiService;
   final DeezerApiService deezerService;
   final WikipediaApiService wikipediaService;
+  final GenreTagService tagService;
   final bool enableLiveCatalog;
 
   final ProviderCircuitBreaker deezerBreaker = ProviderCircuitBreaker(name: 'Deezer');
@@ -75,9 +78,11 @@ class SpotifyRepository {
     this.apiService,
     DeezerApiService? deezerService,
     WikipediaApiService? wikipediaService,
+    GenreTagService? tagService,
     bool? enableLiveCatalog,
   })  : deezerService = deezerService ?? DeezerApiService(),
         wikipediaService = wikipediaService ?? WikipediaApiService(),
+        tagService = tagService ?? GenreTagService(),
         enableLiveCatalog = enableLiveCatalog ??
             (apiService == null || apiService.isConfigured || deezerService != null);
 
@@ -313,7 +318,48 @@ class SpotifyRepository {
     return merged;
   }
 
+  /// Enriches music item with rich, granular Last.fm & MusicBrainz genre tags.
+  Future<MusicItem> _enrichItemWithTags(MusicItem item) async {
+    if (item.genres.isEmpty || item.genres.length <= 1) {
+      try {
+        final tags = await tagService.getTags(
+          artist: item.artist,
+          title: item.name,
+          isAlbum: item.isAlbum || item.isEp,
+        );
+        if (tags.isNotEmpty) {
+          return item.copyWith(genres: tags);
+        }
+      } catch (_) {}
+    }
+    return item;
+  }
+
+  /// Enriches artist with rich Last.fm & MusicBrainz community sub-genres.
+  Future<Artist> _enrichArtistWithTags(Artist artist) async {
+    if (artist.genres.isEmpty || artist.genres.length <= 1) {
+      try {
+        final tags = await tagService.getArtistTags(artist.name);
+        if (tags.isNotEmpty) {
+          return artist.copyWith(genres: tags);
+        }
+      } catch (_) {}
+    }
+    return artist;
+  }
+
   Future<MusicItem?> getItemById(
+    String id, {
+    MusicType? type,
+    String? name,
+    String? artist,
+  }) async {
+    final item = await _getItemByIdRaw(id, type: type, name: name, artist: artist);
+    if (item == null) return null;
+    return _enrichItemWithTags(item);
+  }
+
+  Future<MusicItem?> _getItemByIdRaw(
     String id, {
     MusicType? type,
     String? name,
@@ -644,12 +690,12 @@ class SpotifyRepository {
             );
           }
         } catch (_) {}
-        return resolvedArtist;
+        return _enrichArtistWithTags(resolvedArtist!);
       }
     }
 
     if (mockById != null) {
-      return mockById;
+      return _enrichArtistWithTags(mockById);
     }
 
     // Generic fallback: check if any items in mock data match this artist
@@ -659,15 +705,17 @@ class SpotifyRepository {
     if (matchingItems.isNotEmpty) {
       final first = matchingItems.first;
       final genres = matchingItems.expand((i) => i.genres).toSet().toList();
-      return Artist(
-        id: 'artist_${first.artist.toLowerCase().replaceAll(' ', '_')}',
-        name: first.artist.toUpperCase(),
-        imageUrl: first.coverUrl,
-        genres: genres.take(4).toList(),
-        followers: 1200000,
-        popularity: 75,
-        bio: '${first.artist} is a renowned musical artist with acclaimed works archived in Groovd.',
-        shortDescription: 'Musical artist',
+      return _enrichArtistWithTags(
+        Artist(
+          id: 'artist_${first.artist.toLowerCase().replaceAll(' ', '_')}',
+          name: first.artist.toUpperCase(),
+          imageUrl: first.coverUrl,
+          genres: genres.take(4).toList(),
+          followers: 1200000,
+          popularity: 75,
+          bio: '${first.artist} is a renowned musical artist with acclaimed works archived in Groovd.',
+          shortDescription: 'Musical artist',
+        ),
       );
     }
 

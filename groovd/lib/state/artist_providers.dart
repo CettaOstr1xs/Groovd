@@ -22,6 +22,12 @@ final artistDiscographyProvider = FutureProvider.family<List<MusicItem>, String>
   return repo.getArtistDiscography(artistIdOrName);
 });
 
+/// Provider for granular community-enriched artist tags (Last.fm & MusicBrainz).
+final artistEnrichedGenresProvider = FutureProvider.family<List<String>, String>((ref, artistName) async {
+  final tagService = ref.watch(genreTagServiceProvider);
+  return tagService.getArtistTags(artistName);
+});
+
 /// Career statistics for an artist computed from Groovd's review database.
 class ArtistCareerStats {
   final double averageScore;

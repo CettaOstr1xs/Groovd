@@ -198,6 +198,13 @@ class MusicDetailScreen extends ConsumerWidget {
           )
         : item;
 
+    // Granular Last.fm & MusicBrainz community genre tags
+    final enrichedGenresAsync = ref.watch(itemEnrichedGenresProvider(activeItem));
+    final enrichedTags = enrichedGenresAsync.asData?.value ?? enrichedGenresAsync.value;
+    final displayGenres = (enrichedTags != null && enrichedTags.isNotEmpty)
+        ? enrichedTags
+        : activeItem.genres;
+
     final reviewQuery = ItemReviewQuery.fromItem(activeItem);
     final reviewsAsync = ref.watch(itemReviewsProvider(reviewQuery));
     final currentUserId = ref.watch(currentUserIdProvider);
@@ -532,12 +539,12 @@ class MusicDetailScreen extends ConsumerWidget {
                     ),
                   ),
 
-                  if (activeItem.genres.isNotEmpty) ...[
+                  if (displayGenres.isNotEmpty) ...[
                     const SizedBox(height: 20),
                     Wrap(
                       spacing: 8,
                       runSpacing: 6,
-                      children: activeItem.genres.map((g) {
+                      children: displayGenres.map((g) {
                         return Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
@@ -551,6 +558,24 @@ class MusicDetailScreen extends ConsumerWidget {
                           ),
                         );
                       }).toList(),
+                    ).animate().fadeIn(duration: 300.ms),
+                  ] else if (enrichedGenresAsync.isLoading) ...[
+                    const SizedBox(height: 20),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: List.generate(
+                        3,
+                        (index) => Container(
+                          width: 55.0 + (index * 14),
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceElevated.withValues(alpha: 0.5),
+                            border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ],

@@ -3,6 +3,7 @@ import '../core/constants/spotify_config.dart';
 import '../data/models/artist.dart';
 import '../data/models/music_item.dart';
 import '../data/services/deezer_api_service.dart';
+import '../data/services/genre_tag_service.dart';
 import '../data/services/spotify_api_service.dart';
 import '../data/services/spotify_repository.dart';
 import 'settings_provider.dart';
@@ -20,10 +21,16 @@ final spotifyApiServiceProvider = Provider<SpotifyApiService>((ref) {
   );
 });
 
+/// Singleton GenreTagService providing rich Last.fm & MusicBrainz community genre tags
+final genreTagServiceProvider = Provider<GenreTagService>((ref) {
+  return GenreTagService();
+});
+
 /// Music Repository provider backed by hybrid Deezer & Spotify APIs with circuit-breaker failover
 final spotifyRepositoryProvider = Provider<SpotifyRepository>((ref) {
   final deezer = ref.watch(deezerApiServiceProvider);
   final api = ref.watch(spotifyApiServiceProvider);
+  final tagService = ref.watch(genreTagServiceProvider);
   // Reactively track settings changes
   final settings = ref.watch(spotifySettingsProvider);
   if (settings.clientId.isNotEmpty && settings.clientSecret.isNotEmpty) {
@@ -34,6 +41,7 @@ final spotifyRepositoryProvider = Provider<SpotifyRepository>((ref) {
   return SpotifyRepository(
     apiService: api,
     deezerService: deezer,
+    tagService: tagService,
     enableLiveCatalog: true,
   );
 });
@@ -182,4 +190,18 @@ final moreByArtistProvider = FutureProvider.family<List<MusicItem>, MoreByArtist
   final repo = ref.watch(spotifyRepositoryProvider);
   return repo.getMoreByArtist(query.artist, currentItemId: query.currentItemId);
 });
+
+/// Provider for granular community-enriched genre tags (Last.fm & MusicBrainz).
+/// Returns real-time community tags (e.g. ['SHOEAZE', 'DREAM POP', 'POST-PUNK']).
+final itemEnrichedGenresProvider = FutureProvider.family<List<String>, MusicItem>((ref, item) async {
+  final tagService = ref.watch(genreTagServiceProvider);
+  final tags = await tagService.getTags(
+    artist: item.artist,
+    title: item.name,
+    isAlbum: item.isAlbum || item.isEp,
+  );
+  if (tags.isNotEmpty) return tags;
+  return item.genres;
+});
+
 
