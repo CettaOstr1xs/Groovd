@@ -42,7 +42,7 @@ function initSplashScreen() {
 function initDownload() {
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const baseUrl = isLocal ? window.location.origin : 'https://groovd.web.app';
-  const downloadUrl = `${baseUrl}/download/groovd-latest.apk`;
+  const downloadUrl = `${baseUrl}/download/groovd-release.bin`;
 
   // On homepage, ensure all download CTA buttons route to the download portal page
   const downloadCtaBtns = document.querySelectorAll('.btn-primary-download, .btn-nav-download, .btn-sticky-download');

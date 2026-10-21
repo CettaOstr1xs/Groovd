@@ -12,6 +12,35 @@
         "**/.*",
         "**/node_modules/**",
         "**/*.apk"
+      ],
+      "headers": [
+        {
+          "source": "/download/groovd-release.bin",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/vnd.android.package-archive"
+            },
+            {
+              "key": "Content-Disposition",
+              "value": "attachment; filename=\"groovd-v1.0.0.apk\""
+            },
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        }
+      ],
+      "rewrites": [
+        {
+          "source": "/download/groovd-latest.apk",
+          "destination": "/download/groovd-release.bin"
+        },
+        {
+          "source": "/download/groovd-v1.0.0.apk",
+          "destination": "/download/groovd-release.bin"
+        }
       ]
     },
     {

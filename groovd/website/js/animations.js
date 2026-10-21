@@ -274,7 +274,7 @@
 
     // Interactive Hover Magnetics & Block Expansion
     const magneticButtons = document.querySelectorAll(
-      '.btn-primary-download, .btn-secondary-guide, .btn-action-download, .btn-action-guide, .btn-nav-return, .btn-nav-download, .btn-sticky-download, .btn-copy-checksum, .btn-qr-flip, .nav-links a, .footer-nav-bar a'
+      '.btn-primary-download, .btn-secondary-guide, .btn-action-download, .btn-action-guide, .btn-nav-return, .btn-nav-download, .btn-sticky-download, .btn-copy-checksum, .btn-qr-action, .nav-links a, .footer-nav-bar a'
     );
 
     magneticButtons.forEach(btn => {
@@ -810,9 +810,6 @@
       clearProps: 'rotateY'
     }, 0.3);
 
-    // 6. Holographic 3D QR Laser Scanner
-    initQRInteractiveScanner();
-
     // 7. Quick Sideload Step Cards
     if (typeof ScrollTrigger !== 'undefined') {
       const stepCards = document.querySelectorAll('.step-card');
@@ -863,10 +860,10 @@
       });
     }
 
-    // Animate Data Throughput Counter (0.0 MB -> 28.4 MB)
+    // Animate Data Throughput Counter (0.0 MB -> 134.5 MB)
     const byteCounter = { val: 0.0 };
     gsap.to(byteCounter, {
-      val: 28.4,
+      val: 134.5,
       duration: 1.4,
       ease: 'power2.out',
       onUpdate: () => {
@@ -942,48 +939,6 @@
           });
         }, 2200);
       });
-    }
-  }
-
-  // Holographic QR Scanner Laser & 3D Flip Card
-  function initQRInteractiveScanner() {
-    const laser = document.querySelector('.qr-scanline-laser');
-    if (laser) {
-      gsap.fromTo(laser,
-        { y: 0, opacity: 0.8 },
-        {
-          y: 216,
-          opacity: 1,
-          duration: 2.0,
-          repeat: -1,
-          yoyo: true,
-          ease: 'power1.inOut'
-        }
-      );
-    }
-
-    const flipBtn = document.getElementById('btn-toggle-qr-flip');
-    const flipper = document.getElementById('qr-flipper');
-    const flipLabel = document.getElementById('qr-flip-label');
-
-    if (flipBtn && flipper) {
-      let isFlipped = false;
-      function toggleFlip() {
-        isFlipped = !isFlipped;
-        flipper.classList.toggle('flipped', isFlipped);
-        if (flipLabel && typeof ScrambleTextPlugin !== 'undefined') {
-          gsap.to(flipLabel, {
-            scrambleText: {
-              text: isFlipped ? 'RETURN TO QR CODE' : 'FLIP TO CRYPTO MATRIX',
-              chars: '01_//[]{}'
-            },
-            duration: 0.3
-          });
-        }
-      }
-
-      flipBtn.addEventListener('click', toggleFlip);
-      flipper.addEventListener('click', toggleFlip);
     }
   }
 

@@ -2545,18 +2545,99 @@ input[type="range"]#demo-rating-slider::-webkit-slider-thumb:active {
 
 .qr-canvas-holder {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 16px;
+  padding: 24px 20px;
   background-color: #0A0A0A;
   border: 2px solid var(--border-dark);
   margin-bottom: 16px;
+  gap: 16px;
+}
+
+.qr-code-frame {
+  position: relative;
+  background-color: #FFFFFF;
+  padding: 10px;
+  border: 2px solid #000000;
+  box-shadow: 4px 4px 0px var(--acid-lime);
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.qr-code-frame:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px var(--acid-lime);
 }
 
 .qr-canvas {
-  width: 190px;
-  height: 190px;
+  width: 200px;
+  height: 200px;
   display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.qr-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 260px;
+}
+
+.btn-qr-action {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  padding: 8px 12px;
+  border: 2px solid #000000;
+  cursor: pointer;
+  box-shadow: 3px 3px 0px #000000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.btn-qr-share {
+  background-color: var(--acid-lime);
+  color: #000000;
+}
+
+.btn-qr-share:hover,
+.btn-qr-share:active {
+  background-color: #B8E600;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px #000000;
+}
+
+.btn-qr-save {
+  background-color: #1A1A1A;
+  color: var(--text-primary);
+  border-color: var(--border-dark);
+}
+
+.btn-qr-save:hover,
+.btn-qr-save:active {
+  background-color: #262626;
+  border-color: var(--acid-lime);
+  color: var(--acid-lime);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px var(--acid-lime);
+}
+
+.btn-qr-action.action-success {
+  background-color: #00FF66 !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
 }
 
 .qr-url-display {
@@ -2977,100 +3058,6 @@ input[type="range"]#demo-rating-slider::-webkit-slider-thumb:active {
   background-color: var(--vermillion);
 }
 
-/* =========================================================================
-   Download Page Holographic QR Scanner & Flip Card
-   ========================================================================= */
-.qr-interactive-wrapper {
-  position: relative;
-  perspective: 1000px;
-  margin: 16px auto;
-  width: 220px;
-  height: 220px;
-}
-
-.qr-flipper {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.qr-flipper.flipped {
-  transform: rotateY(180deg);
-}
-
-.qr-face-front,
-.qr-face-back {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  backface-visibility: hidden;
-  border: 2px solid #000000;
-}
-
-.qr-face-front {
-  background-color: var(--acid-lime);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.qr-face-back {
-  background-color: #0A0A0A;
-  color: var(--acid-lime);
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  line-height: 1.35;
-  padding: 14px;
-  transform: rotateY(180deg);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  border: 2px solid var(--acid-lime);
-  text-align: left;
-}
-
-.qr-scanline-laser {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, #CCFF00, #FFFFFF, #CCFF00, transparent);
-  box-shadow: 0 0 12px #CCFF00;
-  pointer-events: none;
-  z-index: 5;
-  opacity: 0.85;
-}
-
-.btn-qr-flip {
-  margin-top: 12px;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  background: #1A1A1A;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-dark);
-  padding: 6px 12px;
-  cursor: pointer;
-  box-shadow: 2px 2px 0px #000000;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.btn-qr-flip:hover {
-  background: var(--acid-lime);
-  color: #000000;
-  border-color: #000000;
-}
 
 /* Real-Time Throughput Gauge in Download Card */
 .download-telemetry {

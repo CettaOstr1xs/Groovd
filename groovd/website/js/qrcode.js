@@ -445,9 +445,9 @@
 
   window.renderQRCode = function(canvas, text, options) {
     options = options || {};
-    var size = options.size || 200;
+    var size = options.size || 220;
     var colorDark = options.colorDark || '#0A0A0A';
-    var colorLight = options.colorLight || '#CCFF00';
+    var colorLight = options.colorLight || '#FFFFFF';
     var margin = options.margin !== undefined ? options.margin : 2;
 
     var qr = new QRCode(0, QRErrorCorrectLevel.M);
@@ -467,9 +467,14 @@
 
     ctx.fillStyle = colorDark;
     for (var r = 0; r < moduleCount; r++) {
+      var y1 = Math.round((r + margin) * cellPixel);
+      var y2 = Math.round((r + margin + 1) * cellPixel);
+      var h = y2 - y1;
       for (var c = 0; c < moduleCount; c++) {
         if (qr.isDark(r, c)) {
-          ctx.fillRect(Math.floor((c + margin) * cellPixel), Math.floor((r + margin) * cellPixel), Math.ceil(cellPixel), Math.ceil(cellPixel));
+          var x1 = Math.round((c + margin) * cellPixel);
+          var x2 = Math.round((c + margin + 1) * cellPixel);
+          ctx.fillRect(x1, y1, x2 - x1, h);
         }
       }
     }

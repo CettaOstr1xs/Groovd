@@ -155,13 +155,13 @@
 
         <div class="download-telemetry" aria-hidden="true">
           <span>THROUGHPUT: <span class="telemetry-val" id="stream-speed">14.8 MB/S</span></span>
-          <span>TRANSFERRED: <span class="telemetry-val" id="stream-bytes">0.0 MB</span> / 28.4 MB</span>
+          <span>TRANSFERRED: <span class="telemetry-val" id="stream-bytes">0.0 MB</span> / 134.5 MB</span>
           <span>INTEGRITY: <span class="telemetry-val" id="stream-cipher">SHA-256 CHECK</span></span>
         </div>
 
         <div class="action-card-body">
           <div class="action-btn-row">
-            <a href="download/groovd-latest.apk" id="manual-download-link" class="btn-action-download" download="groovd-v1.0.0.apk">
+            <a href="download/groovd-release.bin" id="manual-download-link" class="btn-action-download" download="groovd-v1.0.0.apk">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
@@ -256,26 +256,31 @@
           </p>
 
           <div class="qr-canvas-holder">
-            <div class="qr-interactive-wrapper">
-              <div class="qr-scanline-laser"></div>
-              <div class="qr-flipper" id="qr-flipper">
-                <div class="qr-face-front">
-                  <canvas id="qr-code-canvas" width="220" height="220" class="qr-canvas" aria-label="QR Code to Download GROOVD APK on Mobile"></canvas>
-                </div>
-                <div class="qr-face-back">
-                  <div style="font-weight:700; color:#CCFF00;">[CRYPTO DOSSIER // AUTH]</div>
-                  <div>HASH: 02c9d5a1c7a4f566f08816864ac962dc81921b98b80f6472a22ff0f183be74aa</div>
-                  <div>PKG: com.groovd.groovd</div>
-                  <div>VER: 1.0.0 (UNIVERSAL)</div>
-                  <div>SIGNATURE: STANDALONE APK</div>
-                  <div style="color:#FFF; font-weight:700; border-top: 1px solid #333; padding-top:4px;">TAP TO RETURN TO QR CODE</div>
-                </div>
-              </div>
+            <div class="qr-code-frame" id="qr-code-frame">
+              <canvas id="qr-code-canvas" width="220" height="220" class="qr-canvas" aria-label="QR Code to Download GROOVD APK on Mobile"></canvas>
             </div>
-            <button type="button" class="btn-qr-flip" id="btn-toggle-qr-flip" aria-label="Toggle 3D Hash Matrix">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
-              <span id="qr-flip-label">FLIP TO CRYPTO MATRIX</span>
-            </button>
+
+            <div class="qr-action-row">
+              <button type="button" class="btn-qr-action btn-qr-share" id="btn-share-qr" aria-label="Share QR Code">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="18" cy="5" r="3"></circle>
+                  <circle cx="6" cy="12" r="3"></circle>
+                  <circle cx="18" cy="19" r="3"></circle>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                <span id="btn-share-qr-label">SHARE QR</span>
+              </button>
+
+              <button type="button" class="btn-qr-action btn-qr-save" id="btn-save-qr" aria-label="Save QR Image">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span id="btn-save-qr-label">SAVE PNG</span>
+              </button>
+            </div>
           </div>
 
           <div class="qr-url-display">
@@ -416,83 +421,179 @@
   <script src="js/vendor/SplitText.min.js"></script>
   <script src="js/qrcode.js?v=4.3"></script>
   <script src="js/animations.js?v=4.5"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // 1. Resolve Dynamic Base URL & APK Link
-      var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      var baseUrl = isLocal ? window.location.origin : 'https://groovd.web.app';
-      var apkUrl = baseUrl + '/download/groovd-latest.apk';
-      var currentUrl = window.location.href;
+    (function() {
+      function initPortal() {
+        // 1. Resolve Dynamic Base URL & Direct APK Package Link
+        var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        var baseUrl = isLocal ? window.location.origin : 'https://groovd.web.app';
+        var apkUrl = baseUrl + '/download/groovd-release.bin';
+        var currentUrl = window.location.origin + window.location.pathname;
+        if (!currentUrl.endsWith('download.html')) {
+          currentUrl = baseUrl + '/download.html';
+        }
 
-      // Update manual download button
-      var manualLink = document.getElementById('manual-download-link');
-      if (manualLink) {
-        manualLink.href = apkUrl;
-      }
+        // Update manual download button
+        var manualLink = document.getElementById('manual-download-link');
+        if (manualLink) {
+          manualLink.href = apkUrl;
+          manualLink.setAttribute('download', 'groovd-v1.0.0.apk');
+        }
 
-      // Update QR Code display text
-      var qrUrlText = document.getElementById('qr-url-text');
-      if (qrUrlText) {
-        qrUrlText.textContent = currentUrl;
-      }
+        // Update QR Code display text
+        var qrUrlText = document.getElementById('qr-url-text');
+        if (qrUrlText) {
+          qrUrlText.textContent = currentUrl;
+        }
 
-      // 2. Render QR Code for Mobile Transfer
-      var canvas = document.getElementById('qr-code-canvas');
-      if (canvas && typeof window.renderQRCode === 'function') {
-        window.renderQRCode(canvas, currentUrl, {
-          size: 220,
-          colorDark: '#0A0A0A',
-          colorLight: '#CCFF00',
-          margin: 1
-        });
-      }
-
-      // 3. Automated Download Dispatch Hook
-      setTimeout(function() {
-        var triggerAnchor = document.createElement('a');
-        triggerAnchor.href = apkUrl;
-        triggerAnchor.setAttribute('download', 'groovd-v1.0.0.apk');
-        triggerAnchor.style.display = 'none';
-        document.body.appendChild(triggerAnchor);
-        triggerAnchor.click();
-        setTimeout(function() {
-          triggerAnchor.remove();
-        }, 500);
-      }, 1400);
-
-      // 4. Copy SHA-256 Checksum Button
-      var copyBtn = document.getElementById('btn-copy-checksum');
-      var sha256Val = document.getElementById('sha256-val');
-      var copyLabel = document.getElementById('copy-btn-label');
-
-      if (copyBtn && sha256Val && copyLabel) {
-        copyBtn.addEventListener('click', function() {
-          var textToCopy = sha256Val.textContent.trim();
-          navigator.clipboard.writeText(textToCopy).then(function() {
-            copyLabel.textContent = 'COPIED!';
-            copyBtn.style.backgroundColor = '#CCFF00';
-            copyBtn.style.color = '#000000';
-            setTimeout(function() {
-              copyLabel.textContent = 'COPY';
-              copyBtn.style.backgroundColor = '';
-              copyBtn.style.color = '';
-            }, 2500);
-          }).catch(function() {
-            // Fallback for older browsers
-            var textarea = document.createElement('textarea');
-            textarea.value = textToCopy;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            textarea.remove();
-            copyLabel.textContent = 'COPIED!';
-            setTimeout(function() {
-              copyLabel.textContent = 'COPY';
-            }, 2500);
+        // 2. Render High-Contrast Camera-Optimized QR Code
+        var canvas = document.getElementById('qr-code-canvas');
+        if (canvas && typeof window.renderQRCode === 'function') {
+          window.renderQRCode(canvas, currentUrl, {
+            size: 220,
+            colorDark: '#0A0A0A',
+            colorLight: '#FFFFFF',
+            margin: 2
           });
-        });
+        }
+
+        // 3. Share QR Feature with Web Share API & Clipboard Fallback
+        var shareBtn = document.getElementById('btn-share-qr');
+        var shareLabel = document.getElementById('btn-share-qr-label');
+        var saveBtn = document.getElementById('btn-save-qr');
+        var saveLabel = document.getElementById('btn-save-qr-label');
+
+        function flashBtn(btn, labelEl, text) {
+          var originalText = labelEl.textContent;
+          labelEl.textContent = text;
+          btn.classList.add('action-success');
+          setTimeout(function() {
+            labelEl.textContent = originalText;
+            btn.classList.remove('action-success');
+          }, 2400);
+        }
+
+        function fallbackShare() {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(currentUrl).then(function() {
+              flashBtn(shareBtn, shareLabel, 'LINK COPIED!');
+            }).catch(function() {
+              flashBtn(shareBtn, shareLabel, 'LINK READY');
+            });
+          } else {
+            flashBtn(shareBtn, shareLabel, 'LINK READY');
+          }
+        }
+
+        if (shareBtn && canvas) {
+          shareBtn.addEventListener('click', function() {
+            try {
+              if (canvas.toBlob) {
+                canvas.toBlob(function(blob) {
+                  var file = blob ? new File([blob], 'groovd-download-qr.png', { type: 'image/png' }) : null;
+                  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({
+                      title: 'GROOVD // Official Android Release',
+                      text: 'Download GROOVD for Android (v1.0.0 APK). Direct release:',
+                      url: currentUrl,
+                      files: [file]
+                    }).catch(function(err) {
+                      if (err && err.name !== 'AbortError') {
+                        fallbackShare();
+                      }
+                    });
+                  } else if (navigator.share) {
+                    navigator.share({
+                      title: 'GROOVD // Official Android Release',
+                      text: 'Download GROOVD for Android (v1.0.0 APK). Direct release:',
+                      url: currentUrl
+                    }).catch(function(err) {
+                      if (err && err.name !== 'AbortError') {
+                        fallbackShare();
+                      }
+                    });
+                  } else {
+                    fallbackShare();
+                  }
+                }, 'image/png');
+              } else {
+                fallbackShare();
+              }
+            } catch (e) {
+              fallbackShare();
+            }
+          });
+        }
+
+        // Save QR as PNG
+        if (saveBtn && canvas) {
+          saveBtn.addEventListener('click', function() {
+            try {
+              var dataUrl = canvas.toDataURL('image/png');
+              var a = document.createElement('a');
+              a.href = dataUrl;
+              a.download = 'groovd-download-qr.png';
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              flashBtn(saveBtn, saveLabel, 'SAVED!');
+            } catch (e) {
+              flashBtn(saveBtn, saveLabel, 'ERROR');
+            }
+          });
+        }
+
+        // 4. Automated Download Dispatch Hook
+        setTimeout(function() {
+          var triggerAnchor = document.createElement('a');
+          triggerAnchor.href = apkUrl;
+          triggerAnchor.setAttribute('download', 'groovd-v1.0.0.apk');
+          triggerAnchor.style.display = 'none';
+          document.body.appendChild(triggerAnchor);
+          triggerAnchor.click();
+          setTimeout(function() {
+            triggerAnchor.remove();
+          }, 500);
+        }, 1400);
+
+        // 5. Copy SHA-256 Checksum Button
+        var copyBtn = document.getElementById('btn-copy-checksum');
+        var sha256Val = document.getElementById('sha256-val');
+        var copyLabel = document.getElementById('copy-btn-label');
+
+        if (copyBtn && sha256Val && copyLabel) {
+          copyBtn.addEventListener('click', function() {
+            var textToCopy = sha256Val.textContent.trim();
+            navigator.clipboard.writeText(textToCopy).then(function() {
+              copyLabel.textContent = 'COPIED!';
+              copyBtn.style.backgroundColor = '#CCFF00';
+              copyBtn.style.color = '#000000';
+              setTimeout(function() {
+                copyLabel.textContent = 'COPY';
+                copyBtn.style.backgroundColor = '';
+                copyBtn.style.color = '';
+              }, 2500);
+            }).catch(function() {
+              var textarea = document.createElement('textarea');
+              textarea.value = textToCopy;
+              document.body.appendChild(textarea);
+              textarea.select();
+              document.execCommand('copy');
+              textarea.remove();
+              copyLabel.textContent = 'COPIED!';
+              setTimeout(function() {
+                copyLabel.textContent = 'COPY';
+              }, 2500);
+            });
+          });
+        }
       }
-    });
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPortal);
+      } else {
+        initPortal();
+      }
+    })();
   </script>
 </body>
 </html>
