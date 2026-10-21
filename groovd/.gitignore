@@ -35,6 +35,9 @@ migrate_working_dir/
 *.apk
 website/download/*.apk
 website/download/*.bin
+website/*.bin
+*.bin
+.firebase/
 
 # Symbolication related
 app.*.symbols

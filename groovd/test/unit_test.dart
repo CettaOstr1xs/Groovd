@@ -1031,9 +1031,10 @@ void main() {
       expect(StoryTheme.values.contains(StoryTheme.cyberCyan), isTrue);
       expect(StoryTheme.values.contains(StoryTheme.zinePaper), isTrue);
 
-      expect(StoryLayout.values.length, 2);
+      expect(StoryLayout.values.length, 3);
       expect(StoryLayout.values.contains(StoryLayout.fullCritique), isTrue);
       expect(StoryLayout.values.contains(StoryLayout.posterCard), isTrue);
+      expect(StoryLayout.values.contains(StoryLayout.trackScorecard), isTrue);
     });
 
     test('CritiqueStoryCard initializes with centered artwork top layout', () {
@@ -1059,6 +1060,14 @@ void main() {
       );
       expect(card.layout, StoryLayout.posterCard);
       expect(card.theme, StoryTheme.acidBrutal);
+    });
+
+    test('StoryTrackRating formats scores correctly and supports unrated tracks', () {
+      const ratedTrack = StoryTrackRating(trackNumber: 1, title: 'Cherub Rock', rating: 9.3);
+      const unratedTrack = StoryTrackRating(trackNumber: 2, title: 'Quiet', rating: null);
+
+      expect(ratedTrack.scoreFormatted, '9.3');
+      expect(unratedTrack.scoreFormatted, '—');
     });
   });
 

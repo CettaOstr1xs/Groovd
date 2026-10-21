@@ -27,7 +27,12 @@
 **/build/
 **/coverage/
 *.apk
+*.bin
+**/*.bin
 **/download/*.apk
+**/download/*.bin
+**/.firebase/
+.firebase/
 
 # IDE & Editor
 .idea/

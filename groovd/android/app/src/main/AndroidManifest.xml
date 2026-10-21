@@ -70,5 +70,13 @@
             <action android:name="com.instagram.share.ADD_TO_STORY"/>
             <data android:mimeType="image/*"/>
         </intent>
+        <intent>
+            <action android:name="com.instagram.share.ADD_TO_STORY"/>
+            <data android:mimeType="video/mp4"/>
+        </intent>
+        <intent>
+            <action android:name="com.instagram.share.ADD_TO_STORY"/>
+            <data android:mimeType="video/*"/>
+        </intent>
     </queries>
 </manifest>

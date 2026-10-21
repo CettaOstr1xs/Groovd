@@ -7,6 +7,9 @@ import '../../widgets/album_art_card.dart';
 import '../../widgets/critic_avatar.dart';
 import '../../widgets/rating_spike_sign.dart';
 
+import 'track_scorecard_story_card.dart';
+export 'track_scorecard_story_card.dart';
+
 enum StoryTheme {
   darkMatrix,
   acidBrutal,
@@ -17,6 +20,7 @@ enum StoryTheme {
 enum StoryLayout {
   fullCritique,
   posterCard,
+  trackScorecard,
 }
 
 class CritiqueStoryCard extends StatelessWidget {
@@ -24,6 +28,9 @@ class CritiqueStoryCard extends StatelessWidget {
   final StoryTheme theme;
   final StoryLayout layout;
   final String? avatarPath;
+  final List<StoryTrackRating>? tracks;
+  final double? animationProgress;
+  final String? releaseYear;
 
   const CritiqueStoryCard({
     super.key,
@@ -31,6 +38,9 @@ class CritiqueStoryCard extends StatelessWidget {
     this.theme = StoryTheme.darkMatrix,
     this.layout = StoryLayout.fullCritique,
     this.avatarPath,
+    this.tracks,
+    this.animationProgress,
+    this.releaseYear,
   });
 
   Color get _backgroundColor {
@@ -125,6 +135,17 @@ class CritiqueStoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (layout == StoryLayout.trackScorecard) {
+      return TrackScorecardStoryCard(
+        review: review,
+        theme: theme,
+        avatarPath: avatarPath,
+        tracks: tracks ?? const [],
+        animationProgress: animationProgress,
+        releaseYear: releaseYear,
+      );
+    }
+
     final formattedDate = DateFormat('MMM d, yyyy').format(review.createdAt).toUpperCase();
     final isFull = layout == StoryLayout.fullCritique;
 

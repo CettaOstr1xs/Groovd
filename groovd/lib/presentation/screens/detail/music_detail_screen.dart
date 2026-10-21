@@ -16,9 +16,11 @@ import 'package:groovd/presentation/widgets/brutalist_button.dart';
 import 'package:groovd/presentation/widgets/giant_score_badge.dart';
 import 'package:groovd/presentation/widgets/rating_spike_sign.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
+import 'package:groovd/presentation/screens/review/instagram_story_modal.dart';
 import 'package:groovd/state/music_providers.dart';
 import 'package:groovd/state/review_providers.dart';
 import 'package:groovd/state/user_lists_provider.dart';
+import 'package:groovd/state/user_profile_provider.dart';
 import 'package:groovd/state/wishlist_provider.dart';
 
 class MusicDetailScreen extends ConsumerWidget {
@@ -269,6 +271,37 @@ class MusicDetailScreen extends ConsumerWidget {
           style: AppTypography.monoLabel(fontSize: 11),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.auto_stories,
+              color: AppColors.acidLime,
+              size: 20,
+            ),
+            tooltip: 'Share Scorecard to Story',
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              final profile = ref.read(userProfileProvider);
+              final effectiveRating = autoOverallScore ?? existingUserReview?.rating ?? 8.5;
+              final reviewToShare = existingUserReview ??
+                  Review(
+                    id: 'scorecard_${activeItem.id}',
+                    musicItemId: activeItem.id,
+                    musicItemName: activeItem.name,
+                    artistName: activeItem.artist,
+                    coverUrl: activeItem.coverUrl,
+                    itemType: activeItem.isEp ? 'ep' : (activeItem.isSong ? 'song' : 'album'),
+                    userId: profile.userId,
+                    userName: profile.userName,
+                    userHandle: profile.userHandle,
+                    userAvatarUrl: profile.avatarPath,
+                    rating: effectiveRating,
+                    headline: '',
+                    body: '',
+                    createdAt: DateTime.now(),
+                  );
+              InstagramStoryModal.show(context, reviewToShare, musicItem: activeItem);
+            },
+          ),
           IconButton(
             icon: const Icon(
               Icons.playlist_add,
