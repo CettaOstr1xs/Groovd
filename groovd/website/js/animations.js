@@ -860,10 +860,10 @@
       });
     }
 
-    // Animate Data Throughput Counter (0.0 MB -> 134.5 MB)
+    // Animate Data Throughput Counter (0.0 MB -> 66.5 MB)
     const byteCounter = { val: 0.0 };
     gsap.to(byteCounter, {
-      val: 134.5,
+      val: 66.5,
       duration: 1.4,
       ease: 'power2.out',
       onUpdate: () => {
