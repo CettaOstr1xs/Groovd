@@ -25,5 +25,11 @@ service cloud.firestore {
     match /user_lists/{listId} {
       allow read, write: if true;
     }
+
+    // Global crowdsourced music metadata (granular genres & verified original release dates)
+    match /catalog_metadata/{metaId} {
+      allow read: if true;
+      allow write: if true;
+    }
   }
 }

@@ -23,7 +23,9 @@ final spotifyApiServiceProvider = Provider<SpotifyApiService>((ref) {
 
 /// Singleton GenreTagService providing rich Last.fm & MusicBrainz community genre tags
 final genreTagServiceProvider = Provider<GenreTagService>((ref) {
-  return GenreTagService();
+  final service = GenreTagService();
+  service.initPersistence();
+  return service;
 });
 
 /// Music Repository provider backed by hybrid Deezer & Spotify APIs with circuit-breaker failover
@@ -201,6 +203,9 @@ final itemEnrichedGenresByKeyProvider = FutureProvider.family<List<String>, Stri
   final isAlbum = parts.length > 2 ? parts[2] == 'true' : true;
 
   final tagService = ref.watch(genreTagServiceProvider);
+  final syncTags = tagService.getTagsSync(artist: artist, title: title, isAlbum: isAlbum);
+  if (syncTags.isNotEmpty) return syncTags;
+
   return tagService.getTags(
     artist: artist,
     title: title,

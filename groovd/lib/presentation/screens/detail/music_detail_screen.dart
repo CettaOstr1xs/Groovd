@@ -195,6 +195,9 @@ class MusicDetailScreen extends ConsumerWidget {
     final activeItem = fetched != null
         ? fetched.copyWith(
             coverUrl: fetched.coverUrl.isNotEmpty ? fetched.coverUrl : item.coverUrl,
+            genres: fetched.genres.length > 1
+                ? fetched.genres
+                : (item.genres.isNotEmpty ? item.genres : fetched.genres),
           )
         : item;
 
@@ -1365,6 +1368,16 @@ class _EnrichedGenreTagsSection extends ConsumerWidget {
     // If the item already has resolved sub-genres, display them immediately with 0 lag
     if (item.genres.length > 1) {
       return _buildGenreWrap(item.genres);
+    }
+
+    // Synchronous curated or cached lookup (0ms)
+    final syncTags = ref.watch(genreTagServiceProvider).getTagsSync(
+          artist: item.artist,
+          title: item.name,
+          isAlbum: item.isAlbum || item.isEp,
+        );
+    if (syncTags.isNotEmpty) {
+      return _buildGenreWrap(syncTags);
     }
 
     final queryKey = '${item.artist.trim().toLowerCase()}:::${item.name.trim().toLowerCase()}:::${item.isAlbum || item.isEp}';

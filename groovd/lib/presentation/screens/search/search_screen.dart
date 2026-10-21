@@ -588,18 +588,27 @@ class _SearchItemTile extends ConsumerWidget {
     final scoreAsync = ref.watch(itemAverageScoreProvider(ItemReviewQuery.fromItem(item)));
 
     // Granular Last.fm & MusicBrainz genres
-    final queryKey = '${item.artist.trim().toLowerCase()}:::${item.name.trim().toLowerCase()}:::${item.isAlbum || item.isEp}';
-    final enrichedAsync = ref.watch(itemEnrichedGenresByKeyProvider(queryKey));
-    final genres = (item.genres.length > 1)
+    final syncTags = (item.genres.length > 1)
         ? item.genres
-        : (enrichedAsync.asData?.value ?? (item.genres.isNotEmpty ? item.genres : const <String>[]));
+        : ref.watch(genreTagServiceProvider).getTagsSync(
+            artist: item.artist,
+            title: item.name,
+            isAlbum: item.isAlbum || item.isEp,
+          );
+    final queryKey = '${item.artist.trim().toLowerCase()}:::${item.name.trim().toLowerCase()}:::${item.isAlbum || item.isEp}';
+    final enrichedAsync = syncTags.isNotEmpty ? null : ref.watch(itemEnrichedGenresByKeyProvider(queryKey));
+    final genres = syncTags.isNotEmpty
+        ? syncTags
+        : (enrichedAsync?.asData?.value ?? (item.genres.isNotEmpty ? item.genres : const <String>[]));
 
     return InkWell(
       onTap: () {
+        final currentGenres = genres.isNotEmpty ? genres : item.genres;
+        final passItem = currentGenres.isNotEmpty ? item.copyWith(genres: currentGenres) : item;
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => MusicDetailScreen(
-              item: item,
+              item: passItem,
               heroTag: 'search_${item.id}',
             ),
           ),

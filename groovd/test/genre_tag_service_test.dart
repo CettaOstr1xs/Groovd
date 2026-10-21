@@ -31,6 +31,30 @@ void main() {
       expect(date, equals('2008-01-24'));
     });
 
+    test('getTagsSync returns 0ms instant curated genres for iconic releases', () {
+      final service = GenreTagService();
+      final tags = service.getTagsSync(
+        artist: 'Have a Nice Life',
+        title: 'Deathconsciousness',
+      );
+      expect(tags, isNotEmpty);
+      expect(tags, contains('SHOEGAZE'));
+      expect(tags, contains('POST-PUNK'));
+      expect(tags, contains('DARK AMBIENT'));
+      expect(tags, contains('DRONE'));
+
+      final date = service.getCachedReleaseDate('Have a Nice Life', 'Deathconsciousness');
+      expect(date, equals('2008-01-24'));
+    });
+
+    test('generates canonical Firestore document IDs cleanly', () {
+      final docId = GenreTagService.generateDocId('Have a Nice Life', 'Deathconsciousness');
+      expect(docId, equals('have_a_nice_life__deathconsciousness'));
+
+      final artistDocId = GenreTagService.generateArtistDocId('The Cure');
+      expect(artistDocId, equals('artist__the_cure'));
+    });
+
     test('MusicItem formats release dates with day, month, and year accurately', () {
       final item1 = MusicItem(
         id: '1',

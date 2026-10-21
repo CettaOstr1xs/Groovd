@@ -131,27 +131,27 @@ class SpotifyRepository {
     if (isLiveMode) {
       // 1. Try Deezer
       final releases = await _safeDeezer(() => deezerService.getTrendingAlbums(limit: 10));
-      if (releases != null && releases.isNotEmpty) return releases;
+      if (releases != null && releases.isNotEmpty) return _attachInstantGenres(releases);
 
       final searched = await _safeDeezer(() => deezerService.searchAlbums('year:2024', limit: 10));
-      if (searched != null && searched.isNotEmpty) return searched;
+      if (searched != null && searched.isNotEmpty) return _attachInstantGenres(searched);
 
       // 2. Try Spotify if Deezer is degraded or returned empty
       final spotifyReleases = await _safeSpotify(() => apiService!.getNewReleases(limit: 10));
-      if (spotifyReleases != null && spotifyReleases.isNotEmpty) return spotifyReleases;
+      if (spotifyReleases != null && spotifyReleases.isNotEmpty) return _attachInstantGenres(spotifyReleases);
     }
-    return SpotifyMockData.trendingAlbums;
+    return _attachInstantGenres(SpotifyMockData.trendingAlbums);
   }
 
   Future<List<MusicItem>> getHotTracks() async {
     if (isLiveMode) {
       // 1. Try Deezer
       final hotTracks = await _safeDeezer(() => deezerService.getHotTracks(limit: 10));
-      if (hotTracks != null && hotTracks.isNotEmpty) return hotTracks;
+      if (hotTracks != null && hotTracks.isNotEmpty) return _attachInstantGenres(hotTracks);
 
       // 2. Try Spotify if Deezer is degraded
       final spotifyTracks = await _safeSpotify(() => apiService!.search('tag:new', type: 'track', limit: 10));
-      if (spotifyTracks != null && spotifyTracks.isNotEmpty) return spotifyTracks;
+      if (spotifyTracks != null && spotifyTracks.isNotEmpty) return _attachInstantGenres(spotifyTracks);
     }
     return [];
   }
@@ -315,19 +315,66 @@ class SpotifyRepository {
       return 0;
     });
 
-    return merged;
+    return _attachInstantGenres(merged);
+  }
+
+  /// Attaches instant curated or cached genres and verified release dates to a list of items.
+  /// Pre-warms upcoming items in the background for instant subsequent interactions.
+  List<MusicItem> _attachInstantGenres(List<MusicItem> items) {
+    final enrichedList = items.map((item) {
+      if (item.genres.length > 1) return item;
+      final instantTags = tagService.getTagsSync(
+        artist: item.artist,
+        title: item.name,
+        isAlbum: item.isAlbum || item.isEp,
+      );
+      final cachedDate = tagService.getCachedReleaseDate(item.artist, item.name);
+      String date = item.releaseDate;
+      if (cachedDate != null && cachedDate.isNotEmpty) {
+        if (date.isEmpty || cachedDate.compareTo(date) < 0) {
+          date = cachedDate;
+        }
+      }
+      if (instantTags.isNotEmpty || date != item.releaseDate) {
+        return item.copyWith(
+          genres: instantTags.isNotEmpty ? instantTags : item.genres,
+          releaseDate: date,
+        );
+      }
+      return item;
+    }).toList();
+
+    // Trigger pre-fetch in background for any items without cached tags
+    for (final item in enrichedList.take(6)) {
+      if (item.genres.length <= 1) {
+        tagService.prefetchTags(
+          artist: item.artist,
+          title: item.name,
+          isAlbum: item.isAlbum || item.isEp,
+        );
+      }
+    }
+
+    return enrichedList;
   }
 
   /// Enriches music item with rich, granular Last.fm & MusicBrainz genre tags and verified original release date.
   Future<MusicItem> _enrichItemWithTags(MusicItem item) async {
     try {
-      final tags = (item.genres.isEmpty || item.genres.length <= 1)
-          ? await tagService.getTags(
-              artist: item.artist,
-              title: item.name,
-              isAlbum: item.isAlbum || item.isEp,
-            )
-          : item.genres;
+      final syncTags = tagService.getTagsSync(
+        artist: item.artist,
+        title: item.name,
+        isAlbum: item.isAlbum || item.isEp,
+      );
+      final tags = (item.genres.length > 1)
+          ? item.genres
+          : (syncTags.isNotEmpty
+              ? syncTags
+              : await tagService.getTags(
+                  artist: item.artist,
+                  title: item.name,
+                  isAlbum: item.isAlbum || item.isEp,
+                ));
 
       String updatedDate = item.releaseDate;
       final cachedOriginalDate = tagService.getCachedReleaseDate(item.artist, item.name);
