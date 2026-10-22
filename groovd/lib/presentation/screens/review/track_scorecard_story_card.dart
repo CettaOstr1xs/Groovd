@@ -375,7 +375,7 @@ class TrackScorecardStoryCard extends StatelessWidget {
     final formattedDate = DateFormat('MMM d, yyyy').format(review.createdAt).toUpperCase();
     final progress = animationProgress ?? 1.0;
 
-    // Cinematic 8.5s Animation Keyframe Curve (+ 3.0s viewer analysis hold = 11.5s total video):
+    // Cinematic 8.5s Animation Keyframe Curve (+ 5.0s viewer analysis hold = 13.5s total video):
     // Phase 1: 0.0 -> 0.22 (~1.9s): Big cover centered & zoomed with album and artist name centered below it.
     // Phase 2: 0.22 -> 0.32 (~0.85s): Cover scales down & glides to top-left dock; centered text fades out.
     // Phase 3: 0.30 -> 0.38 (~0.68s): Left-aligned metadata and // TRACKLIST header appear.
@@ -620,31 +620,38 @@ class TrackScorecardStoryCard extends StatelessWidget {
                                 ),
                               ),
 
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 12),
 
-                              // 3. Tracklist Section Header Label
-                              Row(
-                                children: [
-                                  Text(
-                                    '// TRACKLIST',
-                                    style: AppTypography.monoLabel(
-                                      color: _secondaryTextColor,
-                                      fontSize: 8.5,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 1.0,
-                                    ),
+                              // 3. Tracklist Section Header Label (Anchored close to tracklist)
+                              Transform.translate(
+                                offset: Offset(headerSlideX, 0),
+                                child: Opacity(
+                                  opacity: headerOpacity,
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        '// TRACKLIST',
+                                        style: AppTypography.displaySmall(
+                                          color: _primaryTextColor,
+                                          fontSize: 10.0,
+                                        ).copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Container(
+                                          height: 1,
+                                          color: _borderColor.withValues(alpha: 0.35),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Container(
-                                      height: 1,
-                                      color: _borderColor.withValues(alpha: 0.35),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
 
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 4),
 
                               // 3. Full Tracklist with Sequential Loading and Top-Rated Highlight
                               Expanded(
@@ -723,8 +730,6 @@ class TrackScorecardStoryCard extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  _buildFormatBadge(fontSize: 8.0),
-                                  const SizedBox(height: 8),
                                   Text(
                                     review.musicItemName.toUpperCase(),
                                     maxLines: 2,
@@ -735,7 +740,7 @@ class TrackScorecardStoryCard extends StatelessWidget {
                                       color: _primaryTextColor,
                                     ).copyWith(height: 1.15),
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 6),
                                   Text(
                                     'BY ${review.artistName.toUpperCase()}',
                                     maxLines: 1,
@@ -743,20 +748,8 @@ class TrackScorecardStoryCard extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                     style: AppTypography.monoLabel(
                                       color: _primaryTextColor.withValues(alpha: 0.85),
-                                      fontSize: 10.5,
+                                      fontSize: 11.0,
                                       fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _formattedReleaseDetails,
-                                    maxLines: 1,
-                                    textAlign: TextAlign.center,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTypography.monoLabel(
-                                      color: _secondaryTextColor,
-                                      fontSize: 9.0,
-                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
@@ -854,15 +847,16 @@ class TrackScorecardStoryCard extends StatelessWidget {
 
     final bool isDualColumn = tracks.length > 9;
     final int count = tracks.length;
+    final MainAxisAlignment singleAlignment = count >= 4 ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start;
 
     if (!isDualColumn) {
       return LayoutBuilder(
         builder: (context, constraints) {
           return Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: singleAlignment,
             children: List.generate(count, (i) {
               final item = tracks[i];
-              return _buildTrackRow(
+              final row = _buildTrackRow(
                 item: item,
                 index: i,
                 totalCount: count,
@@ -870,6 +864,13 @@ class TrackScorecardStoryCard extends StatelessWidget {
                 isDualColumn: false,
                 maxRating: maxRating,
               );
+              if (count < 4 && i < count - 1) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: row,
+                );
+              }
+              return row;
             }),
           );
         },
@@ -888,7 +889,7 @@ class TrackScorecardStoryCard extends StatelessWidget {
           children: [
             Expanded(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(leftTracks.length, (i) {
                   final item = leftTracks[i];
                   return _buildTrackRow(
@@ -905,7 +906,7 @@ class TrackScorecardStoryCard extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(rightTracks.length, (i) {
                   final item = rightTracks[i];
                   return _buildTrackRow(

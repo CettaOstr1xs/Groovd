@@ -10,14 +10,12 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/music_item.dart';
 import '../../../data/models/review.dart';
-import '../../../data/services/spotify_repository.dart';
 import '../../../state/music_providers.dart';
 import '../../../state/user_profile_provider.dart';
 import '../../../state/auth_providers.dart';
 import '../../../state/review_providers.dart';
 import '../../widgets/brutalist_button.dart';
 import 'critique_story_card.dart';
-import 'track_scorecard_story_card.dart';
 
 enum SharePlatform {
   instagram,
@@ -75,7 +73,7 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 11500),
+      duration: const Duration(milliseconds: 13500),
     )..addListener(() {
         if (!_isExporting) {
           setState(() {
@@ -220,10 +218,6 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
     }
   }
 
-  Future<void> _shareToInstagramStories() async {
-    await _shareMedia(SharePlatform.instagram);
-  }
-
   Future<void> _shareMedia(SharePlatform platform) async {
     if (_isAnimatedMode) {
       await _shareVideo(platform);
@@ -254,7 +248,7 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
         final progress = i / totalFrames; // 0.0 -> 1.0 of active animation
         if (mounted) {
           setState(() {
-            _previewProgress = progress * (8.5 / 11.5);
+            _previewProgress = progress * (8.5 / 13.5);
             _exportStatusText = 'RENDERING FRAME ${i + 1}/${totalFrames + 1}...';
           });
         }
@@ -284,9 +278,9 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
           'framePaths': framePaths,
           'outputPath': videoPath,
           'fps': 60,
-          'durationMs': 11500,
+          'durationMs': 13500,
           'activeDurationMs': 8500,
-          'endHoldMs': 3000,
+          'endHoldMs': 5000,
           'width': 720,
           'height': 1280,
         });
@@ -617,9 +611,9 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
           )
         : widget.review;
 
-    // Active animation is 8.5s, followed by 3.0s resting hold (total 11.5s):
+    // Active animation is 8.5s, followed by 5.0s resting hold (total 13.5s):
     final double effectiveProgress = _isAnimatedMode
-        ? (_previewProgress / (8.5 / 11.5)).clamp(0.0, 1.0)
+        ? (_previewProgress / (8.5 / 13.5)).clamp(0.0, 1.0)
         : 1.0;
 
     return Container(
@@ -765,7 +759,7 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '${(_previewProgress * 11.5).toStringAsFixed(1)}s',
+                            '${(_previewProgress * 13.5).toStringAsFixed(1)}s',
                             style: AppTypography.monoLabel(
                               color: AppColors.textPrimary,
                               fontSize: 9,
@@ -1001,47 +995,23 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
 
                   const SizedBox(height: 10),
 
-                  // Multi-Platform Row: WhatsApp Status & TikTok Video
-                  Row(
-                    children: [
-                      Expanded(
-                        child: BrutalistButton(
-                          label: 'WHATSAPP',
-                          icon: Icons.chat_bubble_outline,
-                          backgroundColor: const Color(0xFF25D366),
-                          textColor: AppColors.pureBlack,
-                          onPressed: _isExporting ? () {} : () => _shareMedia(SharePlatform.whatsapp),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: BrutalistButton(
-                          label: 'TIKTOK',
-                          icon: Icons.music_note,
-                          backgroundColor: AppColors.cyberCyan,
-                          textColor: AppColors.pureBlack,
-                          onPressed: _isExporting ? () {} : () => _shareMedia(SharePlatform.tiktok),
-                        ),
-                      ),
-                    ],
+                  // Secondary Action: More Apps (System Share Sheet)
+                  SizedBox(
+                    width: double.infinity,
+                    child: BrutalistButton(
+                      label: 'MORE APPS',
+                      icon: Icons.share_outlined,
+                      backgroundColor: AppColors.surfaceElevated,
+                      textColor: AppColors.textPrimary,
+                      onPressed: _isExporting ? () {} : () => _shareMedia(SharePlatform.system),
+                    ),
                   ),
 
                   const SizedBox(height: 10),
 
-                  // Secondary Actions: More Apps, Save Story & Copy Text
+                  // Utility Actions: Save Story & Copy Text
                   Row(
                     children: [
-                      Expanded(
-                        child: BrutalistButton(
-                          label: 'MORE APPS',
-                          icon: Icons.share_outlined,
-                          backgroundColor: AppColors.surfaceElevated,
-                          textColor: AppColors.textPrimary,
-                          isSmall: true,
-                          onPressed: _isExporting ? () {} : () => _shareMedia(SharePlatform.system),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                       Expanded(
                         child: BrutalistButton(
                           label: 'SAVE STORY',
@@ -1052,7 +1022,7 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                           onPressed: _isExporting ? () {} : _saveStoryImage,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: BrutalistButton(
                           label: 'COPY TEXT',

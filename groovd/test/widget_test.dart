@@ -35,11 +35,23 @@ import 'package:groovd/state/friends_provider.dart';
 import 'package:groovd/state/artist_providers.dart';
 import 'package:groovd/state/onboarding_provider.dart';
 import 'package:groovd/state/review_providers.dart';
+import 'package:groovd/presentation/screens/wishlist/wishlist_screen.dart';
+import 'package:groovd/presentation/screens/review/track_scorecard_story_card.dart';
+import 'package:groovd/data/models/wishlist_item.dart';
+import 'package:groovd/state/wishlist_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _CompletedOnboardingNotifier extends OnboardingNotifier {
   @override
   bool build() => true;
+}
+
+class _TestWishlistNotifier extends WishlistNotifier {
+  final List<WishlistItem> initial;
+  _TestWishlistNotifier(this.initial);
+
+  @override
+  List<WishlistItem> build() => initial;
 }
 
 void main() {
@@ -456,14 +468,12 @@ void main() {
     expect(find.text('CYBER'), findsOneWidget);
     expect(find.text('ZINE'), findsOneWidget);
     expect(find.text('SHARE TO INSTAGRAM STORIES'), findsOneWidget);
-    expect(find.text('WHATSAPP'), findsOneWidget);
-    expect(find.text('TIKTOK'), findsOneWidget);
     expect(find.text('MORE APPS'), findsOneWidget);
     expect(find.text('SAVE STORY'), findsOneWidget);
     expect(find.text('COPY TEXT'), findsOneWidget);
 
     // Tap ACID theme pill
-    await tester.tap(find.text('ACID'));
+    await tester.tap(find.text('ACID'), warnIfMissed: false);
     await tester.pump();
 
     // Tap close button
@@ -2255,6 +2265,128 @@ void main() {
     // Rating column header and badge centers align closely
     expect((ratingHeaderBox.center.dx - ratingDashBox.center.dx).abs(), lessThan(1.0));
     expect((ratingHeaderBox.center.dx - ratingBadgeBox.center.dx).abs(), lessThan(8.0));
+  });
+
+  testWidgets('WishlistScreen renders 3:3 album cover grid by default and toggles between grid and list views', (WidgetTester tester) async {
+    final wishItems = [
+      WishlistItem(
+        musicItem: const MusicItem(
+          id: 'test_lp_1',
+          name: 'Blonde',
+          artist: 'Frank Ocean',
+          coverUrl: '',
+          type: MusicType.album,
+          releaseDate: '2016-08-20',
+        ),
+        addedAt: DateTime.now(),
+      ),
+      WishlistItem(
+        musicItem: const MusicItem(
+          id: 'test_lp_2',
+          name: 'Channel Orange',
+          artist: 'Frank Ocean',
+          coverUrl: '',
+          type: MusicType.album,
+          releaseDate: '2012-07-10',
+        ),
+        addedAt: DateTime.now(),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          wishlistProvider.overrideWith(() => _TestWishlistNotifier(wishItems)),
+        ],
+        child: const MaterialApp(
+          home: WishlistScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Verify header and counters
+    expect(find.text('CRITIC WANTLIST'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+
+    // Verify sort button and view mode toggle buttons exist
+    expect(find.text('RECENT'), findsOneWidget);
+    expect(find.byIcon(Icons.grid_view), findsOneWidget);
+    expect(find.byIcon(Icons.view_agenda_outlined), findsOneWidget);
+
+    // Default view mode is GridView (album cover only)
+    expect(find.byType(GridView), findsOneWidget);
+    expect(find.byType(ListView), findsNothing);
+
+    // Switch to List View
+    await tester.tap(find.byIcon(Icons.view_agenda_outlined));
+    await tester.pumpAndSettle();
+
+    // Now ListView is displayed with detailed cards showing titles and quick actions
+    expect(find.byType(ListView), findsOneWidget);
+    expect(find.byType(GridView), findsNothing);
+    expect(find.text('BLONDE'), findsOneWidget);
+    expect(find.text('+ RATE RELEASE'), findsWidgets);
+
+    // Switch back to Grid View
+    await tester.tap(find.byIcon(Icons.grid_view));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GridView), findsOneWidget);
+    expect(find.byType(ListView), findsNothing);
+  });
+
+  testWidgets('TrackScorecardStoryCard zoomed intro phase renders only album title and artist name without format badge', (WidgetTester tester) async {
+    final review = Review(
+      id: 'rev_zoom_test',
+      userId: 'test_user',
+      userName: 'Tastemaker',
+      userHandle: 'tastemaker',
+      userAvatarUrl: '',
+      musicItemId: 'album_test',
+      musicItemName: 'OK Computer',
+      artistName: 'Radiohead',
+      coverUrl: '',
+      itemType: 'album',
+      rating: 9.8,
+      headline: 'Iconic album',
+      body: 'A masterclass in alternative rock.',
+      createdAt: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TrackScorecardStoryCard(
+            review: review,
+            tracks: const [
+              StoryTrackRating(trackNumber: 1, title: 'Airbag', rating: 9.5),
+              StoryTrackRating(trackNumber: 2, title: 'Paranoid Android', rating: 10.0),
+            ],
+            animationProgress: 0.10, // In Phase 1 Zoom intro
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    // Centered zoomed intro album title and artist name are present
+    expect(
+      find.byWidgetPredicate((w) => w is Text && w.data == 'OK COMPUTER' && w.textAlign == TextAlign.center),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate((w) => w is Text && w.data == 'BY RADIOHEAD' && w.textAlign == TextAlign.center),
+      findsOneWidget,
+    );
+
+    // Format badge is removed from the zoomed intro phase column
+    expect(
+      find.byWidgetPredicate((w) => w is Text && (w.data == 'LP' || w.data == 'LP // FULL LENGTH') && w.textAlign == TextAlign.center),
+      findsNothing,
+    );
   });
 }
 

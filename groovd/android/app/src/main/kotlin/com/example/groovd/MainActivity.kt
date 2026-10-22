@@ -48,9 +48,9 @@ class MainActivity : FlutterActivity() {
                     val width = call.argument<Int>("width") ?: 720
                     val height = call.argument<Int>("height") ?: 1280
                     val fps = call.argument<Int>("fps") ?: 60
-                    val durationMs = call.argument<Int>("durationMs") ?: 11500
+                    val durationMs = call.argument<Int>("durationMs") ?: 13500
                     val activeDurationMs = call.argument<Int>("activeDurationMs") ?: 8500
-                    val endHoldMs = call.argument<Int>("endHoldMs") ?: 3000
+                    val endHoldMs = call.argument<Int>("endHoldMs") ?: 5000
 
                     if (framePaths.isNullOrEmpty() || outputPath == null) {
                         result.error("INVALID_ARGS", "framePaths or outputPath is null", null)
