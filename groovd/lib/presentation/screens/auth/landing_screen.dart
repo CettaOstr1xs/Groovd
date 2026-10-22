@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/services/auth_service.dart';
 import 'package:groovd/presentation/screens/auth/login_screen.dart';
 import 'package:groovd/presentation/screens/auth/register_screen.dart';
+import 'package:groovd/presentation/navigation/main_navigation_screen.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
 import 'package:groovd/state/auth_providers.dart';
 import 'package:groovd/state/dossier_top_picks_provider.dart';
@@ -542,6 +544,14 @@ class _LandingScreenState extends ConsumerState<LandingScreen> with SingleTicker
     super.dispose();
   }
 
+  void _navigateToMainOrPop() {
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+      (route) => false,
+    );
+  }
+
   Future<void> _handleGoogleSignIn() async {
     setState(() {
       _isGoogleLoading = true;
@@ -550,24 +560,28 @@ class _LandingScreenState extends ConsumerState<LandingScreen> with SingleTicker
 
     try {
       final authService = ref.read(authServiceProvider);
-      final credential = await authService.signInWithGoogle();
+      final credential = await authService.signInWithGoogle().timeout(
+        const Duration(seconds: 60),
+        onTimeout: () => throw TimeoutException('Google Sign-In connection timed out. Please check your network and try again.'),
+      );
 
       if (credential != null && mounted) {
         final user = credential.user;
         if (user != null) {
-          await ref.read(userProfileProvider.notifier).syncWithFirebaseUser(user);
-          await ref.read(wishlistProvider.notifier).syncForUser(user.uid);
-          await ref.read(dossierTopPicksProvider.notifier).syncForUser(user.uid);
-          await ref.read(userListsProvider.notifier).syncForUser(user.uid);
-          ref.invalidate(userReviewsProvider);
-          ref.read(reviewRefreshProvider.notifier).notifyChanged();
+          unawaited(Future.wait([
+            ref.read(userProfileProvider.notifier).syncWithFirebaseUser(user),
+            ref.read(wishlistProvider.notifier).syncForUser(user.uid),
+            ref.read(dossierTopPicksProvider.notifier).syncForUser(user.uid),
+            ref.read(userListsProvider.notifier).syncForUser(user.uid),
+          ]).then((_) {
+            ref.invalidate(userReviewsProvider);
+            ref.read(reviewRefreshProvider.notifier).notifyChanged();
+          }).catchError((_) {}));
         }
 
         await ref.read(onboardingProvider.notifier).completeOnboarding();
         if (!mounted) return;
-        if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        }
+        _navigateToMainOrPop();
       }
     } catch (e) {
       if (mounted) {
@@ -591,9 +605,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> with SingleTicker
     if (result == true && mounted) {
       await ref.read(onboardingProvider.notifier).completeOnboarding();
       if (!mounted) return;
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
+      _navigateToMainOrPop();
     }
   }
 
@@ -604,18 +616,14 @@ class _LandingScreenState extends ConsumerState<LandingScreen> with SingleTicker
     if (result == true && mounted) {
       await ref.read(onboardingProvider.notifier).completeOnboarding();
       if (!mounted) return;
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
+      _navigateToMainOrPop();
     }
   }
 
   Future<void> _handleContinueAsGuest() async {
     await ref.read(onboardingProvider.notifier).completeOnboarding();
     if (!mounted) return;
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
+    _navigateToMainOrPop();
   }
 
   @override

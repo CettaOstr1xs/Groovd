@@ -21,11 +21,11 @@ class LocalReviewRepository implements ReviewRepository {
           try {
             final map = jsonDecode(item) as Map<String, dynamic>;
             final review = Review.fromMap(map);
-            final isMock = review.id.startsWith('rev_1') ||
-                review.id.startsWith('rev_2') ||
-                review.id.startsWith('rev_3') ||
-                review.id.startsWith('rev_4') ||
-                review.id.startsWith('rev_5') ||
+            final isMock = review.id == 'rev_1' ||
+                review.id == 'rev_2' ||
+                review.id == 'rev_3' ||
+                review.id == 'rev_4' ||
+                review.id == 'rev_5' ||
                 review.id.startsWith('seed_') ||
                 review.userId.startsWith('critic_') ||
                 review.userName.toUpperCase() == 'ARCHIVE_99' ||

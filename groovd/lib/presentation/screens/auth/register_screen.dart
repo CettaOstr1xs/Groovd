@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
@@ -9,7 +10,9 @@ import '../../../state/review_providers.dart';
 import '../../../state/user_lists_provider.dart';
 import '../../../state/user_profile_provider.dart';
 import '../../../state/wishlist_provider.dart';
+import '../../navigation/main_navigation_screen.dart';
 import '../../widgets/brutalist_button.dart';
+import '../../../state/onboarding_provider.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -65,7 +68,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _syncUserState(dynamic user, {String? customName, String? customHandle}) async {
     if (user == null) return;
     try {
-      await ref.read(userProfileProvider.notifier).syncWithFirebaseUser(user);
+      await Future.wait([
+        ref.read(userProfileProvider.notifier).syncWithFirebaseUser(user),
+        ref.read(wishlistProvider.notifier).syncForUser(user.uid),
+        ref.read(dossierTopPicksProvider.notifier).syncForUser(user.uid),
+        ref.read(userListsProvider.notifier).syncForUser(user.uid),
+      ]).timeout(const Duration(milliseconds: 3500));
       if (customName != null || customHandle != null) {
         final current = ref.read(userProfileProvider);
         await ref.read(userProfileProvider.notifier).updateCriticIdentity(
@@ -73,9 +81,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           handle: customHandle ?? current.userHandle,
         );
       }
-      await ref.read(wishlistProvider.notifier).syncForUser(user.uid);
-      await ref.read(dossierTopPicksProvider.notifier).syncForUser(user.uid);
-      await ref.read(userListsProvider.notifier).syncForUser(user.uid);
       ref.invalidate(userReviewsProvider);
       ref.read(reviewRefreshProvider.notifier).notifyChanged();
     } catch (_) {}
@@ -103,13 +108,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         password: _passwordController.text,
         criticName: _nameController.text.trim(),
         criticHandle: _handleController.text.trim(),
+      ).timeout(
+        const Duration(seconds: 60),
+        onTimeout: () => throw TimeoutException('Registration connection timed out. Please check your network.'),
       );
 
-      await _syncUserState(
+      unawaited(_syncUserState(
         credential.user,
         customName: _nameController.text.trim().toUpperCase(),
         customHandle: _handleController.text.trim(),
-      );
+      ));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -121,7 +129,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
         );
-        Navigator.of(context).pop(true);
+        await ref.read(onboardingProvider.notifier).completeOnboarding();
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+          (route) => false,
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -146,11 +159,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     try {
       final authService = ref.read(authServiceProvider);
-      final credential = await authService.signInWithGoogle();
+      final credential = await authService.signInWithGoogle().timeout(
+        const Duration(seconds: 60),
+        onTimeout: () => throw TimeoutException('Google Sign-In connection timed out. Please check your network and try again.'),
+      );
 
       if (credential != null && mounted) {
-        await _syncUserState(credential.user);
-        if (!mounted) return;
+        unawaited(_syncUserState(credential.user));
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -161,7 +176,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
         );
-        Navigator.of(context).pop(true);
+        await ref.read(onboardingProvider.notifier).completeOnboarding();
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+          (route) => false,
+        );
       }
     } catch (e) {
       if (mounted) {

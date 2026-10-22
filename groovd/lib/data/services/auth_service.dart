@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -31,7 +32,11 @@ class AuthService {
   /// Helper to extract existing guest dossier from 'users/user_me'
   Future<Map<String, dynamic>> _fetchExistingGuestDossier() async {
     try {
-      final guestDoc = await _firestore.collection('users').doc('user_me').get();
+      final guestDoc = await _firestore
+          .collection('users')
+          .doc('user_me')
+          .get()
+          .timeout(const Duration(milliseconds: 2000));
       if (guestDoc.exists && guestDoc.data() != null) {
         return guestDoc.data()!;
       }
@@ -45,13 +50,14 @@ class AuthService {
       final reviewsSnapshot = await _firestore
           .collection('reviews')
           .where('userId', isEqualTo: 'user_me')
-          .get();
+          .get()
+          .timeout(const Duration(milliseconds: 2500));
       for (final doc in reviewsSnapshot.docs) {
         await doc.reference.update({
           'userId': newUid,
           'userName': criticName,
           'userHandle': criticHandle,
-        });
+        }).timeout(const Duration(milliseconds: 1500));
       }
     } catch (_) {}
   }
@@ -69,31 +75,33 @@ class AuthService {
         ? (criticHandle.trim().startsWith('@') ? criticHandle.trim() : '@${criticHandle.trim()}')
         : '@${criticName.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '_')}';
 
-    final credential = await _auth.createUserWithEmailAndPassword(
-      email: cleanEmail,
-      password: password,
-    );
+    final credential = await _auth
+        .createUserWithEmailAndPassword(
+          email: cleanEmail,
+          password: password,
+        )
+        .timeout(const Duration(seconds: 45));
 
     final user = credential.user;
     if (user != null) {
-      await user.updateDisplayName(cleanName);
+      unawaited(() async {
+        try {
+          await user.updateDisplayName(cleanName);
+          final guestData = await _fetchExistingGuestDossier();
+          await _firestore.collection('users').doc(user.uid).set({
+            'userId': user.uid,
+            'email': cleanEmail,
+            'userName': cleanName,
+            'userHandle': generatedHandle,
+            'bio': guestData['bio'] ?? 'Sonic explorer & vinyl enthusiast. Chronicling deep cuts and 10/10 masterpieces.',
+            'createdAt': FieldValue.serverTimestamp(),
+            'avatarPath': guestData['avatarPath'],
+            'backdropPath': guestData['backdropPath'],
+          }, SetOptions(merge: true)).timeout(const Duration(seconds: 4));
 
-      // Fetch any existing guest dossier (e.g. from user_me)
-      final guestData = await _fetchExistingGuestDossier();
-
-      // Provision user profile in Cloud Firestore under their permanent Auth UID
-      await _firestore.collection('users').doc(user.uid).set({
-        'userId': user.uid,
-        'email': cleanEmail,
-        'userName': cleanName,
-        'userHandle': generatedHandle,
-        'bio': guestData['bio'] ?? 'Sonic explorer & vinyl enthusiast. Chronicling deep cuts and 10/10 masterpieces.',
-        'createdAt': FieldValue.serverTimestamp(),
-        'avatarPath': guestData['avatarPath'],
-        'backdropPath': guestData['backdropPath'],
-      }, SetOptions(merge: true));
-
-      await _migrateGuestReviews(user.uid, cleanName, generatedHandle);
+          await _migrateGuestReviews(user.uid, cleanName, generatedHandle);
+        } catch (_) {}
+      }());
     }
 
     return credential;
@@ -104,34 +112,39 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    final credential = await _auth.signInWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
+    final credential = await _auth
+        .signInWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        )
+        .timeout(const Duration(seconds: 45));
 
     final user = credential.user;
     if (user != null) {
-      // Ensure user document exists in Firestore
-      final docRef = _firestore.collection('users').doc(user.uid);
-      final doc = await docRef.get();
-      if (!doc.exists) {
-        final guestData = await _fetchExistingGuestDossier();
-        final displayName = guestData['userName'] ?? user.displayName ?? 'CRITIC // YOU';
-        final handle = guestData['userHandle'] ??
-            '@${displayName.toLowerCase().replaceAll(RegExp(r'\s+'), '_')}';
-        await docRef.set({
-          'userId': user.uid,
-          'email': user.email ?? email.trim(),
-          'userName': displayName.toUpperCase(),
-          'userHandle': handle,
-          'bio': guestData['bio'] ?? 'Sonic explorer & vinyl enthusiast. Chronicling deep cuts and 10/10 masterpieces.',
-          'createdAt': FieldValue.serverTimestamp(),
-          'avatarPath': guestData['avatarPath'],
-          'backdropPath': guestData['backdropPath'],
-        }, SetOptions(merge: true));
+      unawaited(() async {
+        try {
+          final docRef = _firestore.collection('users').doc(user.uid);
+          final doc = await docRef.get().timeout(const Duration(seconds: 3));
+          if (!doc.exists) {
+            final guestData = await _fetchExistingGuestDossier();
+            final displayName = guestData['userName'] ?? user.displayName ?? 'CRITIC // YOU';
+            final handle = guestData['userHandle'] ??
+                '@${displayName.toLowerCase().replaceAll(RegExp(r'\s+'), '_')}';
+            await docRef.set({
+              'userId': user.uid,
+              'email': user.email ?? email.trim(),
+              'userName': displayName.toUpperCase(),
+              'userHandle': handle,
+              'bio': guestData['bio'] ?? 'Sonic explorer & vinyl enthusiast. Chronicling deep cuts and 10/10 masterpieces.',
+              'createdAt': FieldValue.serverTimestamp(),
+              'avatarPath': guestData['avatarPath'],
+              'backdropPath': guestData['backdropPath'],
+            }, SetOptions(merge: true)).timeout(const Duration(seconds: 3));
 
-        await _migrateGuestReviews(user.uid, displayName.toUpperCase(), handle);
-      }
+            await _migrateGuestReviews(user.uid, displayName.toUpperCase(), handle);
+          }
+        } catch (_) {}
+      }());
     }
 
     return credential;
@@ -139,6 +152,10 @@ class AuthService {
 
   /// Sign in or register seamlessly using Google Sign-In.
   Future<UserCredential?> signInWithGoogle() async {
+    try {
+      await _googleSignIn.signOut().timeout(const Duration(seconds: 1));
+    } catch (_) {}
+
     final googleUser = await _googleSignIn.signIn();
     if (googleUser == null) {
       // User cancelled the Google sign-in process
@@ -151,31 +168,37 @@ class AuthService {
       idToken: googleAuth.idToken,
     );
 
-    final userCredential = await _auth.signInWithCredential(credential);
+    final userCredential = await _auth
+        .signInWithCredential(credential)
+        .timeout(const Duration(seconds: 45));
     final user = userCredential.user;
 
     if (user != null) {
-      final docRef = _firestore.collection('users').doc(user.uid);
-      final doc = await docRef.get();
-      if (!doc.exists) {
-        final guestData = await _fetchExistingGuestDossier();
-        final name = guestData['userName'] ??
-            (user.displayName ?? googleUser.displayName ?? 'CRITIC').toUpperCase();
-        final handle = guestData['userHandle'] ??
-            '@${name.toLowerCase().replaceAll(RegExp(r'\s+'), '_')}';
-        await docRef.set({
-          'userId': user.uid,
-          'email': user.email ?? googleUser.email,
-          'userName': name,
-          'userHandle': handle,
-          'bio': guestData['bio'] ?? 'Sonic explorer & vinyl enthusiast. Chronicling deep cuts and 10/10 masterpieces.',
-          'createdAt': FieldValue.serverTimestamp(),
-          'avatarPath': guestData['avatarPath'] ?? user.photoURL,
-          'backdropPath': guestData['backdropPath'],
-        }, SetOptions(merge: true));
+      unawaited(() async {
+        try {
+          final docRef = _firestore.collection('users').doc(user.uid);
+          final doc = await docRef.get().timeout(const Duration(seconds: 3));
+          if (!doc.exists) {
+            final guestData = await _fetchExistingGuestDossier();
+            final name = guestData['userName'] ??
+                (user.displayName ?? googleUser.displayName ?? 'CRITIC').toUpperCase();
+            final handle = guestData['userHandle'] ??
+                '@${name.toLowerCase().replaceAll(RegExp(r'\s+'), '_')}';
+            await docRef.set({
+              'userId': user.uid,
+              'email': user.email ?? googleUser.email,
+              'userName': name,
+              'userHandle': handle,
+              'bio': guestData['bio'] ?? 'Sonic explorer & vinyl enthusiast. Chronicling deep cuts and 10/10 masterpieces.',
+              'createdAt': FieldValue.serverTimestamp(),
+              'avatarPath': guestData['avatarPath'] ?? user.photoURL,
+              'backdropPath': guestData['backdropPath'],
+            }, SetOptions(merge: true)).timeout(const Duration(seconds: 3));
 
-        await _migrateGuestReviews(user.uid, name, handle);
-      }
+            await _migrateGuestReviews(user.uid, name, handle);
+          }
+        } catch (_) {}
+      }());
     }
 
     return userCredential;

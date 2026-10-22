@@ -350,8 +350,21 @@ class UserProfileNotifier extends Notifier<UserProfile> {
 
   /// Syncs user profile state with authenticated Firebase User & Firestore.
   Future<void> syncWithFirebaseUser(User user) async {
+    // 1. Instantly apply Firebase User auth info so the UI renders immediately without delay
+    state = state.copyWith(
+      userId: user.uid,
+      userName: (user.displayName != null && user.displayName!.isNotEmpty)
+          ? user.displayName!.toUpperCase()
+          : state.userName,
+      avatarPath: user.photoURL ?? state.avatarPath,
+    );
+
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get()
+          .timeout(const Duration(milliseconds: 3000));
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         state = UserProfile(
@@ -361,12 +374,6 @@ class UserProfileNotifier extends Notifier<UserProfile> {
           bio: data['bio'] as String? ?? state.bio,
           avatarPath: data['avatarPath'] as String? ?? user.photoURL,
           backdropPath: data['backdropPath'] as String?,
-        );
-      } else {
-        state = state.copyWith(
-          userId: user.uid,
-          userName: (user.displayName ?? state.userName).toUpperCase(),
-          avatarPath: user.photoURL ?? state.avatarPath,
         );
       }
       await _persist();

@@ -8,7 +8,6 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
@@ -62,6 +61,10 @@
         </intent>
         <package android:name="com.spotify.music"/>
         <package android:name="com.instagram.android"/>
+        <package android:name="com.whatsapp"/>
+        <package android:name="com.whatsapp.w4b"/>
+        <package android:name="com.zhiliaoapp.musically"/>
+        <package android:name="com.ss.android.ugc.trill"/>
         <intent>
             <action android:name="com.instagram.share.ADD_TO_STORY"/>
             <data android:mimeType="image/png"/>

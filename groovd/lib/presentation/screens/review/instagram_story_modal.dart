@@ -19,6 +19,13 @@ import '../../widgets/brutalist_button.dart';
 import 'critique_story_card.dart';
 import 'track_scorecard_story_card.dart';
 
+enum SharePlatform {
+  instagram,
+  whatsapp,
+  tiktok,
+  system,
+}
+
 class InstagramStoryModal extends ConsumerStatefulWidget {
   final Review review;
   final MusicItem? musicItem;
@@ -58,6 +65,9 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
   bool _isLoadingTracks = true;
   String? _releaseYear;
 
+  File? _cachedVideoFile;
+  File? _cachedImageFile;
+
   static const MethodChannel _storyChannel = MethodChannel('com.example.groovd/instagram_stories');
 
   @override
@@ -65,7 +75,7 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3500),
+      duration: const Duration(milliseconds: 11500),
     )..addListener(() {
         if (!_isExporting) {
           setState(() {
@@ -140,6 +150,7 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
             trackNumber: 1,
             title: widget.review.musicItemName,
             rating: widget.review.rating,
+            durationMs: item?.durationMs,
           ),
         );
       }
@@ -210,11 +221,177 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
   }
 
   Future<void> _shareToInstagramStories() async {
+    await _shareMedia(SharePlatform.instagram);
+  }
+
+  Future<void> _shareMedia(SharePlatform platform) async {
     if (_isAnimatedMode) {
-      await _shareAsVideoToInstagram();
-      return;
+      await _shareVideo(platform);
+    } else {
+      await _shareStaticImage(platform);
+    }
+  }
+
+  Future<File?> _generateVideoFile() async {
+    if (_cachedVideoFile != null && await _cachedVideoFile!.exists()) {
+      return _cachedVideoFile;
     }
 
+    Directory? framesDir;
+    try {
+      final tempDir = await getTemporaryDirectory();
+      framesDir = Directory('${tempDir.path}/groovd_story_frames_${DateTime.now().millisecondsSinceEpoch}');
+      await framesDir.create(recursive: true);
+
+      final framePaths = <String>[];
+      const int totalFrames = 102; // 102 keyframes across 8.5 seconds (12 keyframes/sec for smooth 60 FPS video)
+
+      if (_animController.isAnimating) {
+        _animController.stop();
+      }
+
+      for (int i = 0; i <= totalFrames; i++) {
+        final progress = i / totalFrames; // 0.0 -> 1.0 of active animation
+        if (mounted) {
+          setState(() {
+            _previewProgress = progress * (8.5 / 11.5);
+            _exportStatusText = 'RENDERING FRAME ${i + 1}/${totalFrames + 1}...';
+          });
+        }
+
+        await WidgetsBinding.instance.endOfFrame;
+
+        final boundary = _repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+        if (boundary == null) continue;
+
+        final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
+        final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+        if (byteData == null) continue;
+
+        final frameFile = File('${framesDir.path}/frame_${i.toString().padLeft(4, '0')}.png');
+        await frameFile.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
+        framePaths.add(frameFile.path);
+      }
+
+      if (mounted) {
+        setState(() => _exportStatusText = 'ENCODING 60 FPS MP4 VIDEO...');
+      }
+
+      final videoPath = '${tempDir.path}/groovd_story_${widget.review.id}_${DateTime.now().millisecondsSinceEpoch}.mp4';
+
+      if (Platform.isAndroid && framePaths.isNotEmpty) {
+        final encodeResult = await _storyChannel.invokeMethod<bool>('encodeVideoFromFrames', {
+          'framePaths': framePaths,
+          'outputPath': videoPath,
+          'fps': 60,
+          'durationMs': 11500,
+          'activeDurationMs': 8500,
+          'endHoldMs': 3000,
+          'width': 720,
+          'height': 1280,
+        });
+
+        if (encodeResult == true) {
+          final videoFile = File(videoPath);
+          if (await videoFile.exists()) {
+            _cachedVideoFile = videoFile;
+            return videoFile;
+          }
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error generating video file: $e');
+      return null;
+    } finally {
+      if (framesDir != null && await framesDir.exists()) {
+        try {
+          await framesDir.delete(recursive: true);
+        } catch (_) {}
+      }
+    }
+  }
+
+  Future<void> _shareVideo(SharePlatform platform) async {
+    setState(() {
+      _isExporting = true;
+      _exportStatusText = 'RENDERING ANIMATION...';
+    });
+    HapticFeedback.mediumImpact();
+
+    try {
+      final videoFile = await _generateVideoFile();
+      if (!mounted) return;
+
+      if (videoFile == null || !await videoFile.exists()) {
+        await _captureAndShareStaticFallback();
+        return;
+      }
+
+      final platformName = platform == SharePlatform.system ? 'SYSTEM' : platform.name.toUpperCase();
+      setState(() => _exportStatusText = 'OPENING $platformName...');
+
+      bool directSuccess = false;
+
+      if (Platform.isAndroid && platform != SharePlatform.system) {
+        try {
+          final shareResult = await _storyChannel.invokeMethod<bool>('shareToPlatform', {
+            'filePath': videoFile.path,
+            'mimeType': 'video/mp4',
+            'platform': platform.name,
+          });
+          directSuccess = shareResult == true;
+        } on PlatformException catch (e) {
+          debugPrint('Video share error for $platform: $e');
+          directSuccess = false;
+        }
+      }
+
+      if (directSuccess) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (mounted) Navigator.of(context).pop();
+      } else {
+        if (mounted && platform != SharePlatform.system) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.surfaceElevated,
+              content: Text(
+                '$platformName APP NOT DETECTED — OPENING SYSTEM SHARE',
+                style: AppTypography.monoBadge(color: AppColors.acidLime),
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(videoFile.path, mimeType: 'video/mp4')],
+            text: '${widget.review.musicItemName} by ${widget.review.artistName} — Track Scorecard on Groovd',
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.surfaceElevated,
+            content: Text('VIDEO EXPORT FAILED: $e', style: AppTypography.monoBadge(color: AppColors.electricPink)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+          _exportStatusText = null;
+          _previewProgress = _animController.value;
+        });
+        _animController.forward(from: 0.0);
+      }
+    }
+  }
+
+  Future<void> _shareStaticImage(SharePlatform platform) async {
     setState(() {
       _isExporting = true;
       _exportStatusText = 'EXPORTING STORY IMAGE...';
@@ -222,7 +399,20 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
     HapticFeedback.mediumImpact();
 
     try {
-      final file = await _captureStoryImage(pixelRatio: 3.0);
+      File? file;
+      if (_cachedImageFile != null && await _cachedImageFile!.exists()) {
+        file = _cachedImageFile;
+      } else {
+        final prevVal = _previewProgress;
+        setState(() => _previewProgress = 1.0);
+        await WidgetsBinding.instance.endOfFrame;
+        file = await _captureStoryImage(pixelRatio: 3.0);
+        setState(() => _previewProgress = prevVal);
+        if (file != null) {
+          _cachedImageFile = file;
+        }
+      }
+
       if (!mounted) return;
 
       if (file == null) {
@@ -235,17 +425,21 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
         return;
       }
 
+      final platformName = platform == SharePlatform.system ? 'SYSTEM' : platform.name.toUpperCase();
+      setState(() => _exportStatusText = 'OPENING $platformName...');
+
       bool directSuccess = false;
 
-      if (Platform.isAndroid) {
+      if (Platform.isAndroid && platform != SharePlatform.system) {
         try {
-          final result = await _storyChannel.invokeMethod<bool>('shareToInstagramStories', {
+          final result = await _storyChannel.invokeMethod<bool>('shareToPlatform', {
             'filePath': file.path,
             'mimeType': 'image/png',
+            'platform': platform.name,
           });
           directSuccess = result == true;
         } on PlatformException catch (e) {
-          debugPrint('Instagram Stories direct share error: $e');
+          debugPrint('$platform direct share error: $e');
           directSuccess = false;
         }
       }
@@ -255,12 +449,12 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
           Navigator.of(context).pop();
         }
       } else {
-        if (mounted) {
+        if (mounted && platform != SharePlatform.system) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: AppColors.surfaceElevated,
               content: Text(
-                'INSTAGRAM APP NOT DETECTED — OPENING SHARE SHEET',
+                '$platformName APP NOT DETECTED — OPENING SYSTEM SHARE',
                 style: AppTypography.monoBadge(color: AppColors.electricPink),
               ),
               duration: const Duration(seconds: 2),
@@ -296,131 +490,6 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
     }
   }
 
-  Future<void> _shareAsVideoToInstagram() async {
-    setState(() {
-      _isExporting = true;
-      _exportStatusText = 'RENDERING ANIMATION...';
-    });
-    HapticFeedback.mediumImpact();
-
-    Directory? framesDir;
-    try {
-      final tempDir = await getTemporaryDirectory();
-      framesDir = Directory('${tempDir.path}/groovd_story_frames_${DateTime.now().millisecondsSinceEpoch}');
-      await framesDir.create(recursive: true);
-
-      final framePaths = <String>[];
-      const int totalFrames = 18; // 18 keyframes across 3.5 seconds
-
-      if (_animController.isAnimating) {
-        _animController.stop();
-      }
-
-      for (int i = 0; i <= totalFrames; i++) {
-        final progress = i / totalFrames;
-        setState(() {
-          _previewProgress = progress;
-          _exportStatusText = 'RENDERING FRAME ${i + 1}/${totalFrames + 1}...';
-        });
-
-        await WidgetsBinding.instance.endOfFrame;
-
-        final boundary = _repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-        if (boundary == null) continue;
-
-        final ui.Image image = await boundary.toImage(pixelRatio: 1.8);
-        final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-        if (byteData == null) continue;
-
-        final frameFile = File('${framesDir.path}/frame_${i.toString().padLeft(4, '0')}.png');
-        await frameFile.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
-        framePaths.add(frameFile.path);
-      }
-
-      setState(() => _exportStatusText = 'ENCODING MP4 VIDEO...');
-
-      final videoPath = '${tempDir.path}/groovd_story_${widget.review.id}_${DateTime.now().millisecondsSinceEpoch}.mp4';
-
-      bool directSuccess = false;
-
-      if (Platform.isAndroid && framePaths.isNotEmpty) {
-        try {
-          final encodeResult = await _storyChannel.invokeMethod<bool>('encodeVideoFromFrames', {
-            'framePaths': framePaths,
-            'outputPath': videoPath,
-            'fps': 6,
-            'width': 720,
-            'height': 1280,
-          });
-
-          if (encodeResult == true) {
-            setState(() => _exportStatusText = 'OPENING INSTAGRAM STORIES...');
-            final shareResult = await _storyChannel.invokeMethod<bool>('shareToInstagramStories', {
-              'filePath': videoPath,
-              'mimeType': 'video/mp4',
-            });
-            directSuccess = shareResult == true;
-          }
-        } on PlatformException catch (e) {
-          debugPrint('Video encoding / share error: $e');
-          directSuccess = false;
-        }
-      }
-
-      if (directSuccess) {
-        if (mounted) Navigator.of(context).pop();
-      } else {
-        final videoFile = File(videoPath);
-        if (await videoFile.exists()) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: AppColors.surfaceElevated,
-                content: Text(
-                  'INSTAGRAM APP NOT DETECTED — OPENING SYSTEM SHARE',
-                  style: AppTypography.monoBadge(color: AppColors.acidLime),
-                ),
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          }
-          await SharePlus.instance.share(
-            ShareParams(
-              files: [XFile(videoFile.path, mimeType: 'video/mp4')],
-              text: '${widget.review.musicItemName} by ${widget.review.artistName} — Track Scorecard on Groovd',
-            ),
-          );
-        } else {
-          // If video encoding failed, fallback to static image
-          await _captureAndShareStaticFallback();
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppColors.surfaceElevated,
-            content: Text('VIDEO EXPORT FAILED: $e', style: AppTypography.monoBadge(color: AppColors.electricPink)),
-          ),
-        );
-      }
-    } finally {
-      if (framesDir != null && await framesDir.exists()) {
-        try {
-          await framesDir.delete(recursive: true);
-        } catch (_) {}
-      }
-      if (mounted) {
-        setState(() {
-          _isExporting = false;
-          _exportStatusText = null;
-          _previewProgress = _animController.value;
-        });
-        _animController.forward(from: 0.0);
-      }
-    }
-  }
-
   Future<void> _captureAndShareStaticFallback() async {
     setState(() => _previewProgress = 1.0);
     await WidgetsBinding.instance.endOfFrame;
@@ -438,30 +507,50 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
   Future<void> _saveStoryImage() async {
     setState(() {
       _isExporting = true;
-      _exportStatusText = 'SAVING STORY IMAGE...';
+      _exportStatusText = _isAnimatedMode ? 'SAVING STORY VIDEO...' : 'SAVING STORY IMAGE...';
     });
     HapticFeedback.lightImpact();
 
     try {
-      // Temporarily set to full rest state for the static capture
-      final prevVal = _previewProgress;
-      setState(() => _previewProgress = 1.0);
-      await WidgetsBinding.instance.endOfFrame;
-
-      final file = await _captureStoryImage(pixelRatio: 3.0);
-      setState(() => _previewProgress = prevVal);
+      File? file;
+      if (_isAnimatedMode) {
+        file = await _generateVideoFile();
+      } else {
+        if (_cachedImageFile != null && await _cachedImageFile!.exists()) {
+          file = _cachedImageFile;
+        } else {
+          final prevVal = _previewProgress;
+          setState(() => _previewProgress = 1.0);
+          await WidgetsBinding.instance.endOfFrame;
+          file = await _captureStoryImage(pixelRatio: 3.0);
+          setState(() => _previewProgress = prevVal);
+          if (file != null) {
+            _cachedImageFile = file;
+          }
+        }
+      }
 
       if (!mounted) return;
 
-      if (file != null) {
+      if (file != null && await file.exists()) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: AppColors.surfaceElevated,
             content: Text(
-              'STORY IMAGE EXPORTED READY TO SHARE',
+              _isAnimatedMode
+                  ? 'STORY VIDEO EXPORTED READY TO SHARE'
+                  : 'STORY IMAGE EXPORTED READY TO SHARE',
               style: AppTypography.monoBadge(color: AppColors.acidLime),
             ),
             duration: const Duration(seconds: 2),
+          ),
+        );
+
+        final mimeType = _isAnimatedMode ? 'video/mp4' : 'image/png';
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path, mimeType: mimeType)],
+            text: '${widget.review.musicItemName} by ${widget.review.artistName} — Track Scorecard on Groovd',
           ),
         );
       }
@@ -528,7 +617,10 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
           )
         : widget.review;
 
-    final double effectiveProgress = _isAnimatedMode ? _previewProgress : 1.0;
+    // Active animation is 8.5s, followed by 3.0s resting hold (total 11.5s):
+    final double effectiveProgress = _isAnimatedMode
+        ? (_previewProgress / (8.5 / 11.5)).clamp(0.0, 1.0)
+        : 1.0;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.94,
@@ -673,7 +765,7 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '${(_previewProgress * 3.5).toStringAsFixed(1)}s',
+                            '${(_previewProgress * 11.5).toStringAsFixed(1)}s',
                             style: AppTypography.monoLabel(
                               color: AppColors.textPrimary,
                               fontSize: 9,
@@ -699,6 +791,8 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                             HapticFeedback.selectionClick();
                             setState(() {
                               _isAnimatedMode = true;
+                              _cachedVideoFile = null;
+                              _cachedImageFile = null;
                               _animController.forward(from: 0.0);
                             });
                           },
@@ -713,6 +807,8 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                             HapticFeedback.selectionClick();
                             setState(() {
                               _isAnimatedMode = false;
+                              _cachedVideoFile = null;
+                              _cachedImageFile = null;
                               if (_animController.isAnimating) {
                                 _animController.stop();
                               }
@@ -757,7 +853,11 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                         isSelected: _currentTheme == StoryTheme.darkMatrix,
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          setState(() => _currentTheme = StoryTheme.darkMatrix);
+                          setState(() {
+                            _currentTheme = StoryTheme.darkMatrix;
+                            _cachedVideoFile = null;
+                            _cachedImageFile = null;
+                          });
                         },
                       ),
                       const SizedBox(width: 8),
@@ -768,7 +868,11 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                         isSelected: _currentTheme == StoryTheme.acidBrutal,
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          setState(() => _currentTheme = StoryTheme.acidBrutal);
+                          setState(() {
+                            _currentTheme = StoryTheme.acidBrutal;
+                            _cachedVideoFile = null;
+                            _cachedImageFile = null;
+                          });
                         },
                       ),
                       const SizedBox(width: 8),
@@ -779,7 +883,11 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                         isSelected: _currentTheme == StoryTheme.cyberCyan,
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          setState(() => _currentTheme = StoryTheme.cyberCyan);
+                          setState(() {
+                            _currentTheme = StoryTheme.cyberCyan;
+                            _cachedVideoFile = null;
+                            _cachedImageFile = null;
+                          });
                         },
                       ),
                       const SizedBox(width: 8),
@@ -790,7 +898,11 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                         isSelected: _currentTheme == StoryTheme.zinePaper,
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          setState(() => _currentTheme = StoryTheme.zinePaper);
+                          setState(() {
+                            _currentTheme = StoryTheme.zinePaper;
+                            _cachedVideoFile = null;
+                            _cachedImageFile = null;
+                          });
                         },
                       ),
                     ],
@@ -830,7 +942,11 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                           isSelected: _currentLayout == StoryLayout.trackScorecard,
                           onTap: () {
                             HapticFeedback.selectionClick();
-                            setState(() => _currentLayout = StoryLayout.trackScorecard);
+                            setState(() {
+                              _currentLayout = StoryLayout.trackScorecard;
+                              _cachedVideoFile = null;
+                              _cachedImageFile = null;
+                            });
                           },
                         ),
                       ),
@@ -841,7 +957,11 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                           isSelected: _currentLayout == StoryLayout.posterCard,
                           onTap: () {
                             HapticFeedback.selectionClick();
-                            setState(() => _currentLayout = StoryLayout.posterCard);
+                            setState(() {
+                              _currentLayout = StoryLayout.posterCard;
+                              _cachedVideoFile = null;
+                              _cachedImageFile = null;
+                            });
                           },
                         ),
                       ),
@@ -852,14 +972,18 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                           isSelected: _currentLayout == StoryLayout.fullCritique,
                           onTap: () {
                             HapticFeedback.selectionClick();
-                            setState(() => _currentLayout = StoryLayout.fullCritique);
+                            setState(() {
+                              _currentLayout = StoryLayout.fullCritique;
+                              _cachedVideoFile = null;
+                              _cachedImageFile = null;
+                            });
                           },
                         ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
 
                   // Primary Action: Share to Instagram Stories
                   SizedBox(
@@ -871,15 +995,53 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                       icon: _isAnimatedMode ? Icons.movie_creation_outlined : Icons.auto_stories,
                       backgroundColor: AppColors.acidLime,
                       textColor: AppColors.pureBlack,
-                      onPressed: _isExporting ? () {} : _shareToInstagramStories,
+                      onPressed: _isExporting ? () {} : () => _shareMedia(SharePlatform.instagram),
                     ),
                   ),
 
                   const SizedBox(height: 10),
 
-                  // Secondary Actions: Save Image / Video & Copy Text
+                  // Multi-Platform Row: WhatsApp Status & TikTok Video
                   Row(
                     children: [
+                      Expanded(
+                        child: BrutalistButton(
+                          label: 'WHATSAPP',
+                          icon: Icons.chat_bubble_outline,
+                          backgroundColor: const Color(0xFF25D366),
+                          textColor: AppColors.pureBlack,
+                          onPressed: _isExporting ? () {} : () => _shareMedia(SharePlatform.whatsapp),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: BrutalistButton(
+                          label: 'TIKTOK',
+                          icon: Icons.music_note,
+                          backgroundColor: AppColors.cyberCyan,
+                          textColor: AppColors.pureBlack,
+                          onPressed: _isExporting ? () {} : () => _shareMedia(SharePlatform.tiktok),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Secondary Actions: More Apps, Save Story & Copy Text
+                  Row(
+                    children: [
+                      Expanded(
+                        child: BrutalistButton(
+                          label: 'MORE APPS',
+                          icon: Icons.share_outlined,
+                          backgroundColor: AppColors.surfaceElevated,
+                          textColor: AppColors.textPrimary,
+                          isSmall: true,
+                          onPressed: _isExporting ? () {} : () => _shareMedia(SharePlatform.system),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: BrutalistButton(
                           label: 'SAVE STORY',
@@ -890,7 +1052,7 @@ class _InstagramStoryModalState extends ConsumerState<InstagramStoryModal>
                           onPressed: _isExporting ? () {} : _saveStoryImage,
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: BrutalistButton(
                           label: 'COPY TEXT',

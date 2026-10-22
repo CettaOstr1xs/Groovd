@@ -456,7 +456,11 @@ void main() {
     expect(find.text('CYBER'), findsOneWidget);
     expect(find.text('ZINE'), findsOneWidget);
     expect(find.text('SHARE TO INSTAGRAM STORIES'), findsOneWidget);
+    expect(find.text('WHATSAPP'), findsOneWidget);
+    expect(find.text('TIKTOK'), findsOneWidget);
+    expect(find.text('MORE APPS'), findsOneWidget);
     expect(find.text('SAVE STORY'), findsOneWidget);
+    expect(find.text('COPY TEXT'), findsOneWidget);
 
     // Tap ACID theme pill
     await tester.tap(find.text('ACID'));

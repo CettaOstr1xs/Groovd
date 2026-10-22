@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
@@ -9,7 +11,9 @@ import '../../../state/review_providers.dart';
 import '../../../state/user_lists_provider.dart';
 import '../../../state/user_profile_provider.dart';
 import '../../../state/wishlist_provider.dart';
+import '../../navigation/main_navigation_screen.dart';
 import '../../widgets/brutalist_button.dart';
+import '../../../state/onboarding_provider.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -45,10 +49,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _syncUserState(dynamic user) async {
     if (user == null) return;
     try {
-      await ref.read(userProfileProvider.notifier).syncWithFirebaseUser(user);
-      await ref.read(wishlistProvider.notifier).syncForUser(user.uid);
-      await ref.read(dossierTopPicksProvider.notifier).syncForUser(user.uid);
-      await ref.read(userListsProvider.notifier).syncForUser(user.uid);
+      await Future.wait([
+        ref.read(userProfileProvider.notifier).syncWithFirebaseUser(user),
+        ref.read(wishlistProvider.notifier).syncForUser(user.uid),
+        ref.read(dossierTopPicksProvider.notifier).syncForUser(user.uid),
+        ref.read(userListsProvider.notifier).syncForUser(user.uid),
+      ]).timeout(const Duration(milliseconds: 3500));
       ref.invalidate(userReviewsProvider);
       ref.read(reviewRefreshProvider.notifier).notifyChanged();
     } catch (_) {}
@@ -67,9 +73,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final credential = await authService.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
+      ).timeout(
+        const Duration(seconds: 60),
+        onTimeout: () => throw TimeoutException('Sign-in connection timed out. Please check your network.'),
       );
 
-      await _syncUserState(credential.user);
+      unawaited(_syncUserState(credential.user));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -81,12 +90,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         );
-        Navigator.of(context).pop(true);
+        await ref.read(onboardingProvider.notifier).completeOnboarding();
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+          (route) => false,
+        );
       }
     } catch (e) {
       if (mounted) {
+        String errorMsg = AuthService.getHumanReadableError(e);
+        if (e is FirebaseAuthException &&
+            (e.code == 'invalid-credential' || e.code == 'wrong-password')) {
+          errorMsg =
+              'INVALID CREDENTIALS. IF CREATED VIA GOOGLE, USE "CONTINUE WITH GOOGLE" OR TAP "FORGOT PASSWORD".';
+        }
         setState(() {
-          _errorMessage = AuthService.getHumanReadableError(e);
+          _errorMessage = errorMsg;
         });
       }
     } finally {
@@ -106,11 +126,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authService = ref.read(authServiceProvider);
-      final credential = await authService.signInWithGoogle();
+      final credential = await authService.signInWithGoogle().timeout(
+        const Duration(seconds: 60),
+        onTimeout: () => throw TimeoutException('Google Sign-In connection timed out. Please check your network and try again.'),
+      );
 
       if (credential != null && mounted) {
-        await _syncUserState(credential.user);
-        if (!mounted) return;
+        unawaited(_syncUserState(credential.user));
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -121,7 +143,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         );
-        Navigator.of(context).pop(true);
+        await ref.read(onboardingProvider.notifier).completeOnboarding();
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+          (route) => false,
+        );
       }
     } catch (e) {
       if (mounted) {
