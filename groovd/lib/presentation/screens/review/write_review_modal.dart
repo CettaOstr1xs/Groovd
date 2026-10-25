@@ -7,6 +7,7 @@ import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
+import 'package:groovd/presentation/widgets/brutalist_slider.dart';
 import 'package:groovd/presentation/widgets/critic_avatar.dart';
 import 'package:groovd/presentation/widgets/rating_spike_sign.dart';
 import 'package:groovd/state/auth_providers.dart';
@@ -70,19 +71,7 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
   final List<String> _customTags = [];
   bool _isSubmitting = false;
   bool _isDragging = false;
-
-  final List<String> _defaultTags = [
-    '#AOTY',
-    '#MASTERPIECE',
-    '#TIMELESS',
-    '#PRODUCTION_GOD',
-    '#HEAVY_ROTATION',
-    '#LYRICS_MATTER',
-    '#REPEAT_ONE',
-    '#OVERRATED',
-    '#SKIP',
-    '#GROWER',
-  ];
+  bool _isInterlude = false;
 
   @override
   void initState() {
@@ -91,6 +80,7 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
         ref.read(albumAutomaticOverallScoreProvider(widget.musicItem));
     if (widget.existingReview != null && !widget.isLogAgain) {
       _rating = widget.existingReview!.rating;
+      _isInterlude = widget.existingReview!.isInterlude;
       _headlineController.text = widget.existingReview!.headline;
       _bodyController.text = widget.existingReview!.body;
       _selectedTags.addAll(widget.existingReview!.tags);
@@ -126,7 +116,7 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
       tag = '#$tag';
     }
 
-    if (!_customTags.contains(tag) && !_defaultTags.contains(tag)) {
+    if (!_customTags.contains(tag)) {
       _customTags.add(tag);
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -192,9 +182,11 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
     final userAvatarUrl = profile.avatarPath;
 
     final isEditing = widget.existingReview != null && !widget.isLogAgain;
+    final isInterlude = widget.musicItem.isSong && _isInterlude;
     final reviewToSave = isEditing
         ? widget.existingReview!.copyWith(
-            rating: _rating,
+            rating: isInterlude ? 0.0 : _rating,
+            isInterlude: isInterlude,
             headline: _headlineController.text.trim(),
             body: _bodyController.text.trim(),
             tags: _selectedTags,
@@ -215,7 +207,8 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
             userName: userName,
             userHandle: userHandle,
             userAvatarUrl: userAvatarUrl,
-            rating: _rating,
+            rating: isInterlude ? 0.0 : _rating,
+            isInterlude: isInterlude,
             headline: _headlineController.text.trim(),
             body: _bodyController.text.trim(),
             tags: _selectedTags,
@@ -235,15 +228,17 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
           SnackBar(
             content: Text(
               isEditing
-                  ? 'CRITIQUE & RATING UPDATED'
+                  ? (isInterlude ? 'INTERLUDE LOG UPDATED' : 'CRITIQUE & RATING UPDATED')
                   : (widget.isLogAgain
                       ? 'LOGGED AGAIN TO ARCHIVE [LISTEN #${(widget.previousLogCount ?? 1) + 1}]'
-                      : (reviewToSave.hasWrittenReview
-                          ? 'CRITIQUE DISPATCHED TO ARCHIVE'
-                          : 'RATING LOGGED TO DOSSIER')),
+                      : (isInterlude
+                          ? 'INTERLUDE LOGGED TO DOSSIER'
+                          : (reviewToSave.hasWrittenReview
+                              ? 'CRITIQUE DISPATCHED TO ARCHIVE'
+                              : 'RATING LOGGED TO DOSSIER'))),
               style: AppTypography.monoBadge(color: AppColors.pureBlack),
             ),
-            backgroundColor: AppColors.acidLime,
+            backgroundColor: isInterlude ? AppColors.cyberCyan : AppColors.acidLime,
           ),
         );
       }
@@ -383,168 +378,228 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
             ),
 
             // Giant Score Live Display with bounce
-            Center(
-              child: Column(
-                children: [
-                  AnimatedScale(
-                    scale: _isDragging ? 1.08 : 1.0,
-                    duration: const Duration(milliseconds: 160),
-                    curve: Curves.easeOutBack,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            if (_isInterlude) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  border: Border.all(color: AppColors.cyberCyan, width: 1.5),
+                  borderRadius: BorderRadius.circular(2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.pureBlack,
+                      offset: Offset(3, 3),
+                      blurRadius: 0,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _scoreColor,
+                        color: AppColors.cyberCyan,
                         borderRadius: BorderRadius.circular(2),
-                        border: Border.all(color: AppColors.pureBlack, width: 2.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _scoreColor.withValues(alpha: _isDragging ? 0.6 : 0.0),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                          const BoxShadow(
-                            color: AppColors.pureBlack,
-                            offset: Offset(4, 4),
-                            blurRadius: 0,
-                          ),
-                        ],
+                        border: Border.all(color: AppColors.pureBlack, width: 1.0),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                      child: Text(
+                        'INT',
+                        style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 11),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          RatingSpikeSign(
-                            rating: _rating,
-                            size: 28,
-                            color: AppColors.pureBlack,
+                          Text(
+                            'INTERLUDE TRACK',
+                            style: AppTypography.monoBadge(color: AppColors.cyberCyan, fontSize: 11),
                           ),
-                          const SizedBox(width: 10),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                _rating.toStringAsFixed(1),
-                                style: AppTypography.scoreGiant(color: AppColors.pureBlack),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '/10',
-                                style: AppTypography.monoBadge(
-                                  color: AppColors.pureBlack.withValues(alpha: 0.7),
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 4),
+                          Text(
+                            'No rating score required. This track is excluded from album overall score calculations.',
+                            style: AppTypography.bodySmall(color: AppColors.textSecondary),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceElevated,
-                      border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        RatingSpikeSign(
-                          rating: _rating,
-                          size: 13,
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ] else ...[
+              // Giant Score Live Display with bounce
+              Center(
+                child: Column(
+                  children: [
+                    AnimatedScale(
+                      scale: _isDragging ? 1.08 : 1.0,
+                      duration: const Duration(milliseconds: 160),
+                      curve: Curves.easeOutBack,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                        decoration: BoxDecoration(
                           color: _scoreColor,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _descriptor,
-                          style: AppTypography.monoBadge(color: _scoreColor, fontSize: 10),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Builder(
-                    builder: (context) {
-                      final effectiveAutoScore = widget.autoOverallScore ??
-                          ref.watch(albumAutomaticOverallScoreProvider(widget.musicItem));
-                      if (effectiveAutoScore == null) return const SizedBox.shrink();
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: InkWell(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            setState(() {
-                              _rating = effectiveAutoScore;
-                            });
-                          },
                           borderRadius: BorderRadius.circular(2),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.cyberCyan.withValues(alpha: 0.15),
-                              border: Border.all(color: AppColors.cyberCyan, width: 1.0),
-                              borderRadius: BorderRadius.circular(2),
+                          border: Border.all(color: AppColors.pureBlack, width: 2.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _scoreColor.withValues(alpha: _isDragging ? 0.6 : 0.0),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
                             ),
-                            child: Row(
+                            const BoxShadow(
+                              color: AppColors.pureBlack,
+                              offset: Offset(4, 4),
+                              blurRadius: 0,
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            RatingSpikeSign(
+                              rating: _rating,
+                              size: 28,
+                              color: AppColors.pureBlack,
+                            ),
+                            const SizedBox(width: 10),
+                            Row(
                               mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
                               children: [
-                                const Icon(Icons.calculate_outlined, size: 12, color: AppColors.cyberCyan),
+                                Text(
+                                  _rating.toStringAsFixed(1),
+                                  style: AppTypography.scoreGiant(color: AppColors.pureBlack),
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'TRACKS OVERALL: ${effectiveAutoScore.toStringAsFixed(1)} (TAP TO SET)',
+                                  '/10',
                                   style: AppTypography.monoBadge(
-                                    color: AppColors.cyberCyan,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.pureBlack.withValues(alpha: 0.7),
+                                    fontSize: 14,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
+                          ],
                         ),
-                      );
-                    },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated,
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          RatingSpikeSign(
+                            rating: _rating,
+                            size: 13,
+                            color: _scoreColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _descriptor,
+                            style: AppTypography.monoBadge(color: _scoreColor, fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Builder(
+                      builder: (context) {
+                        final effectiveAutoScore = widget.autoOverallScore ??
+                            ref.watch(albumAutomaticOverallScoreProvider(widget.musicItem));
+                        if (effectiveAutoScore == null) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: InkWell(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setState(() {
+                                _rating = effectiveAutoScore;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(2),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.cyberCyan.withValues(alpha: 0.15),
+                                border: Border.all(color: AppColors.cyberCyan, width: 1.0),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.calculate_outlined, size: 12, color: AppColors.cyberCyan),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'TRACKS OVERALL: ${effectiveAutoScore.toStringAsFixed(1)} (TAP TO SET)',
+                                    style: AppTypography.monoBadge(
+                                      color: AppColors.cyberCyan,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Rating Slider with tactile neo-brutalist block geometry
+              SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackShape: const BrutalistBlockSliderTrackShape(trackHeight: 8.0),
+                  activeTrackColor: _scoreColor,
+                  inactiveTrackColor: AppColors.surfaceElevated,
+                  thumbColor: _scoreColor,
+                  overlayColor: Colors.transparent,
+                  thumbShape: BrutalistBlockSliderThumbShape(
+                    width: 16.0,
+                    height: 24.0,
+                    fillColor: _scoreColor,
+                    borderColor: AppColors.pureBlack,
+                    borderWidth: 2.0,
+                    elevation: 2.0,
                   ),
-                ],
+                ),
+                child: Slider(
+                  value: _rating,
+                  min: 0.0,
+                  max: 10.0,
+                  divisions: 100,
+                  onChangeStart: (_) {
+                    setState(() => _isDragging = true);
+                  },
+                  onChangeEnd: (_) {
+                    setState(() => _isDragging = false);
+                  },
+                  onChanged: (val) {
+                    setState(() {
+                      _rating = double.parse(val.toStringAsFixed(1));
+                    });
+                  },
+                ),
               ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Rating Slider with tactile interaction
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: _scoreColor,
-                inactiveTrackColor: AppColors.surfaceElevated,
-                thumbColor: _scoreColor,
-                overlayColor: _scoreColor.withValues(alpha: 0.2),
-                trackHeight: 6,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
-              ),
-              child: Slider(
-                value: _rating,
-                min: 0.0,
-                max: 10.0,
-                divisions: 100,
-                onChangeStart: (_) {
-                  setState(() => _isDragging = true);
-                },
-                onChangeEnd: (_) {
-                  setState(() => _isDragging = false);
-                },
-                onChanged: (val) {
-                  setState(() {
-                    _rating = double.parse(val.toStringAsFixed(1));
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+            ],
 
             // Headline Input
             Text(
@@ -637,14 +692,25 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
               const SizedBox(height: 10),
 
               // Tags Wrap
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ...{..._defaultTags, ..._customTags}.map((tag) {
-                    final isSelected = _selectedTags.contains(tag);
-                    final isCustom = _customTags.contains(tag);
-                    return FilterChip(
+              Builder(
+                builder: (context) {
+                  final displayTags = {..._customTags, ..._selectedTags}.toList();
+                  if (displayTags.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'NO VIBES & TAGS YET // TYPE A TAG ABOVE & TAP + ADD',
+                        style: AppTypography.monoLabel(color: AppColors.textMuted, fontSize: 10),
+                      ),
+                    );
+                  }
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: displayTags.map((tag) {
+                      final isSelected = _selectedTags.contains(tag);
+                      final isCustom = _customTags.contains(tag);
+                      return FilterChip(
                       label: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -686,37 +752,110 @@ class _WriteReviewModalState extends ConsumerState<WriteReviewModal> {
                         });
                       },
                     );
-                  }),
-                ],
-              ),
+                  }).toList(),
+                );
+              },
+            ),
 
-              const SizedBox(height: 24),
-
-              // Submit Button (Dynamic for written review vs quick rating vs editing vs log again)
-              BrutalistButton(
-                label: _isSubmitting
-                    ? 'SAVING...'
-                    : (widget.existingReview != null && !widget.isLogAgain)
-                        ? (_hasWrittenText
-                            ? 'UPDATE CRITIQUE [${_rating.toStringAsFixed(1)}]'
-                            : 'UPDATE RATING [${_rating.toStringAsFixed(1)}]')
-                        : (widget.isLogAgain
-                            ? (_hasWrittenText
-                                ? 'LOG RE-LISTEN CRITIQUE [${_rating.toStringAsFixed(1)}]'
-                                : 'LOG RE-LISTEN SCORE [${_rating.toStringAsFixed(1)}]')
-                            : (_hasWrittenText
-                                ? 'PUBLISH CRITIQUE'
-                                : 'LOG SCORE [${_rating.toStringAsFixed(1)}] // QUICK RATE')),
-                leading: RatingSpikeSign(
-                  rating: _rating,
-                  size: 16,
-                  color: AppColors.pureBlack,
+            // Interlude Option Button (Full Width, below Vibes & Tags)
+            if (widget.musicItem.isSong) ...[
+              const SizedBox(height: 18),
+              InkWell(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    _isInterlude = !_isInterlude;
+                  });
+                },
+                borderRadius: BorderRadius.circular(2),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _isInterlude ? AppColors.cyberCyan : AppColors.surfaceElevated,
+                    border: Border.all(
+                      color: _isInterlude ? AppColors.pureBlack : AppColors.border,
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(2),
+                    boxShadow: _isInterlude
+                        ? const [
+                            BoxShadow(
+                              color: AppColors.pureBlack,
+                              offset: Offset(3, 3),
+                              blurRadius: 0,
+                            ),
+                          ]
+                        : const [
+                            BoxShadow(
+                              color: AppColors.pureBlack,
+                              offset: Offset(2, 2),
+                              blurRadius: 0,
+                            ),
+                          ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _isInterlude ? Icons.check_box : Icons.check_box_outline_blank,
+                        size: 16,
+                        color: _isInterlude ? AppColors.pureBlack : AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          _isInterlude
+                              ? 'INTERLUDE ACTIVE // NO RATING NEEDED'
+                              : 'MARK AS INTERLUDE (SKIP RATING)',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.monoBadge(
+                            color: _isInterlude ? AppColors.pureBlack : AppColors.textPrimary,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                isFullWidth: true,
-                backgroundColor: AppColors.acidLime,
-                textColor: AppColors.pureBlack,
-                onPressed: _isSubmitting ? null : _submit,
               ),
+            ],
+
+            const SizedBox(height: 24),
+
+            // Submit Button (Dynamic for written review vs quick rating vs editing vs log again vs interlude)
+            BrutalistButton(
+              label: _isSubmitting
+                  ? 'SAVING...'
+                  : _isInterlude
+                      ? ((widget.existingReview != null && !widget.isLogAgain)
+                          ? 'UPDATE INTERLUDE'
+                          : 'SAVE AS INTERLUDE')
+                      : (widget.existingReview != null && !widget.isLogAgain)
+                          ? (_hasWrittenText
+                              ? 'UPDATE CRITIQUE [${_rating.toStringAsFixed(1)}]'
+                              : 'UPDATE RATING [${_rating.toStringAsFixed(1)}]')
+                          : (widget.isLogAgain
+                              ? (_hasWrittenText
+                                  ? 'LOG RE-LISTEN CRITIQUE [${_rating.toStringAsFixed(1)}]'
+                                  : 'LOG RE-LISTEN SCORE [${_rating.toStringAsFixed(1)}]')
+                              : (_hasWrittenText
+                                  ? 'PUBLISH CRITIQUE'
+                                  : 'LOG SCORE [${_rating.toStringAsFixed(1)}] // QUICK RATE')),
+              leading: _isInterlude
+                  ? const Icon(Icons.music_off_outlined, size: 16, color: AppColors.pureBlack)
+                  : RatingSpikeSign(
+                      rating: _rating,
+                      size: 16,
+                      color: AppColors.pureBlack,
+                    ),
+              isFullWidth: true,
+              backgroundColor: _isInterlude ? AppColors.cyberCyan : AppColors.acidLime,
+              textColor: AppColors.pureBlack,
+              onPressed: _isSubmitting ? null : _submit,
+            ),
             ],
           ),
         ),

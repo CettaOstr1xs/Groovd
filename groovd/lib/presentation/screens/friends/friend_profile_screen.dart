@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:groovd/presentation/widgets/critic_avatar.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/friend_profile.dart';
@@ -134,22 +136,7 @@ class FriendProfileScreen extends ConsumerWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    (profile.backdropPath!.startsWith('http://') ||
-                            profile.backdropPath!.startsWith('https://'))
-                        ? Image.network(
-                            profile.backdropPath!,
-                            width: double.infinity,
-                            height: 165,
-                            fit: BoxFit.cover,
-                            errorBuilder: (ctx, err, stack) => const SizedBox.shrink(),
-                          )
-                        : Image.file(
-                            File(profile.backdropPath!),
-                            width: double.infinity,
-                            height: 165,
-                            fit: BoxFit.cover,
-                            errorBuilder: (ctx, err, stack) => const SizedBox.shrink(),
-                          ),
+                    _buildBackdropWidget(profile.backdropPath!),
                     DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -183,72 +170,21 @@ class FriendProfileScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // Profile Avatar
-                      Container(
-                        width: 71,
-                        height: 71,
-                        decoration: BoxDecoration(
-                          color: AppColors.acidLime,
-                          border: Border.all(color: AppColors.pureBlack, width: 2.0),
-                          borderRadius: BorderRadius.circular(2),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: AppColors.pureBlack,
-                              offset: Offset(3, 3),
-                              blurRadius: 0,
-                            ),
-                          ],
-                        ),
-                        child: (profile.avatarPath != null && profile.avatarPath!.isNotEmpty)
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(1),
-                                child: (profile.avatarPath!.startsWith('http://') ||
-                                        profile.avatarPath!.startsWith('https://'))
-                                    ? Image.network(
-                                        profile.avatarPath!,
-                                        width: 71,
-                                        height: 71,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (ctx, err, stack) => Center(
-                                          child: Text(
-                                            profile.userName.isNotEmpty
-                                                ? profile.userName[0].toUpperCase()
-                                                : 'C',
-                                            style: AppTypography.monoBadge(
-                                              color: AppColors.pureBlack,
-                                              fontSize: 18,
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                    : Image.file(
-                                        File(profile.avatarPath!),
-                                        width: 71,
-                                        height: 71,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (ctx, err, stack) => Center(
-                                          child: Text(
-                                            profile.userName.isNotEmpty
-                                                ? profile.userName[0].toUpperCase()
-                                                : 'C',
-                                            style: AppTypography.monoBadge(
-                                              color: AppColors.pureBlack,
-                                              fontSize: 18,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                              )
-                            : Center(
-                                child: Text(
-                                  profile.userName.isNotEmpty
-                                      ? profile.userName[0].toUpperCase()
-                                      : 'C',
-                                  style: AppTypography.monoBadge(
-                                    color: AppColors.pureBlack,
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              ),
+                      CriticAvatar(
+                        avatarPath: profile.avatarPath,
+                        fallbackInitial: profile.userName.isNotEmpty ? profile.userName[0] : 'C',
+                        size: 71,
+                        borderWidth: 2.0,
+                        borderColor: AppColors.pureBlack,
+                        fallbackBgColor: AppColors.acidLime,
+                        fallbackTextColor: AppColors.pureBlack,
+                        boxShadow: const [
+                          BoxShadow(
+                            color: AppColors.pureBlack,
+                            offset: Offset(3, 3),
+                            blurRadius: 0,
+                          ),
+                        ],
                       ),
                       const SizedBox(width: 16),
                       // Critic name & handle vertically centered on the middle side of avatar
@@ -621,6 +557,77 @@ class FriendProfileScreen extends ConsumerWidget {
             ),
 
             const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackdropWidget(String rawPath) {
+    final path = rawPath.trim();
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return Image.network(
+        path,
+        width: double.infinity,
+        height: 165,
+        fit: BoxFit.cover,
+        errorBuilder: (ctx, err, stack) => _buildBackdropFallback(),
+      );
+    } else if (path.startsWith('data:image')) {
+      try {
+        final bytes = base64Decode(path.split(',').last);
+        return Image.memory(
+          bytes,
+          width: double.infinity,
+          height: 165,
+          fit: BoxFit.cover,
+          errorBuilder: (ctx, err, stack) => _buildBackdropFallback(),
+        );
+      } catch (_) {
+        return _buildBackdropFallback();
+      }
+    } else if (!path.startsWith('/') && path.length > 100) {
+      try {
+        final bytes = base64Decode(path);
+        return Image.memory(
+          bytes,
+          width: double.infinity,
+          height: 165,
+          fit: BoxFit.cover,
+          errorBuilder: (ctx, err, stack) => _buildBackdropFallback(),
+        );
+      } catch (_) {
+        return _buildBackdropFallback();
+      }
+    } else {
+      final file = File(path);
+      if (file.existsSync()) {
+        return Image.file(
+          file,
+          width: double.infinity,
+          height: 165,
+          fit: BoxFit.cover,
+          errorBuilder: (ctx, err, stack) => _buildBackdropFallback(),
+        );
+      } else {
+        return _buildBackdropFallback();
+      }
+    }
+  }
+
+  Widget _buildBackdropFallback() {
+    return Container(
+      color: AppColors.surfaceElevated,
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.star, size: 14, color: AppColors.acidLime),
+            const SizedBox(width: 6),
+            Text(
+              'PATRON CRITIC // DOSSIER BACKDROP',
+              style: AppTypography.monoBadge(color: AppColors.acidLime, fontSize: 10),
+            ),
           ],
         ),
       ),
@@ -1095,31 +1102,46 @@ class _RecentActivityCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: _scoreColor,
-                          borderRadius: BorderRadius.circular(1),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            RatingSpikeSign(
-                              rating: review.rating,
-                              size: 9,
-                              color: AppColors.pureBlack,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              review.rating.toStringAsFixed(1),
-                              style: AppTypography.monoBadge(
-                                color: AppColors.pureBlack,
-                                fontSize: 9,
+                      review.isInterlude
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: AppColors.cyberCyan,
+                                borderRadius: BorderRadius.circular(1),
+                              ),
+                              child: Text(
+                                'INT',
+                                style: AppTypography.monoBadge(
+                                  color: AppColors.pureBlack,
+                                  fontSize: 8.5,
+                                ),
+                              ),
+                            )
+                          : Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: _scoreColor,
+                                borderRadius: BorderRadius.circular(1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  RatingSpikeSign(
+                                    rating: review.rating,
+                                    size: 9,
+                                    color: AppColors.pureBlack,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    review.rating.toStringAsFixed(1),
+                                    style: AppTypography.monoBadge(
+                                      color: AppColors.pureBlack,
+                                      fontSize: 9,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
                       const SizedBox(width: 6),
                       Text(
                         isAlbum ? 'LP' : 'TRACK',

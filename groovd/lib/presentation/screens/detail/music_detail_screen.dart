@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -373,13 +374,17 @@ class MusicDetailScreen extends ConsumerWidget {
                 Expanded(
                   flex: 2,
                   child: BrutalistButton(
-                    label: 'EDIT [${existingUserReview.rating.toStringAsFixed(1)}]',
-                    icon: Icons.edit_note,
-                    leading: RatingSpikeSign(
-                      rating: existingUserReview.rating,
-                      size: 14,
-                      color: AppColors.textPrimary,
-                    ),
+                    label: existingUserReview.isInterlude
+                        ? 'EDIT [INTERLUDE]'
+                        : 'EDIT [${existingUserReview.rating.toStringAsFixed(1)}]',
+                    icon: existingUserReview.isInterlude ? Icons.music_off_outlined : Icons.edit_note,
+                    leading: existingUserReview.isInterlude
+                        ? null
+                        : RatingSpikeSign(
+                            rating: existingUserReview.rating,
+                            size: 14,
+                            color: AppColors.textPrimary,
+                          ),
                     backgroundColor: AppColors.surfaceElevated,
                     textColor: AppColors.textPrimary,
                     borderColor: AppColors.borderBold,
@@ -488,6 +493,61 @@ class MusicDetailScreen extends ConsumerWidget {
                           style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
                         ),
                       ),
+                      Builder(
+                        builder: (context) {
+                          final isSongInterlude = existingUserReview?.isInterlude == true;
+                          final displayScore = autoOverallScore ?? existingUserReview?.rating;
+
+                          if (isSongInterlude) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.cyberCyan.withValues(alpha: 0.15),
+                                border: Border.all(color: AppColors.cyberCyan, width: 1.0),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                              child: Text(
+                                'INTERLUDE',
+                                style: AppTypography.monoBadge(color: AppColors.cyberCyan, fontSize: 9),
+                              ),
+                            );
+                          }
+
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: displayScore != null ? AppColors.cyberCyan : AppColors.surfaceElevated,
+                              border: Border.all(
+                                color: displayScore != null ? AppColors.pureBlack : AppColors.border,
+                                width: 1.0,
+                              ),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (displayScore != null) ...[
+                                  RatingSpikeSign(
+                                    rating: displayScore,
+                                    size: 11,
+                                    color: AppColors.pureBlack,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'OVERALL ${displayScore.toStringAsFixed(1)}',
+                                    style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
+                                  ),
+                                ] else ...[
+                                  Text(
+                                    'OVERALL —',
+                                    style: AppTypography.monoBadge(color: AppColors.textMuted, fontSize: 9),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                       if (activeItem.formattedReleaseDate.isNotEmpty)
                         Text(
                           'REL. ${activeItem.formattedReleaseDate}',
@@ -513,11 +573,8 @@ class MusicDetailScreen extends ConsumerWidget {
 
                   const SizedBox(height: 14),
 
-                  // Giant Exaggerated Album / Song Title
-                  Text(
-                    activeItem.name.toUpperCase(),
-                    style: AppTypography.displayMassive(),
-                  ),
+                  // Adaptive Exaggerated Album / Song Title (auto-scales size & length to prevent breaking words)
+                  _buildAdaptiveMusicTitle(activeItem.name),
 
                   const SizedBox(height: 6),
 
@@ -644,18 +701,21 @@ class MusicDetailScreen extends ConsumerWidget {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        if (autoOverallScore != null) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.cyberCyan,
-                              border: Border.all(color: AppColors.pureBlack, width: 1.0),
-                              borderRadius: BorderRadius.circular(2),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: autoOverallScore != null ? AppColors.cyberCyan : AppColors.surfaceElevated,
+                            border: Border.all(
+                              color: autoOverallScore != null ? AppColors.pureBlack : AppColors.border,
+                              width: 1.0,
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (autoOverallScore != null) ...[
                                 RatingSpikeSign(
                                   rating: autoOverallScore,
                                   size: 11,
@@ -666,10 +726,15 @@ class MusicDetailScreen extends ConsumerWidget {
                                   'OVERALL ${autoOverallScore.toStringAsFixed(1)}',
                                   style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 9),
                                 ),
+                              ] else ...[
+                                Text(
+                                  'OVERALL —',
+                                  style: AppTypography.monoBadge(color: AppColors.textMuted, fontSize: 9),
+                                ),
                               ],
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ],
                     ),
                     if (activeItem.tracks.isNotEmpty)
@@ -744,6 +809,9 @@ class MusicDetailScreen extends ConsumerWidget {
                   ),
                   itemBuilder: (context, index) {
                     final track = activeItem.tracks[index];
+                    final trackReview = ref.watch(
+                      trackUserReviewProvider((track: track, albumArtist: activeItem.artist)),
+                    );
                     final trackRating = ref.watch(
                       trackUserRatingProvider((track: track, albumArtist: activeItem.artist)),
                     );
@@ -827,40 +895,56 @@ class MusicDetailScreen extends ConsumerWidget {
                           SizedBox(
                             width: 58,
                             child: Center(
-                              child: trackRating != null
+                              child: (trackReview != null && trackReview.isInterlude)
                                   ? Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                       decoration: BoxDecoration(
-                                        color: AppColors.acidLime.withValues(alpha: 0.15),
-                                        border: Border.all(color: AppColors.acidLime, width: 1.0),
+                                        color: AppColors.cyberCyan.withValues(alpha: 0.15),
+                                        border: Border.all(color: AppColors.cyberCyan, width: 1.0),
                                         borderRadius: BorderRadius.circular(2),
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          RatingSpikeSign(
-                                            rating: trackRating,
-                                            size: 10,
-                                            color: AppColors.acidLime,
-                                          ),
-                                          const SizedBox(width: 3),
-                                          Text(
-                                            trackRating.toStringAsFixed(1),
-                                            style: AppTypography.monoBadge(
-                                              color: AppColors.acidLime,
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                        ],
+                                      child: Text(
+                                        'INT',
+                                        style: AppTypography.monoBadge(
+                                          color: AppColors.cyberCyan,
+                                          fontSize: 9.5,
+                                        ),
                                       ),
                                     )
-                                  : Text(
-                                      '-',
-                                      style: AppTypography.monoBadge(
-                                        color: AppColors.textMuted,
-                                        fontSize: 12,
-                                      ),
-                                    ),
+                                  : trackRating != null
+                                      ? Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.acidLime.withValues(alpha: 0.15),
+                                            border: Border.all(color: AppColors.acidLime, width: 1.0),
+                                            borderRadius: BorderRadius.circular(2),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              RatingSpikeSign(
+                                                rating: trackRating,
+                                                size: 10,
+                                                color: AppColors.acidLime,
+                                              ),
+                                              const SizedBox(width: 3),
+                                              Text(
+                                                trackRating.toStringAsFixed(1),
+                                                style: AppTypography.monoBadge(
+                                                  color: AppColors.acidLime,
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : Text(
+                                          '-',
+                                          style: AppTypography.monoBadge(
+                                            color: AppColors.textMuted,
+                                            fontSize: 12,
+                                          ),
+                                        ),
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -1076,6 +1160,66 @@ class MusicDetailScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAdaptiveMusicTitle(String rawTitle) {
+    final title = rawTitle.trim().toUpperCase();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final words = title.split(RegExp(r'\s+'));
+
+        // Find the length of the longest individual word
+        int longestWordLength = 0;
+        for (final w in words) {
+          if (w.length > longestWordLength) {
+            longestWordLength = w.length;
+          }
+        }
+
+        // Calculate max allowable font size so the longest word fits horizontally without breaking characters mid-word
+        double maxWordFittingSize = 44.0;
+        if (longestWordLength > 0) {
+          const estimatedCharRatio = 0.68;
+          final safeWidth = availableWidth > 40 ? (availableWidth - 12) : 320.0;
+          maxWordFittingSize = safeWidth / (longestWordLength * estimatedCharRatio);
+        }
+
+        // Length-based font sizing scale for consistent editorial hierarchy
+        double lengthBasedSize = 44.0;
+        if (title.length > 55) {
+          lengthBasedSize = 20.0;
+        } else if (title.length > 40) {
+          lengthBasedSize = 22.0;
+        } else if (title.length > 28) {
+          lengthBasedSize = 26.0;
+        } else if (title.length > 18) {
+          lengthBasedSize = 32.0;
+        } else if (title.length > 11) {
+          lengthBasedSize = 38.0;
+        }
+
+        // Choose the optimal font size clamped safely between 16 and 44
+        final targetFontSize = math.min(lengthBasedSize, maxWordFittingSize).clamp(16.0, 44.0);
+
+        // Adjust letterSpacing and line height proportionally to prevent collisions on smaller font sizes
+        final double letterSpacing = targetFontSize >= 38 ? -1.8 : (targetFontSize >= 26 ? -1.0 : -0.5);
+        final double lineHeight = targetFontSize >= 38 ? 0.98 : (targetFontSize >= 26 ? 1.05 : 1.15);
+
+        return Text(
+          title,
+          maxLines: targetFontSize <= 22 ? 4 : 3,
+          overflow: TextOverflow.ellipsis,
+          softWrap: true,
+          style: AppTypography.displayMassive().copyWith(
+            fontSize: targetFontSize,
+            letterSpacing: letterSpacing,
+            height: lineHeight,
+          ),
+        );
+      },
     );
   }
 }

@@ -51,14 +51,11 @@ class FriendsRepository {
             final data = doc.data();
             final uid = doc.id;
             if (!map.containsKey(uid)) {
-              map[uid] = FriendProfile(
-                userId: uid,
-                userName: data['userName'] as String? ?? 'CRITIC',
-                userHandle: data['userHandle'] as String? ?? '@critic',
-                avatarPath: data['avatarPath'] as String?,
-                bio: data['bio'] as String? ?? '',
-                isFollowing: true,
-              );
+              map[uid] = FriendProfile.fromMap({
+                'userId': uid,
+                ...data,
+                'isFollowing': true,
+              });
             }
           }
           following = map.values.where((f) => cloudIds.contains(f.userId)).toList();
@@ -211,15 +208,11 @@ class FriendsRepository {
           if (name.toLowerCase().contains(clean) ||
               handle.toLowerCase().replaceAll('@', '').contains(clean) ||
               bio.toLowerCase().contains(clean)) {
-            results.add(FriendProfile(
-              userId: uid,
-              userName: name.isNotEmpty ? name : 'CRITIC',
-              userHandle: handle.isNotEmpty ? handle : '@critic',
-              avatarPath: data['avatarPath'] as String?,
-              backdropPath: data['backdropPath'] as String?,
-              bio: bio,
-              isFollowing: followingIds.contains(uid),
-            ));
+            results.add(FriendProfile.fromMap({
+              'userId': uid,
+              ...data,
+              'isFollowing': followingIds.contains(uid),
+            }));
             seenIds.add(uid);
           }
         }
@@ -271,15 +264,11 @@ class FriendsRepository {
 
           // Only suggest users who have a name or handle configured
           if (name.isNotEmpty || handle.isNotEmpty) {
-            suggestions.add(FriendProfile(
-              userId: uid,
-              userName: name.isNotEmpty ? name : 'CRITIC',
-              userHandle: handle.isNotEmpty ? handle : '@critic',
-              avatarPath: data['avatarPath'] as String?,
-              backdropPath: data['backdropPath'] as String?,
-              bio: data['bio'] as String? ?? '',
-              isFollowing: false,
-            ));
+            suggestions.add(FriendProfile.fromMap({
+              'userId': uid,
+              ...data,
+              'isFollowing': false,
+            }));
             seenIds.add(uid);
           }
         }
@@ -457,23 +446,19 @@ class FriendsRepository {
             joinedAt = (data['createdAt'] as Timestamp).toDate();
           }
 
-          return FriendProfile(
-            userId: friendId,
-            userName: data['userName'] as String? ?? 'CRITIC',
-            userHandle: data['userHandle'] as String? ?? '@critic',
-            avatarPath: data['avatarPath'] as String?,
-            backdropPath: data['backdropPath'] as String?,
-            bio: data['bio'] as String? ?? '',
-            reviewsCount: reviewsCount,
-            followersCount: followersCount,
-            followingCount: followingCount,
-            wantlistCount: wantlistCount,
-            listsCount: listsCount,
-            isFollowing: isFollowing,
-            topAlbums: topAlbums,
-            topSongs: topSongs,
-            joinedAt: joinedAt,
-          );
+          return FriendProfile.fromMap({
+            'userId': friendId,
+            ...data,
+            'reviewsCount': reviewsCount,
+            'followersCount': followersCount,
+            'followingCount': followingCount,
+            'wantlistCount': wantlistCount,
+            'listsCount': listsCount,
+            'isFollowing': isFollowing,
+            'topAlbums': topAlbums.map((a) => a.toMap()).toList(),
+            'topSongs': topSongs.map((s) => s.toMap()).toList(),
+            if (joinedAt != null) 'joinedAt': joinedAt.toIso8601String(),
+          });
         }
       } catch (_) {}
     }

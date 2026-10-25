@@ -121,12 +121,34 @@ class FriendProfile {
   }
 
   factory FriendProfile.fromMap(Map<String, dynamic> map) {
+    final rawAvatar = (map['avatarUrl'] as String?)?.isNotEmpty == true
+        ? (map['avatarUrl'] as String?)
+        : ((map['avatarPath'] as String?)?.startsWith('http') == true ||
+           (map['avatarPath'] as String?)?.startsWith('data:') == true)
+            ? (map['avatarPath'] as String?)
+            : ((map['avatarBase64'] as String?)?.isNotEmpty == true
+                ? ((map['avatarBase64'] as String).startsWith('data:')
+                    ? map['avatarBase64'] as String
+                    : 'data:image/jpeg;base64,${map['avatarBase64']}')
+                : (map['photoURL'] as String? ?? map['avatarPath'] as String?));
+
+    final rawBackdrop = (map['backdropUrl'] as String?)?.isNotEmpty == true
+        ? (map['backdropUrl'] as String?)
+        : ((map['backdropPath'] as String?)?.startsWith('http') == true ||
+           (map['backdropPath'] as String?)?.startsWith('data:') == true)
+            ? (map['backdropPath'] as String?)
+            : ((map['backdropBase64'] as String?)?.isNotEmpty == true
+                ? ((map['backdropBase64'] as String).startsWith('data:')
+                    ? map['backdropBase64'] as String
+                    : 'data:image/jpeg;base64,${map['backdropBase64']}')
+                : map['backdropPath'] as String?);
+
     return FriendProfile(
       userId: map['userId'] as String? ?? '',
       userName: map['userName'] as String? ?? 'CRITIC',
       userHandle: map['userHandle'] as String? ?? '@critic',
-      avatarPath: map['avatarPath'] as String?,
-      backdropPath: map['backdropPath'] as String?,
+      avatarPath: rawAvatar,
+      backdropPath: rawBackdrop,
       bio: map['bio'] as String? ?? '',
       reviewsCount: (map['reviewsCount'] as num?)?.toInt() ?? 0,
       followersCount: (map['followersCount'] as num?)?.toInt() ?? 0,

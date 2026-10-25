@@ -406,10 +406,46 @@ class _ReviewDetailScreenState extends ConsumerState<ReviewDetailScreen> {
             const SizedBox(height: 14),
 
             // Redesigned Critic / Personal Score Section (Positioned directly below the profile picture)
-            ScoreVerdictBar(
-              score: _review.rating,
-              label: isCurrentUser ? 'PERSONAL SCORE' : 'CRITIC SCORE',
-            ),
+            if (_review.isInterlude)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  border: Border.all(color: AppColors.cyberCyan, width: 2.0),
+                  borderRadius: BorderRadius.circular(2),
+                  boxShadow: const [
+                    BoxShadow(color: AppColors.pureBlack, offset: Offset(3, 3), blurRadius: 0),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.cyberCyan,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Text(
+                        'INT',
+                        style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 11),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'LOGGED AS INTERLUDE // NO SCORE RECORDED',
+                        style: AppTypography.monoBadge(color: AppColors.cyberCyan, fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ScoreVerdictBar(
+                score: _review.rating,
+                label: isCurrentUser ? 'PERSONAL SCORE' : 'CRITIC SCORE',
+              ),
 
             const SizedBox(height: 20),
 

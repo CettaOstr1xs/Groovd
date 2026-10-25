@@ -17,6 +17,7 @@ class Review {
   final List<String> tags;
   final DateTime createdAt;
   final int likesCount;
+  final bool isInterlude;
 
   const Review({
     required this.id,
@@ -35,6 +36,7 @@ class Review {
     this.tags = const [],
     required this.createdAt,
     this.likesCount = 0,
+    this.isInterlude = false,
   });
 
   String get scoreFormatted => rating.toStringAsFixed(1);
@@ -110,6 +112,7 @@ class Review {
     List<String>? tags,
     DateTime? createdAt,
     int? likesCount,
+    bool? isInterlude,
   }) {
     return Review(
       id: id ?? this.id,
@@ -128,6 +131,7 @@ class Review {
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
       likesCount: likesCount ?? this.likesCount,
+      isInterlude: isInterlude ?? this.isInterlude,
     );
   }
 
@@ -149,6 +153,7 @@ class Review {
       'tags': tags,
       'createdAt': createdAt.toIso8601String(),
       'likesCount': likesCount,
+      'isInterlude': isInterlude,
     };
   }
 
@@ -172,6 +177,7 @@ class Review {
           ? DateTime.tryParse(map['createdAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
       likesCount: (map['likesCount'] as num?)?.toInt() ?? 0,
+      isInterlude: map['isInterlude'] as bool? ?? false,
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,8 @@ import '../../core/theme/app_typography.dart';
 ///
 /// Reliably handles:
 /// - Remote/Network URLs (e.g. Google profile photos `https://...`) via [CachedNetworkImage]
-/// - Local file paths (e.g. cropped gallery images) via [Image.file]
+/// - Base64 data URIs and strings
+/// - Local file paths (e.g. cropped gallery images) via [Image.file] with existsSync safety
 /// - Graceful monogram fallback on missing files, load errors, or null paths
 class CriticAvatar extends StatelessWidget {
   final String? avatarPath;
@@ -38,6 +40,14 @@ class CriticAvatar extends StatelessWidget {
   bool get _isNetwork =>
       _hasValidPath &&
       (avatarPath!.trim().startsWith('http://') || avatarPath!.trim().startsWith('https://'));
+  bool get _isDataUri =>
+      _hasValidPath && avatarPath!.trim().startsWith('data:');
+  bool get _isRawBase64 =>
+      _hasValidPath &&
+      !_isNetwork &&
+      !_isDataUri &&
+      !avatarPath!.trim().startsWith('/') &&
+      avatarPath!.trim().length > 100;
 
   @override
   Widget build(BuildContext context) {
@@ -47,9 +57,10 @@ class CriticAvatar extends StatelessWidget {
     Widget? imageWidget;
 
     if (_hasValidPath) {
+      final path = avatarPath!.trim();
       if (_isNetwork) {
         imageWidget = CachedNetworkImage(
-          imageUrl: avatarPath!.trim(),
+          imageUrl: path,
           width: size,
           height: size,
           fit: BoxFit.cover,
@@ -58,15 +69,33 @@ class CriticAvatar extends StatelessWidget {
           placeholder: (_, _) => _buildFallback(letter),
           errorWidget: (_, _, _) => _buildFallback(letter),
         );
+      } else if (_isDataUri || _isRawBase64) {
+        try {
+          final base64Content = _isDataUri ? path.split(',').last : path;
+          final bytes = base64Decode(base64Content);
+          imageWidget = Image.memory(
+            bytes,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => _buildFallback(letter),
+          );
+        } catch (_) {
+          imageWidget = _buildFallback(letter);
+        }
       } else {
-        final file = File(avatarPath!.trim());
-        imageWidget = Image.file(
-          file,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => _buildFallback(letter),
-        );
+        final file = File(path);
+        if (file.existsSync()) {
+          imageWidget = Image.file(
+            file,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => _buildFallback(letter),
+          );
+        } else {
+          imageWidget = _buildFallback(letter);
+        }
       }
     }
 

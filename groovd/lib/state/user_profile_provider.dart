@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -163,13 +166,153 @@ class UserProfileNotifier extends Notifier<UserProfile> {
       await prefs.setString(_bioKey, state.bio);
 
       if (Firebase.apps.isNotEmpty) {
+        final firestoreMap = state.toMap();
+
+        if (state.avatarPath == null) {
+          firestoreMap['avatarUrl'] = null;
+          firestoreMap['avatarBase64'] = null;
+        } else if (!state.avatarPath!.startsWith('http')) {
+          try {
+            final f = File(state.avatarPath!);
+            if (f.existsSync()) {
+              final bytes = await f.readAsBytes();
+              if (bytes.length <= 600000) {
+                firestoreMap['avatarBase64'] = base64Encode(bytes);
+              }
+            }
+          } catch (_) {}
+        }
+
+        if (state.backdropPath == null) {
+          firestoreMap['backdropUrl'] = null;
+          firestoreMap['backdropBase64'] = null;
+        } else if (!state.backdropPath!.startsWith('http')) {
+          try {
+            final f = File(state.backdropPath!);
+            if (f.existsSync()) {
+              final bytes = await f.readAsBytes();
+              if (bytes.length <= 600000) {
+                firestoreMap['backdropBase64'] = base64Encode(bytes);
+              }
+            }
+          } catch (_) {}
+        }
+
         await FirebaseFirestore.instance
             .collection('users')
             .doc(state.userId)
-            .set(state.toMap(), SetOptions(merge: true))
-            .timeout(const Duration(milliseconds: 2500));
+            .set(firestoreMap, SetOptions(merge: true))
+            .timeout(const Duration(milliseconds: 3500));
       }
     } catch (_) {}
+  }
+
+  Future<String?> _uploadFileToStorage(File file, String remotePath) async {
+    if (Firebase.apps.isEmpty) return null;
+    try {
+      final storageRef = FirebaseStorage.instance.ref().child(remotePath);
+      final uploadTask = await storageRef.putFile(
+        file,
+        SettableMetadata(contentType: 'image/jpeg'),
+      ).timeout(const Duration(seconds: 10));
+      return await uploadTask.ref.getDownloadURL();
+    } catch (e) {
+      debugPrint('Storage upload error: $e');
+      return null;
+    }
+  }
+
+  Future<void> _syncAvatarCloud(File file) async {
+    if (Firebase.apps.isEmpty) return;
+    try {
+      String? base64Str;
+      try {
+        final bytes = await file.readAsBytes();
+        if (bytes.length <= 600000) {
+          base64Str = base64Encode(bytes);
+        }
+      } catch (_) {}
+
+      final cloudUrl = await _uploadFileToStorage(
+        file,
+        'users/${state.userId}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
+      final updateMap = <String, dynamic>{};
+      if (cloudUrl != null) {
+        updateMap['avatarUrl'] = cloudUrl;
+        updateMap['avatarPath'] = cloudUrl;
+      }
+      if (base64Str != null) {
+        updateMap['avatarBase64'] = base64Str;
+      }
+
+      if (updateMap.isNotEmpty) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(state.userId)
+            .set(updateMap, SetOptions(merge: true))
+            .timeout(const Duration(seconds: 5));
+
+        if (cloudUrl != null) {
+          state = state.copyWith(avatarPath: cloudUrl);
+          await _persist();
+          try {
+            await ref.read(reviewRepositoryProvider).updateAuthorMetadata(
+              state.userId,
+              state.userName,
+              state.userHandle,
+              cloudUrl,
+            );
+            ref.read(reviewRefreshProvider.notifier).notifyChanged();
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      debugPrint('Avatar sync error: $e');
+    }
+  }
+
+  Future<void> _syncBackdropCloud(File file) async {
+    if (Firebase.apps.isEmpty) return;
+    try {
+      String? base64Str;
+      try {
+        final bytes = await file.readAsBytes();
+        if (bytes.length <= 600000) {
+          base64Str = base64Encode(bytes);
+        }
+      } catch (_) {}
+
+      final cloudUrl = await _uploadFileToStorage(
+        file,
+        'users/${state.userId}/backdrop_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+
+      final updateMap = <String, dynamic>{};
+      if (cloudUrl != null) {
+        updateMap['backdropUrl'] = cloudUrl;
+        updateMap['backdropPath'] = cloudUrl;
+      }
+      if (base64Str != null) {
+        updateMap['backdropBase64'] = base64Str;
+      }
+
+      if (updateMap.isNotEmpty) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(state.userId)
+            .set(updateMap, SetOptions(merge: true))
+            .timeout(const Duration(seconds: 5));
+
+        if (cloudUrl != null) {
+          state = state.copyWith(backdropPath: cloudUrl);
+          await _persist();
+        }
+      }
+    } catch (e) {
+      debugPrint('Backdrop sync error: $e');
+    }
   }
 
   /// Picks a raw photo from the user's gallery for framing/adjustment.
@@ -205,6 +348,8 @@ class UserProfileNotifier extends Notifier<UserProfile> {
 
       state = state.copyWith(avatarPath: croppedImagePath);
       await _persist();
+
+      _syncAvatarCloud(File(croppedImagePath));
 
       try {
         await ref.read(reviewRepositoryProvider).updateAuthorMetadata(
@@ -292,6 +437,7 @@ class UserProfileNotifier extends Notifier<UserProfile> {
       await File(pickedFile.path).copy(savedImage.path);
       state = state.copyWith(backdropPath: savedImage.path);
       await _persist();
+      _syncBackdropCloud(savedImage);
       return true;
     } catch (_) {
       return false;

@@ -267,18 +267,19 @@ final currentUserReviewLogIndexProvider = Provider.family<int, Review>((ref, rev
 /// Calculates the automatic overall score for an album or EP based on the current user's
 /// ratings of all individual tracks on the release.
 ///
-/// Returns null if:
-/// - The item is not an album or EP (`!item.isRelease`)
-/// - The release has no tracks (`item.tracks.isEmpty`)
-/// - NOT ALL tracks have been rated/reviewed by the user
+/// Calculates the automatic overall score for an album, EP, or track based on the current user's
+/// ratings.
 ///
-/// When ALL tracks have been rated, returns the mathematical average of the user's
-/// track ratings rounded to 1 decimal place (0.0 to 10.0).
+/// For albums and EPs:
+/// - Computes the running mathematical average of any tracks the user has rated (0.0 to 10.0),
+///   rounded to 1 decimal place.
+/// - Excludes tracks marked as interludes (`review.isInterlude == true`).
+/// - Does not wait for all tracks to be rated; running average is computed as soon as any track is rated.
+/// - If no tracks are rated yet, falls back to the album/release review rating if present.
+///
+/// For tracks/singles (`item.isSong`):
+/// - Returns the current user's rating for the track, or null if unrated or marked as an interlude.
 final albumAutomaticOverallScoreProvider = Provider.family<double?, MusicItem>((ref, item) {
-  if (!item.isRelease || item.tracks.isEmpty) {
-    return null;
-  }
-
   final currentUserId = ref.watch(currentUserIdProvider);
   final userReviewsAsync = ref.watch(userReviewsProvider(currentUserId));
   final reviews = userReviewsAsync.asData?.value ?? const [];
@@ -287,6 +288,28 @@ final albumAutomaticOverallScoreProvider = Provider.family<double?, MusicItem>((
       : const <Review>[];
   final allReviews = [...reviews, ...guestReviews];
 
+  // If item is a track/song
+  if (item.isSong || !item.isRelease) {
+    for (final r in allReviews) {
+      if (item.id.isNotEmpty && r.musicItemId.isNotEmpty && r.musicItemId == item.id) {
+        return r.isInterlude ? null : r.rating;
+      }
+      final rType = r.itemType.toLowerCase();
+      if (rType == 'song' || rType == 'track') {
+        if (r.matchesItem(
+          id: item.id,
+          name: item.name,
+          artist: item.artist,
+          type: 'song',
+        )) {
+          return r.isInterlude ? null : r.rating;
+        }
+      }
+    }
+    return null;
+  }
+
+  // Release (Album / EP)
   final List<double> trackRatings = [];
 
   for (final track in item.tracks) {
@@ -312,21 +335,36 @@ final albumAutomaticOverallScoreProvider = Provider.family<double?, MusicItem>((
       }
     }
 
-    if (matchedReview == null) {
-      // At least one track on the album/ep has not been rated
-      return null;
+    if (matchedReview != null && !matchedReview.isInterlude) {
+      trackRatings.add(matchedReview.rating);
     }
-
-    trackRatings.add(matchedReview.rating);
   }
 
-  if (trackRatings.isEmpty) return null;
-  final avg = trackRatings.reduce((a, b) => a + b) / trackRatings.length;
-  return (avg * 10).round() / 10.0;
+  if (trackRatings.isNotEmpty) {
+    final avg = trackRatings.reduce((a, b) => a + b) / trackRatings.length;
+    return (avg * 10).round() / 10.0;
+  }
+
+  // If no track ratings yet, check if there's an album-level review
+  for (final r in allReviews) {
+    final rType = r.itemType.toLowerCase();
+    if (rType == 'album' || rType == 'ep' || item.isRelease) {
+      if (r.matchesItem(
+        id: item.id,
+        name: item.name,
+        artist: item.artist,
+        type: item.isEp ? 'ep' : 'album',
+      )) {
+        return r.isInterlude ? null : r.rating;
+      }
+    }
+  }
+
+  return null;
 });
 
-/// Provider to look up the current user's rating for a specific track, if rated.
-final trackUserRatingProvider = Provider.family<double?, ({TrackInfo track, String albumArtist})>((ref, arg) {
+/// Provider to look up the current user's review for a specific track, if logged.
+final trackUserReviewProvider = Provider.family<Review?, ({TrackInfo track, String albumArtist})>((ref, arg) {
   final currentUserId = ref.watch(currentUserIdProvider);
   final userReviewsAsync = ref.watch(userReviewsProvider(currentUserId));
   final reviews = userReviewsAsync.asData?.value ?? const [];
@@ -339,7 +377,7 @@ final trackUserRatingProvider = Provider.family<double?, ({TrackInfo track, Stri
 
   for (final r in allReviews) {
     if (arg.track.id.isNotEmpty && r.musicItemId.isNotEmpty && r.musicItemId == arg.track.id) {
-      return r.rating;
+      return r;
     }
     final rType = r.itemType.toLowerCase();
     if (rType == 'song' || rType == 'track') {
@@ -349,11 +387,18 @@ final trackUserRatingProvider = Provider.family<double?, ({TrackInfo track, Stri
         artist: trackArtist,
         type: 'song',
       )) {
-        return r.rating;
+        return r;
       }
     }
   }
   return null;
+});
+
+/// Provider to look up the current user's rating for a specific track, if rated and not an interlude.
+final trackUserRatingProvider = Provider.family<double?, ({TrackInfo track, String albumArtist})>((ref, arg) {
+  final review = ref.watch(trackUserReviewProvider(arg));
+  if (review == null || review.isInterlude) return null;
+  return review.rating;
 });
 
 /// Review Action Controller

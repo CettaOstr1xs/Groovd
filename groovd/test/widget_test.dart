@@ -20,6 +20,7 @@ import 'package:groovd/data/models/artist.dart';
 import 'package:groovd/presentation/screens/artist/artist_detail_screen.dart';
 import 'package:groovd/presentation/screens/profile/all_rated_releases_screen.dart';
 import 'package:groovd/presentation/widgets/album_art_card.dart';
+import 'package:groovd/presentation/widgets/brutalist_slider.dart';
 import 'package:groovd/presentation/widgets/rating_spike_sign.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/presentation/screens/auth/landing_screen.dart';
@@ -1788,7 +1789,7 @@ void main() {
     expect(find.text('+ FOLLOW BACK'), findsNWidgets(2));
   });
 
-  testWidgets('Album automatic overall score badge only appears when ALL tracks are rated', (WidgetTester tester) async {
+  testWidgets('Album automatic overall score badge always appears showing running average, and handles interludes', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -1822,7 +1823,7 @@ void main() {
       createdAt: DateTime.now(),
     );
 
-    // Scenario 1: Only track 1 is rated -> OVERALL badge must NOT appear
+    // Scenario 1: Only track 1 is rated -> OVERALL running average badge ALWAYS appears (OVERALL 8.0)
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -1838,7 +1839,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.textContaining('OVERALL'), findsNothing);
+    expect(find.text('OVERALL 8.0'), findsWidgets);
     // Track 1 should show its rating badge
     expect(find.text('8.0'), findsOneWidget);
 
@@ -1876,18 +1877,57 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     // Average is (8.0 + 9.4)/2 = 8.7
-    // Verify OVERALL 8.7 badge appears in the tracklist header
-    expect(find.text('OVERALL 8.7'), findsOneWidget);
+    // Verify OVERALL 8.7 badge appears in both metadata header and tracklist header
+    expect(find.text('OVERALL 8.7'), findsWidgets);
 
-    // Now tap + LOG YOUR REVIEW to verify it opens WriteReviewModal with 8.7 auto-set
+    // Scenario 3: Track 2 is an interlude -> excluded from calculation, shows INT badge
+    final track2Interlude = Review(
+      id: 'rev_t2_int',
+      musicItemId: 'trk_2',
+      musicItemName: 'Bodysnatchers',
+      artistName: 'RADIOHEAD',
+      coverUrl: '',
+      itemType: 'song',
+      userId: 'user_me',
+      userName: 'YOU',
+      userHandle: '@you',
+      rating: 0.0,
+      isInterlude: true,
+      headline: '',
+      body: '',
+      createdAt: DateTime.now(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        key: UniqueKey(),
+        overrides: [
+          userReviewsProvider('user_me').overrideWith((ref) => Future.value([track1Review, track2Interlude])),
+          itemReviewsProvider(ItemReviewQuery.fromItem(albumItem)).overrideWith((ref) => Future.value([])),
+        ],
+        child: MaterialApp(
+          home: MusicDetailScreen(item: albumItem),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Track 2 shows INT badge
+    expect(find.text('INT'), findsOneWidget);
+    // Overall is calculated only from non-interlude track 1 (8.0)
+    expect(find.text('OVERALL 8.0'), findsWidgets);
+
+    // Now tap + LOG YOUR REVIEW to verify it opens WriteReviewModal with 8.0 auto-set
     await tester.tap(find.text('+ LOG YOUR REVIEW'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    // The modal's score live display should default to 8.7
-    expect(find.text('8.7'), findsWidgets);
+    // The modal's score live display should default to 8.0
+    expect(find.text('8.0'), findsWidgets);
     // The TAP TO SET chip should be rendered
-    final tapToSetFinder = find.text('TRACKS OVERALL: 8.7 (TAP TO SET)');
+    final tapToSetFinder = find.text('TRACKS OVERALL: 8.0 (TAP TO SET)');
     expect(tapToSetFinder, findsOneWidget);
 
     // Verify user can freely change rating via slider interaction
@@ -1896,10 +1936,10 @@ void main() {
     await tester.tap(sliderFinder);
     await tester.pump();
 
-    // Tap the TAP TO SET chip to snap back to the computed 8.7 overall score
+    // Tap the TAP TO SET chip to snap back to the computed 8.0 overall score
     await tester.tap(tapToSetFinder);
     await tester.pump();
-    expect(find.text('8.7'), findsWidgets);
+    expect(find.text('8.0'), findsWidgets);
   });
 
   testWidgets('RatingSpikeSign renders hollow for <= 6.0, full for 6.1-9.4, and 8-point for 9.5-10.0', (WidgetTester tester) async {
@@ -2387,6 +2427,107 @@ void main() {
       find.byWidgetPredicate((w) => w is Text && (w.data == 'LP' || w.data == 'LP // FULL LENGTH') && w.textAlign == TextAlign.center),
       findsNothing,
     );
+  });
+
+  testWidgets('WriteReviewModal renders block-shaped slider, full-width interlude button below tags, and toggles interlude state', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final trackItem = MusicItem(
+      id: 'song_block_slider_test',
+      name: 'Lotus Flower',
+      artist: 'Radiohead',
+      type: MusicType.song,
+      coverUrl: '',
+      releaseDate: '2011',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => WriteReviewModal.show(context, trackItem),
+                child: const Text('OPEN MODAL'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('OPEN MODAL'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Verify slider is present with BrutalistBlockSliderThumbShape and track
+    final sliderFinder = find.byType(Slider);
+    expect(sliderFinder, findsOneWidget);
+    final sliderThemeFinder = find.byType(SliderTheme);
+    expect(sliderThemeFinder, findsOneWidget);
+    final sliderTheme = tester.widget<SliderTheme>(sliderThemeFinder);
+    expect(sliderTheme.data.thumbShape is BrutalistBlockSliderThumbShape, isTrue);
+    expect(sliderTheme.data.trackShape is BrutalistBlockSliderTrackShape, isTrue);
+
+    // Verify MARK AS INTERLUDE button appears below vibes and tags
+    expect(find.text('MARK AS INTERLUDE (SKIP RATING)'), findsOneWidget);
+
+    // Tap to toggle interlude ON
+    await tester.tap(find.text('MARK AS INTERLUDE (SKIP RATING)'));
+    await tester.pump();
+
+    // Now interlude is active:
+    // 1. Full-width button updates to active label
+    expect(find.text('INTERLUDE ACTIVE // NO RATING NEEDED'), findsOneWidget);
+    // 2. Score slider is replaced by INTERLUDE TRACK card
+    expect(find.text('INTERLUDE TRACK'), findsOneWidget);
+    expect(find.byType(Slider), findsNothing);
+    // 3. Submit button updates to SAVE AS INTERLUDE
+    expect(find.text('SAVE AS INTERLUDE'), findsOneWidget);
+
+    // Tap to toggle interlude OFF
+    await tester.tap(find.text('INTERLUDE ACTIVE // NO RATING NEEDED'));
+    await tester.pump();
+
+    // Returns to standard score slider and rating mode
+    expect(find.text('MARK AS INTERLUDE (SKIP RATING)'), findsOneWidget);
+    expect(find.byType(Slider), findsOneWidget);
+  });
+
+  testWidgets('MusicDetailScreen adaptive title adjusts font size dynamically and handles long single words like DEATHCONSCIOUSNESS without breaking words', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final longWordAlbum = MusicItem(
+      id: 'album_deathconscious',
+      name: 'DEATHCONSCIOUSNESS',
+      artist: 'HAVE A NICE LIFE',
+      type: MusicType.album,
+      coverUrl: '',
+      releaseDate: '2008',
+      tracks: const [
+        TrackInfo(id: 't1', name: 'A Quick One Before the Eternal Worm Devours Connecticut', trackNumber: 1, durationMs: 473000, artist: 'HAVE A NICE LIFE'),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: MusicDetailScreen(item: longWordAlbum),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Verify title DEATHCONSCIOUSNESS is rendered
+    expect(find.text('DEATHCONSCIOUSNESS'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 

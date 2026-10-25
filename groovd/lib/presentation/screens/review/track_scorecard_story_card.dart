@@ -571,7 +571,7 @@ class TrackScorecardStoryCard extends StatelessWidget {
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                               style: AppTypography.displaySmall(
-                                                fontSize: 15,
+                                                fontSize: review.musicItemName.length > 30 ? 12.0 : (review.musicItemName.length > 18 ? 13.5 : 15.0),
                                                 color: _primaryTextColor,
                                               ).copyWith(height: 1.15),
                                             ),
@@ -736,7 +736,7 @@ class TrackScorecardStoryCard extends StatelessWidget {
                                     textAlign: TextAlign.center,
                                     overflow: TextOverflow.ellipsis,
                                     style: AppTypography.displaySmall(
-                                      fontSize: 18,
+                                      fontSize: review.musicItemName.length > 30 ? 14.5 : (review.musicItemName.length > 18 ? 16.0 : 18.0),
                                       color: _primaryTextColor,
                                     ).copyWith(height: 1.15),
                                   ),

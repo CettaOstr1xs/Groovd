@@ -100,37 +100,50 @@ class ReviewCard extends ConsumerWidget {
                   ),
                 ),
                 // Score Box
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _scoreColor,
-                    borderRadius: BorderRadius.circular(2),
-                    border: Border.all(color: AppColors.pureBlack, width: 1.5),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      RatingSpikeSign(
-                        rating: review.rating,
-                        size: 14,
-                        color: AppColors.pureBlack,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        review.scoreFormatted,
-                        style: AppTypography.scoreMedium(color: AppColors.pureBlack),
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        '/10',
-                        style: AppTypography.monoBadge(
-                          color: AppColors.pureBlack.withValues(alpha: 0.7),
-                          fontSize: 9,
+                review.isInterlude
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.cyberCyan,
+                          borderRadius: BorderRadius.circular(2),
+                          border: Border.all(color: AppColors.pureBlack, width: 1.5),
+                        ),
+                        child: Text(
+                          'INTERLUDE',
+                          style: AppTypography.monoBadge(color: AppColors.pureBlack, fontSize: 10),
+                        ),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _scoreColor,
+                          borderRadius: BorderRadius.circular(2),
+                          border: Border.all(color: AppColors.pureBlack, width: 1.5),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            RatingSpikeSign(
+                              rating: review.rating,
+                              size: 14,
+                              color: AppColors.pureBlack,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              review.scoreFormatted,
+                              style: AppTypography.scoreMedium(color: AppColors.pureBlack),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '/10',
+                              style: AppTypography.monoBadge(
+                                color: AppColors.pureBlack.withValues(alpha: 0.7),
+                                fontSize: 9,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
               ],
             ),
 
