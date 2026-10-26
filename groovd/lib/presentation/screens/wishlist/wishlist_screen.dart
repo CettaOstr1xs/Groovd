@@ -11,6 +11,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../widgets/brutalist_button.dart';
 import '../detail/music_detail_screen.dart';
 import '../review/write_review_modal.dart';
+import 'wishlist_roll_modal.dart';
 
 enum _WishlistFilter { all, albums, songs }
 enum _WishlistSort { recent, title, artist }
@@ -315,8 +316,41 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
             ? '${widget.targetUserName}\'S WANTLIST'
             : 'WANTLIST');
 
+    final rollCandidates = displayedItems;
+    final bool isFilterEmpty = rollCandidates.isEmpty;
+
+    final String filterContextLabel;
+    if (_filter == _WishlistFilter.albums) {
+      filterContextLabel = isFilterEmpty ? 'ROLL LPS [0]' : 'ROLL LPS';
+    } else if (_filter == _WishlistFilter.songs) {
+      filterContextLabel = isFilterEmpty ? 'ROLL SONGS [0]' : 'ROLL SONGS';
+    } else if (_searchQuery.trim().isNotEmpty) {
+      filterContextLabel = isFilterEmpty ? 'ROLL MATCHES [0]' : 'ROLL MATCHES';
+    } else {
+      filterContextLabel = isFilterEmpty ? 'ROLL QUEUE [0]' : 'ROLL QUEUE';
+    }
+
+    final String emptyMessage;
+    if (allWishlistItems.isEmpty) {
+      emptyMessage = 'QUEUE RELEASES FIRST // YOUR WANTLIST IS EMPTY';
+    } else if (_filter == _WishlistFilter.songs && displayedItems.isEmpty) {
+      emptyMessage = 'NO SONGS IN YOUR WANTLIST // QUEUE TRACKS FIRST';
+    } else if (_filter == _WishlistFilter.albums && displayedItems.isEmpty) {
+      emptyMessage = 'NO LPS IN YOUR WANTLIST // QUEUE ALBUMS FIRST';
+    } else if (_searchQuery.trim().isNotEmpty && displayedItems.isEmpty) {
+      emptyMessage = 'NO MATCHES FOUND // TRY ANOTHER SEARCH QUERY';
+    } else {
+      emptyMessage = 'NO RELEASES FOUND // ADJUST YOUR WANTLIST FILTERS';
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: _WishlistRollDock(
+        rollableItems: rollCandidates,
+        isEmpty: isFilterEmpty,
+        filterContextLabel: filterContextLabel,
+        emptyMessage: emptyMessage,
+      ),
       appBar: AppBar(
         title: Row(
           children: [
@@ -564,7 +598,7 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
                       : _viewMode == _WishlistViewMode.grid
                           ? GridView.builder(
                               key: ValueKey('grid_${_filter.name}_${_sort.name}_${_searchQuery.isNotEmpty}'),
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 3,
                                 childAspectRatio: 1.0,
@@ -587,7 +621,7 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
                             )
                           : ListView.separated(
                               key: ValueKey('list_${_filter.name}_${_sort.name}_${_searchQuery.isNotEmpty}'),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                               itemCount: displayedItems.length,
                               separatorBuilder: (context, index) => const SizedBox(height: 12),
                               itemBuilder: (context, index) {
@@ -961,3 +995,196 @@ class _WishlistCoverCard extends StatelessWidget {
     );
   }
 }
+
+class _WishlistRollDock extends StatefulWidget {
+  final List<WishlistItem> rollableItems;
+  final bool isEmpty;
+  final String filterContextLabel;
+  final String emptyMessage;
+
+  const _WishlistRollDock({
+    required this.rollableItems,
+    required this.isEmpty,
+    required this.filterContextLabel,
+    required this.emptyMessage,
+  });
+
+  @override
+  State<_WishlistRollDock> createState() => _WishlistRollDockState();
+}
+
+class _WishlistRollDockState extends State<_WishlistRollDock> {
+  bool _isPressed = false;
+
+  void _handleRoll(BuildContext context) {
+    if (widget.isEmpty) {
+      HapticFeedback.lightImpact();
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.surfaceElevated,
+          content: Text(
+            widget.emptyMessage,
+            style: AppTypography.monoLabel(color: AppColors.acidLime, fontSize: 11),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    HapticFeedback.heavyImpact();
+    WishlistRollModal.show(context, items: widget.rollableItems);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final count = widget.rollableItems.length;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(
+          top: BorderSide(color: AppColors.borderBold, width: 2.0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.pureBlack,
+            offset: Offset(0, -4),
+            blurRadius: 0,
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Main Interactive Roll Button Strip
+              GestureDetector(
+                onTapDown: (_) => setState(() => _isPressed = true),
+                onTapUp: (_) => setState(() => _isPressed = false),
+                onTapCancel: () => setState(() => _isPressed = false),
+                onTap: () => _handleRoll(context),
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedScale(
+                  scale: _isPressed ? 0.97 : 1.0,
+                  duration: const Duration(milliseconds: 100),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                    decoration: BoxDecoration(
+                      color: widget.isEmpty
+                          ? AppColors.surfaceElevated
+                          : AppColors.acidLime,
+                      borderRadius: BorderRadius.zero, // blocky shape
+                      border: Border.all(
+                        color: widget.isEmpty
+                            ? AppColors.border
+                            : AppColors.pureBlack,
+                        width: 2.0,
+                      ),
+                      boxShadow: widget.isEmpty
+                          ? null
+                          : const [
+                              BoxShadow(
+                                color: AppColors.pureBlack,
+                                offset: Offset(3, 3),
+                                blurRadius: 0,
+                              ),
+                            ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.casino,
+                          size: 18,
+                          color: widget.isEmpty
+                              ? AppColors.textMuted
+                              : AppColors.pureBlack,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          widget.filterContextLabel,
+                          style: AppTypography.displaySmall(
+                            fontSize: 13,
+                          ).copyWith(
+                            color: widget.isEmpty
+                                ? AppColors.textMuted
+                                : AppColors.pureBlack,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                        if (!widget.isEmpty) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.pureBlack,
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            child: Text(
+                              '$count',
+                              style: AppTypography.monoBadge(
+                                color: AppColors.acidLime,
+                                fontSize: 9.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              // Bottom Tastemaker Prompt
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    widget.isEmpty ? 'WANTLIST EMPTY' : "CAN'T DECIDE?",
+                    style: AppTypography.monoLabel(
+                      color: widget.isEmpty
+                          ? AppColors.textMuted
+                          : AppColors.cyberCyan,
+                      fontSize: 9.0,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    widget.isEmpty ? '// QUEUE RELEASES FIRST' : '•',
+                    style: AppTypography.monoLabel(
+                      color: AppColors.textMuted,
+                      fontSize: 9.0,
+                    ),
+                  ),
+                  if (!widget.isEmpty) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      'CRITIC ROULETTE',
+                      style: AppTypography.monoLabel(
+                        color: AppColors.acidLime,
+                        fontSize: 9.0,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

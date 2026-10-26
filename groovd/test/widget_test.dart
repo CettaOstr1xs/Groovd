@@ -37,6 +37,7 @@ import 'package:groovd/state/artist_providers.dart';
 import 'package:groovd/state/onboarding_provider.dart';
 import 'package:groovd/state/review_providers.dart';
 import 'package:groovd/presentation/screens/wishlist/wishlist_screen.dart';
+import 'package:groovd/presentation/screens/wishlist/wishlist_roll_modal.dart';
 import 'package:groovd/presentation/screens/review/track_scorecard_story_card.dart';
 import 'package:groovd/data/models/wishlist_item.dart';
 import 'package:groovd/state/wishlist_provider.dart';
@@ -2348,7 +2349,8 @@ void main() {
 
     // Verify header and counters
     expect(find.text('CRITIC WANTLIST'), findsOneWidget);
-    expect(find.text('2'), findsOneWidget);
+    expect(find.descendant(of: find.byType(AppBar), matching: find.text('2')), findsOneWidget);
+    expect(find.text('CRITIC ROULETTE'), findsOneWidget);
 
     // Verify sort button and view mode toggle buttons exist
     expect(find.text('RECENT'), findsOneWidget);
@@ -2529,5 +2531,202 @@ void main() {
     expect(find.text('DEATHCONSCIOUSNESS'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('WishlistScreen roll dock shows empty queue prompt and snackbar when wantlist is empty', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          wishlistProvider.overrideWith(() => _TestWishlistNotifier([])),
+        ],
+        child: const MaterialApp(
+          home: WishlistScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Verify roll dock is placed at bottom and indicates empty state
+    expect(find.text('WANTLIST EMPTY'), findsWidgets);
+    expect(find.text('ROLL QUEUE [0]'), findsOneWidget);
+
+    // Tap the roll button when empty
+    await tester.tap(find.text('ROLL QUEUE [0]'));
+    await tester.pump();
+
+    // Verifies brutalist prompt snackbar
+    expect(find.text('QUEUE RELEASES FIRST // YOUR WANTLIST IS EMPTY'), findsOneWidget);
+  });
+
+  testWidgets('WishlistScreen roll feature adapts to filters and launches Sonic Roulette modal with roll animation, winner card, and reroll action', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final wishItems = [
+      WishlistItem(
+        musicItem: const MusicItem(
+          id: 'album_in_rainbows',
+          name: 'IN RAINBOWS',
+          artist: 'RADIOHEAD',
+          type: MusicType.album,
+          coverUrl: '',
+          releaseDate: '2007-10-10',
+          trackCount: 10,
+        ),
+        addedAt: DateTime.now(),
+      ),
+      WishlistItem(
+        musicItem: const MusicItem(
+          id: 'song_weird_fishes',
+          name: 'WEIRD FISHES / ARPEGGI',
+          artist: 'RADIOHEAD',
+          type: MusicType.song,
+          coverUrl: '',
+          releaseDate: '2007-10-10',
+        ),
+        addedAt: DateTime.now(),
+      ),
+      WishlistItem(
+        musicItem: const MusicItem(
+          id: 'album_javelin',
+          name: 'JAVELIN',
+          artist: 'SUFJAN STEVENS',
+          type: MusicType.album,
+          coverUrl: '',
+          releaseDate: '2023-10-06',
+          trackCount: 10,
+        ),
+        addedAt: DateTime.now(),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          wishlistProvider.overrideWith(() => _TestWishlistNotifier(wishItems)),
+        ],
+        child: const MaterialApp(
+          home: WishlistScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // 1. Roll dock docked at bottom
+    expect(find.text("CAN'T DECIDE?"), findsOneWidget);
+    expect(find.text('CRITIC ROULETTE'), findsOneWidget);
+    expect(find.text('ROLL QUEUE'), findsOneWidget);
+
+    // 2. Select LPS filter -> roll button text updates to ROLL LPS
+    await tester.tap(find.text('LPS (2)'));
+    await tester.pumpAndSettle();
+    expect(find.text('ROLL LPS'), findsOneWidget);
+
+    // 3. Select SONGS filter -> roll button text updates to ROLL SONGS
+    await tester.tap(find.text('SONGS (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('ROLL SONGS'), findsOneWidget);
+
+    // 4. Select ALL filter -> returns to ROLL QUEUE
+    await tester.tap(find.text('ALL (3)'));
+    await tester.pumpAndSettle();
+    expect(find.text('ROLL QUEUE'), findsOneWidget);
+
+    // 5. Tap the ROLL button to trigger Sonic Roulette
+    await tester.tap(find.text('ROLL QUEUE'));
+    await tester.pump(); // Start modal bottom sheet opening
+    await tester.pump(const Duration(milliseconds: 300)); // Entrance animation
+
+    expect(find.byType(WishlistRollModal), findsOneWidget);
+    expect(find.text('SONIC ROULETTE // SHUFFLING...'), findsOneWidget);
+    expect(find.textContaining('CYCLING THROUGH 3 QUEUED RELEASES'), findsOneWidget);
+
+    // Advance the roll sequence through deceleration ticks (19 steps from ~45ms to ~450ms)
+    for (int i = 0; i < 25; i++) {
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    // Roll completed: Grand reveal card is displayed
+    expect(find.text("TONIGHT'S CRITIC SPIN"), findsOneWidget);
+    expect(find.text('RANDOM PICK LOCKED FROM YOUR WANTLIST'), findsOneWidget);
+    expect(find.text('LISTEN NOW // ARCHIVE'), findsOneWidget);
+    expect(find.text('REROLL [↻]'), findsOneWidget);
+    expect(find.text('RATE & REVIEW NOW [★]'), findsOneWidget);
+
+    // 6. Test REROLL [↻] restarts the spin sequence
+    await tester.tap(find.text('REROLL [↻]'));
+    await tester.pump();
+    expect(find.text('SONIC ROULETTE // SHUFFLING...'), findsOneWidget);
+
+    // Advance through the reroll sequence
+    for (int i = 0; i < 25; i++) {
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    // Locked again
+    expect(find.text("TONIGHT'S CRITIC SPIN"), findsOneWidget);
+  });
+
+  testWidgets('WishlistScreen roll does not roll LPs when filtering by songs if songs is empty, and vice versa', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    // Setup wantlist with ONLY LPs (0 songs)
+    final onlyLps = [
+      WishlistItem(
+        musicItem: const MusicItem(
+          id: 'album_kid_a',
+          name: 'KID A',
+          artist: 'RADIOHEAD',
+          type: MusicType.album,
+          coverUrl: '',
+          releaseDate: '2000-10-02',
+          trackCount: 10,
+        ),
+        addedAt: DateTime.now(),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          wishlistProvider.overrideWith(() => _TestWishlistNotifier(onlyLps)),
+        ],
+        child: const MaterialApp(
+          home: WishlistScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Tap SONGS (0) filter
+    await tester.tap(find.text('SONGS (0)'));
+    await tester.pumpAndSettle();
+
+    // Verify button shows ROLL SONGS [0]
+    expect(find.text('ROLL SONGS [0]'), findsOneWidget);
+
+    // Tap ROLL SONGS [0]
+    await tester.tap(find.text('ROLL SONGS [0]'));
+    await tester.pump();
+
+    // Expect snackbar informing no songs in wantlist, NOT opening roll modal or rolling LPs
+    expect(find.text('NO SONGS IN YOUR WANTLIST // QUEUE TRACKS FIRST'), findsOneWidget);
+    expect(find.byType(WishlistRollModal), findsNothing);
+
+    // Now switch to LPS (1) filter
+    await tester.tap(find.text('LPS (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('ROLL LPS'), findsOneWidget);
+  });
 }
+
 
