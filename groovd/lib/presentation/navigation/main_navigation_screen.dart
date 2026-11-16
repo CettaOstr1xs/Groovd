@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
@@ -6,9 +7,11 @@ import 'package:groovd/presentation/screens/home/home_screen.dart';
 import 'package:groovd/presentation/screens/search/search_screen.dart';
 import 'package:groovd/presentation/screens/friends/friends_screen.dart';
 import 'package:groovd/presentation/screens/profile/profile_screen.dart';
+import 'package:groovd/presentation/screens/chat/critic_chat_modal.dart';
 import 'package:groovd/state/settings_provider.dart';
 import 'package:groovd/state/user_profile_provider.dart';
 import '../widgets/critic_avatar.dart';
+import '../widgets/rating_spike_sign.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
@@ -67,28 +70,34 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           child: SizedBox(
             height: 62,
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
-                // Sliding acid-lime indicator bar atop the selected tab
-                AnimatedAlign(
-                  alignment: Alignment(-1.0 + (_currentIndex * (2.0 / 3.0)), -1.0),
-                  duration: const Duration(milliseconds: 240),
-                  curve: Curves.easeOutCubic,
-                  child: FractionallySizedBox(
-                    widthFactor: 1 / 4,
-                    child: Container(
-                      height: 3.0,
-                      decoration: const BoxDecoration(
-                        color: AppColors.acidLime,
-                        boxShadow: [
-                          BoxShadow(
+                // Sliding acid-lime indicator bar atop the selected tab (5 slots)
+                Builder(
+                  builder: (context) {
+                    final slotIndex = _currentIndex < 2 ? _currentIndex : _currentIndex + 1;
+                    return AnimatedAlign(
+                      alignment: Alignment(-1.0 + (slotIndex * 0.5), -1.0),
+                      duration: const Duration(milliseconds: 240),
+                      curve: Curves.easeOutCubic,
+                      child: FractionallySizedBox(
+                        widthFactor: 1 / 5,
+                        child: Container(
+                          height: 3.0,
+                          decoration: const BoxDecoration(
                             color: AppColors.acidLime,
-                            blurRadius: 6,
-                            offset: Offset(0, 1),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.acidLime,
+                                blurRadius: 6,
+                                offset: Offset(0, 1),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
 
                 Row(
@@ -105,6 +114,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                       activeIcon: Icons.search,
                       label: 'SEARCH',
                     ),
+                    _buildCriticNavButton(context),
                     _buildNavItem(
                       index: 2,
                       icon: Icons.people_outline,
@@ -122,6 +132,62 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCriticNavButton(BuildContext context) {
+    return Expanded(
+      child: Transform.translate(
+        offset: const Offset(0, -12),
+        child: GestureDetector(
+          key: const Key('nav_center_critic_btn'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            HapticFeedback.heavyImpact();
+            CriticChatModal.show(context);
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 52,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.acidLime,
+                  borderRadius: BorderRadius.zero,
+                  border: Border.all(
+                    color: AppColors.pureBlack,
+                    width: 2.0,
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.pureBlack,
+                      offset: Offset(2.0, 2.0),
+                      blurRadius: 0,
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: RatingSpikeSign(
+                    rating: 10.0,
+                    size: 22,
+                    color: AppColors.pureBlack,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'GROOVD AI',
+                style: AppTypography.monoBadge(
+                  color: AppColors.acidLime,
+                  fontSize: 8.5,
+                ),
+              ),
+            ],
           ),
         ),
       ),

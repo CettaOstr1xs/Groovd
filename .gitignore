@@ -13,6 +13,10 @@
 **/GoogleService-Info.plist
 **/*firebase_options*.dart
 
+# AI configuration & credentials
+**/gemini_config.dart
+!**/gemini_config.example.dart
+
 # Keystores & signing
 *.keystore
 *.jks
@@ -45,6 +49,21 @@
 .DS_Store
 Thumbs.db
 __MACOSX/
+
+# Agent configurations & skills
+.agents/
+**/.agents/
+groovd/.agents
+.superpowers/
+**/.superpowers/
+AGENTS.md
+**/AGENTS.md
+GEMINI.md
+**/GEMINI.md
+
+# Documentation & specifications
+docs/
+**/docs/
 
 # Vendor raw archives
 gsap-public/

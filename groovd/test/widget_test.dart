@@ -30,6 +30,7 @@ import 'package:groovd/presentation/screens/search/search_screen.dart';
 import 'package:groovd/presentation/navigation/main_navigation_screen.dart';
 import 'package:groovd/presentation/widgets/critic_followers_stats_row.dart';
 import 'package:groovd/presentation/screens/friends/friends_screen.dart';
+import 'package:groovd/presentation/screens/chat/critic_chat_modal.dart';
 import 'package:groovd/presentation/screens/friends/friend_profile_screen.dart';
 import 'package:groovd/data/models/friend_profile.dart';
 import 'package:groovd/state/friends_provider.dart';
@@ -41,6 +42,7 @@ import 'package:groovd/presentation/screens/wishlist/wishlist_roll_modal.dart';
 import 'package:groovd/presentation/screens/review/track_scorecard_story_card.dart';
 import 'package:groovd/data/models/wishlist_item.dart';
 import 'package:groovd/state/wishlist_provider.dart';
+import 'package:groovd/state/gemini_settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _CompletedOnboardingNotifier extends OnboardingNotifier {
@@ -2726,6 +2728,94 @@ void main() {
     await tester.tap(find.text('LPS (1)'));
     await tester.pumpAndSettle();
     expect(find.text('ROLL LPS'), findsOneWidget);
+  });
+
+  testWidgets('Bottom navigation bar renders 5 navigation slots and center critic AI button opens modal', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: MainNavigationScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Verify all 4 tabs + center critic AI slot
+    expect(find.text('DISPATCH'), findsOneWidget);
+    expect(find.text('SEARCH'), findsOneWidget);
+    expect(find.text('GROOVD AI'), findsOneWidget);
+    expect(find.byType(RatingSpikeSign), findsWidgets);
+    expect(find.byIcon(Icons.bolt), findsNothing);
+    expect(find.text('FRIENDS'), findsOneWidget);
+    expect(find.text('DOSSIER'), findsOneWidget);
+
+    // Tap Center Critic AI button
+    await tester.tap(find.byKey(const Key('nav_center_critic_btn')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(CriticChatModal), findsOneWidget);
+  });
+
+  testWidgets('Settings modal contains GEMINI CRITIC API KEY tile and saves key', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userReviewsProvider.overrideWith((ref, userId) async => []),
+        ],
+        child: const MaterialApp(
+          home: ProfileScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Tap Settings gear icon
+    final settingsButton = find.byTooltip('Settings');
+    expect(settingsButton, findsOneWidget);
+    await tester.tap(settingsButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Verify GEMINI CRITIC API KEY tile is present and reports CONFIGURED (bundled key)
+    expect(find.text('GEMINI CRITIC API KEY'), findsOneWidget);
+    expect(find.text('CONFIGURED'), findsOneWidget);
+
+    // Tap on GEMINI CRITIC API KEY tile
+    await tester.tap(find.text('GEMINI CRITIC API KEY'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Input dialog is shown
+    expect(find.byKey(const Key('gemini_settings_dialog_key_input')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('gemini_settings_dialog_key_input')), 'AIzaTestSecretKey123');
+    await tester.pump();
+
+    // Tap SAVE KEY button
+    await tester.tap(find.byKey(const Key('gemini_settings_dialog_save_btn')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Verify key is saved in geminiSettingsProvider
+    final element = tester.element(find.byType(ProfileScreen));
+    final container = ProviderScope.containerOf(element);
+    expect(container.read(geminiSettingsProvider).apiKey, 'AIzaTestSecretKey123');
+    expect(container.read(geminiSettingsProvider).isConfigured, isTrue);
+
+    // Verify status updated to CONFIGURED
+    expect(find.text('CONFIGURED'), findsOneWidget);
   });
 }
 

@@ -42,6 +42,16 @@ website/*.bin
 # Symbolication related
 app.*.symbols
 
+# Agent configurations & skills
+.agents/
+.agents
+AGENTS.md
+**/AGENTS.md
+GEMINI.md
+**/GEMINI.md
+docs/
+**/docs/
+
 # Obfuscation related
 app.*.map.json
 
@@ -62,6 +72,8 @@ app.*.map.json
 google-services.json
 GoogleService-Info.plist
 *firebase_options*.dart
+**/gemini_config.dart
+!**/gemini_config.example.dart
 
 # Android signing / keystores
 *.keystore

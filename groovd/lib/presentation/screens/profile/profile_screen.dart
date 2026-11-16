@@ -34,6 +34,7 @@ import 'package:groovd/state/review_providers.dart';
 import 'package:groovd/state/user_lists_provider.dart';
 import 'package:groovd/state/user_profile_provider.dart';
 import 'package:groovd/state/wishlist_provider.dart';
+import 'package:groovd/state/gemini_settings_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -890,6 +891,112 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
 
+                    // Gemini Critic AI Settings Tile
+                    Consumer(
+                      builder: (ctx, cRef, _) {
+                        final geminiSettings = cRef.watch(geminiSettingsProvider);
+                        final isConfigured = geminiSettings.isConfigured;
+
+                        return InkWell(
+                          onTap: () => _showGeminiApiKeyDialog(context, ref),
+                          borderRadius: BorderRadius.circular(2),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceCard,
+                              border: Border.all(
+                                color: isConfigured ? AppColors.acidLime : AppColors.border,
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const RatingSpikeSign(
+                                          rating: 10.0,
+                                          size: 18,
+                                          color: AppColors.acidLime,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'GEMINI CRITIC API KEY',
+                                          style: AppTypography.monoLabel(
+                                            color: AppColors.textPrimary,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isConfigured
+                                            ? AppColors.acidLime.withValues(alpha: 0.15)
+                                            : AppColors.surfaceElevated,
+                                        border: Border.all(
+                                          color: isConfigured
+                                              ? AppColors.acidLime
+                                              : AppColors.border,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        isConfigured
+                                            ? 'CONFIGURED'
+                                            : 'FREE TIER KEY REQUIRED',
+                                        style: AppTypography.monoBadge(
+                                          color: isConfigured
+                                              ? AppColors.acidLime
+                                              : AppColors.textSecondary,
+                                          fontSize: 9,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Connect your free AI API key (Google AI Studio) to unlock personalized music criticism and taste roasts.',
+                                  style: AppTypography.bodySmall(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                BrutalistButton(
+                                  label: isConfigured ? 'CONFIGURE / CHANGE KEY' : 'ENTER GEMINI API KEY',
+                                  icon: Icons.key,
+                                  backgroundColor: isConfigured
+                                      ? AppColors.surfaceElevated
+                                      : AppColors.acidLime,
+                                  textColor: isConfigured
+                                      ? AppColors.textPrimary
+                                      : AppColors.pureBlack,
+                                  borderColor: isConfigured
+                                      ? AppColors.borderBold
+                                      : AppColors.pureBlack,
+                                  isSmall: true,
+                                  isFullWidth: true,
+                                  onPressed: () {
+                                    _showGeminiApiKeyDialog(context, ref);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
                     // Cloud Dossier / Authentication Section
                     Consumer(
                       builder: (ctx, cRef, _) {
@@ -1134,6 +1241,164 @@ class ProfileScreen extends ConsumerWidget {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  void _showGeminiApiKeyDialog(BuildContext context, WidgetRef ref) {
+    final geminiSettings = ref.read(geminiSettingsProvider);
+    final keyController = TextEditingController(text: geminiSettings.apiKey);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: EdgeInsets.only(
+            top: 20,
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            border: Border(
+              top: BorderSide(color: AppColors.acidLime, width: 2.0),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('GEMINI CRITIC KEY', style: AppTypography.displaySmall(fontSize: 14)),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'GOOGLE AI STUDIO // FREE TIER (15 RPM)',
+                style: AppTypography.monoLabel(
+                  color: AppColors.textSecondary,
+                  fontSize: 10.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.pureBlack,
+                  border: Border.all(color: AppColors.border, width: 1.5),
+                ),
+                child: TextField(
+                  key: const Key('gemini_settings_dialog_key_input'),
+                  controller: keyController,
+                  obscureText: true,
+                  style: AppTypography.monoLabel(
+                    fontSize: 12,
+                    color: AppColors.textPrimary,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'PASTE GEMINI API KEY (AIza...)',
+                    hintStyle: AppTypography.monoLabel(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  if (geminiSettings.isConfigured) ...[
+                    Expanded(
+                      child: BrutalistButton(
+                        label: 'CLEAR KEY',
+                        icon: Icons.delete_outline,
+                        backgroundColor: AppColors.surfaceElevated,
+                        textColor: AppColors.vermillion,
+                        borderColor: AppColors.vermillion,
+                        isSmall: true,
+                        onPressed: () async {
+                          await ref.read(geminiSettingsProvider.notifier).clearApiKey();
+                          if (ctx.mounted) {
+                            Navigator.of(ctx).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'GEMINI API KEY REMOVED',
+                                  style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                ),
+                                backgroundColor: AppColors.acidLime,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: GestureDetector(
+                      key: const Key('gemini_settings_dialog_save_btn'),
+                      onTap: () async {
+                        final key = keyController.text.trim();
+                        if (key.isNotEmpty) {
+                          HapticFeedback.heavyImpact();
+                          await ref.read(geminiSettingsProvider.notifier).saveApiKey(key);
+                          if (ctx.mounted) {
+                            Navigator.of(ctx).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'GEMINI API KEY STORED SECURELY',
+                                  style: AppTypography.monoBadge(color: AppColors.pureBlack),
+                                ),
+                                backgroundColor: AppColors.acidLime,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: const BoxDecoration(
+                          color: AppColors.acidLime,
+                          borderRadius: BorderRadius.zero,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.pureBlack,
+                              offset: Offset(2, 2),
+                              blurRadius: 0,
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            'SAVE KEY',
+                            style: AppTypography.displaySmall(fontSize: 12).copyWith(
+                              color: AppColors.pureBlack,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       },
     );
