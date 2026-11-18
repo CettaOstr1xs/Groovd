@@ -299,6 +299,74 @@ void main() {
       expect(formatTag('#AOTY_CONTENDER'), '#AOTY_CONTENDER');
       expect(formatTag('night drives  '), '#NIGHT_DRIVES');
     });
+
+    test('areTitlesEquivalent prevents substring collisions between distinct songs like Mary and I Think About Mary Poppins', () {
+      // Must NOT match substring titles
+      expect(MusicItem.areTitlesEquivalent('Mary', 'I Think About Mary Poppins'), isFalse);
+      expect(MusicItem.areTitlesEquivalent('I Think About Mary Poppins', 'Mary'), isFalse);
+      expect(MusicItem.areTitlesEquivalent('Mary', 'Proud Mary'), isFalse);
+      expect(MusicItem.areTitlesEquivalent('You', 'Wish You Were Here'), isFalse);
+
+      // Must STILL match legitimate edition variations and Cyrillic transliterations
+      expect(MusicItem.areTitlesEquivalent('Deathconsciousness', 'Deathconsciousness (Deluxe Edition)'), isTrue);
+      expect(MusicItem.areTitlesEquivalent('Loveless - Remastered', 'Loveless'), isTrue);
+      expect(MusicItem.areTitlesEquivalent('Группа крови', 'Gruppa krovi'), isTrue);
+    });
+
+    test('areArtistsEquivalent prevents substring collisions between distinct artists', () {
+      expect(MusicItem.areArtistsEquivalent('My Dead Girlfriend', 'Dead'), isFalse);
+      expect(MusicItem.areArtistsEquivalent('My Dead Girlfriend', 'Girlfriend'), isFalse);
+      expect(MusicItem.areArtistsEquivalent('The Cure', 'The'), isFalse);
+
+      // Must STILL match "The" prefix differences, aliases, and Cyrillic transliterations
+      expect(MusicItem.areArtistsEquivalent('The Beatles', 'Beatles'), isTrue);
+      expect(MusicItem.areArtistsEquivalent('kino', 'кино'), isTrue);
+      expect(MusicItem.areArtistsEquivalent('Tokyo Shoegazer', '東京酒吐座(Tokyo Shoegazer)'), isTrue);
+    });
+
+    test('Review.matchesItem does not match different tracks sharing words in their titles', () {
+      final review = Review(
+        id: 'rev_mary_poppins',
+        musicItemId: 'track_mary_poppins_123',
+        musicItemName: 'I Think About Mary Poppins',
+        artistName: 'My Dead Girlfriend',
+        coverUrl: '',
+        itemType: 'song',
+        userId: 'user_me',
+        userName: 'Critic',
+        userHandle: '@critic',
+        rating: 9.5,
+        headline: '',
+        body: '',
+        createdAt: DateTime.now(),
+      );
+
+      // Mary track on another album (or even same artist) must NOT match
+      final isMatchOtherArtist = review.matchesItem(
+        id: 'track_mary_456',
+        name: 'Mary',
+        artist: 'Alex G',
+        type: 'song',
+      );
+      expect(isMatchOtherArtist, isFalse);
+
+      final isMatchSameArtist = review.matchesItem(
+        id: 'track_mary_789',
+        name: 'Mary',
+        artist: 'My Dead Girlfriend',
+        type: 'song',
+      );
+      expect(isMatchSameArtist, isFalse);
+
+      // Exact track must match
+      final isMatchSelf = review.matchesItem(
+        id: 'track_mary_poppins_123',
+        name: 'I Think About Mary Poppins',
+        artist: 'My Dead Girlfriend',
+        type: 'song',
+      );
+      expect(isMatchSelf, isTrue);
+    });
   });
 
   group('Wishlist Feature Tests', () {

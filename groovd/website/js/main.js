@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSplashScreen();
   initDownload();
   initRatingPlayground();
+  initCriticConsole();
   initSideloadAccordion();
   initStickyBar();
   initDeviceBadge();
@@ -225,4 +226,148 @@ function initStickyBar() {
 
   window.addEventListener('scroll', handleSticky, { passive: true });
   window.addEventListener('resize', handleSticky, { passive: true });
+}
+
+/* =========================================================================
+   6. GROOVD AI // Resident Critic Console (Zero Emojis • Scramble Decoder)
+   ========================================================================= */
+function initCriticConsole() {
+  const outputEl = document.getElementById('critic-text-output');
+  const chipBtns = document.querySelectorAll('.critic-chip-btn');
+  const albumEmbed = document.getElementById('critic-album-embed');
+  const visionBox = document.getElementById('critic-vision-box');
+  const userPromptLabel = document.getElementById('critic-user-prompt-label');
+
+  if (!outputEl || chipBtns.length === 0) return;
+
+  const scenarios = {
+    roast: {
+      prompt: 'QUERY: WHY DOES DECIMAL SCORING MATTER?',
+      showVision: false,
+      text: 'The 5-star rating system is broken. Everything collapses into a bland 3 or 4 stars, lost in the grey mush of algorithmic consensus.\n\nA 10.0 decimal system demands real conviction. An 8.2 is a thrilling, deeply flawed underground record with flashes of brilliance. An 8.8 is a future classic. A 9.7 permanently rewires your neurological chemistry.\n\nWhen you score with decimal precision, you stop being a passive listener and start documenting a definitive personal canon.',
+      album: {
+        title: 'OK COMPUTER',
+        artist: 'RADIOHEAD',
+        art: 'assets/covers/ok_computer.jpg',
+        badge: '9.8 CANON'
+      }
+    },
+    recommend: {
+      prompt: 'QUERY: HOW ARE YOU DIFFERENT FROM STREAMING APPS?',
+      showVision: false,
+      text: 'Streaming algorithms optimize for low-friction background wallpaper—pleasant, predictable tracks designed not to offend so you leave the playlist running.\n\nGROOVD AI is grounded in decades of independent music criticism, underground pressing history, and uncompromising acoustic analysis. It does not recommend what is safe. It recommends what will shake you out of musical complacency.',
+      album: {
+        title: 'UNKNOWN PLEASURES',
+        artist: 'JOY DIVISION',
+        art: 'assets/covers/unknown_pleasures.jpg',
+        badge: 'CULTURE SHIFT'
+      }
+    },
+    gear: {
+      prompt: 'MULTIMODAL: CAN YOU REALLY INSPECT MY RECORD SETUP?',
+      showVision: true,
+      text: 'Snap a photo of your turntable, your cartridge alignment, or the matrix etchings in your vinyl runout groove.\n\nGROOVD AI detects plinth vibration, tracking angle errors, and room acoustic placement from a single camera shot. It is the difference between hearing compressed surface noise and unlocking the full dynamic headroom of your physical pressings.',
+      album: {
+        title: 'THE DARK SIDE OF THE MOON',
+        artist: 'PINK FLOYD',
+        art: 'assets/covers/the_dark_side_of_the_moon.jpg',
+        badge: '180G AUDIOPHILE'
+      }
+    },
+    take: {
+      prompt: 'QUERY: HOW DOES THIS IMPROVE MY ALBUM REVIEWS?',
+      showVision: false,
+      text: 'Most album logs are just a forgotten star rating and a date. GROOVD turns your listening history into an active intellectual archive.\n\nDebate your hottest takes, track rating spikes across full tracklists, filter out interludes, and archive your entire physical and digital collection in a private, telemetry-free notebook.',
+      album: {
+        title: 'TO PIMP A BUTTERFLY',
+        artist: 'KENDRICK LAMAR',
+        art: 'assets/covers/to_pimp_a_butterfly.jpg',
+        badge: 'CRITIC DOSSIER'
+      }
+    }
+  };
+
+  let isScrambling = false;
+  const chars = '#$%&*+/<=>?@[\\]^_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  function scrambleDecode(targetText, onDone) {
+    if (isScrambling) return;
+    isScrambling = true;
+
+    outputEl.textContent = '';
+    let currentIdx = 0;
+    const totalChars = targetText.length;
+    const stepDuration = 18;
+
+    const timer = setInterval(() => {
+      let displayStr = targetText.slice(0, currentIdx);
+
+      for (let i = 0; i < 3 && currentIdx + i < totalChars; i++) {
+        if (targetText[currentIdx + i] === ' ' || targetText[currentIdx + i] === '\n') {
+          displayStr += targetText[currentIdx + i];
+        } else {
+          displayStr += chars[Math.floor(Math.random() * chars.length)];
+        }
+      }
+
+      outputEl.textContent = displayStr;
+      currentIdx += 2;
+
+      if (currentIdx >= totalChars) {
+        clearInterval(timer);
+        outputEl.textContent = targetText;
+        isScrambling = false;
+        if (onDone) onDone();
+      }
+    }, stepDuration);
+  }
+
+  function activateScenario(key) {
+    const data = scenarios[key];
+    if (!data || isScrambling) return;
+
+    chipBtns.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.scenario === key);
+    });
+
+    if (userPromptLabel) {
+      userPromptLabel.textContent = data.prompt;
+    }
+
+    if (visionBox) {
+      visionBox.style.display = data.showVision ? 'flex' : 'none';
+    }
+
+    if (albumEmbed) {
+      albumEmbed.style.opacity = '0';
+      albumEmbed.style.pointerEvents = 'none';
+    }
+
+    scrambleDecode(data.text, () => {
+      if (albumEmbed && data.album) {
+        const titleEl = albumEmbed.querySelector('.critic-album-title');
+        const artistEl = albumEmbed.querySelector('.critic-album-artist');
+        const badgeEl = albumEmbed.querySelector('.critic-album-badge');
+        const artEl = albumEmbed.querySelector('.critic-album-art');
+
+        if (titleEl) titleEl.textContent = data.album.title;
+        if (artistEl) artistEl.textContent = data.album.artist;
+        if (badgeEl) badgeEl.textContent = data.album.badge;
+        if (artEl) artEl.src = data.album.art;
+
+        albumEmbed.style.opacity = '1';
+        albumEmbed.style.pointerEvents = 'auto';
+      }
+    });
+  }
+
+  chipBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const scenarioKey = btn.dataset.scenario;
+      if (scenarioKey) activateScenario(scenarioKey);
+    });
+  });
+
+  // Initial trigger
+  activateScenario('roast');
 }

@@ -537,30 +537,37 @@ class MusicItem {
     final a1 = normalizeArtist(artist1);
     final a2 = normalizeArtist(artist2);
     if (a1.isEmpty || a2.isEmpty) return false;
-    if (a1 == a2 || a1.contains(a2) || a2.contains(a1)) return true;
+    if (a1 == a2) return true;
+
+    // Strip optional leading 'the ' prefix (e.g. 'The Beatles' vs 'Beatles')
+    final cleanThe1 = a1.startsWith('the ') ? a1.substring(4).trim() : a1;
+    final cleanThe2 = a2.startsWith('the ') ? a2.substring(4).trim() : a2;
+    if (cleanThe1.isNotEmpty && cleanThe1 == cleanThe2) return true;
 
     // Direct key equivalence via Cyrillic-to-Latin transliteration
     final k1 = toLatinKey(a1);
     final k2 = toLatinKey(a2);
-    if (k1.isNotEmpty && k2.isNotEmpty && (k1 == k2 || k1.contains(k2) || k2.contains(k1))) {
+    if (k1.isNotEmpty && k2.isNotEmpty && k1 == k2) {
       return true;
     }
 
     // Check parenthesized alias extraction e.g. 東京酒吐座(Tokyo Shoegazer)
     final p1 = RegExp(r'\(([^)]+)\)').firstMatch(a1)?.group(1)?.trim();
-    if (p1 != null && p1.isNotEmpty && (p1 == a2 || p1.contains(a2) || a2.contains(p1))) {
-      return true;
+    if (p1 != null && p1.isNotEmpty) {
+      final normP1 = normalizeArtist(p1);
+      if (normP1 == a2 || toLatinKey(normP1) == k2) return true;
     }
     final p2 = RegExp(r'\(([^)]+)\)').firstMatch(a2)?.group(1)?.trim();
-    if (p2 != null && p2.isNotEmpty && (p2 == a1 || p2.contains(a1) || a1.contains(p2))) {
-      return true;
+    if (p2 != null && p2.isNotEmpty) {
+      final normP2 = normalizeArtist(p2);
+      if (normP2 == a1 || toLatinKey(normP2) == k1) return true;
     }
 
     // Check alias mapping
     final aliases1 = _artistAliases[a1] ?? const [];
     if (aliases1.any((alias) {
       final aLower = alias.toLowerCase();
-      return a2 == aLower || a2.contains(aLower) || toLatinKey(a2) == toLatinKey(aLower);
+      return a2 == aLower || toLatinKey(a2) == toLatinKey(aLower);
     })) {
       return true;
     }
@@ -568,7 +575,7 @@ class MusicItem {
     final aliases2 = _artistAliases[a2] ?? const [];
     if (aliases2.any((alias) {
       final aLower = alias.toLowerCase();
-      return a1 == aLower || a1.contains(aLower) || toLatinKey(a1) == toLatinKey(aLower);
+      return a1 == aLower || toLatinKey(a1) == toLatinKey(aLower);
     })) {
       return true;
     }
@@ -581,12 +588,12 @@ class MusicItem {
     final n1 = normalizeTitle(name1);
     final n2 = normalizeTitle(name2);
     if (n1.isEmpty || n2.isEmpty) return false;
-    if (n1 == n2 || n1.contains(n2) || n2.contains(n1)) return true;
+    if (n1 == n2) return true;
 
     // Key equivalence via transliteration
     final k1 = toLatinKey(n1);
     final k2 = toLatinKey(n2);
-    if (k1.isNotEmpty && k2.isNotEmpty && (k1 == k2 || k1.contains(k2) || k2.contains(k1))) {
+    if (k1.isNotEmpty && k2.isNotEmpty && k1 == k2) {
       return true;
     }
 

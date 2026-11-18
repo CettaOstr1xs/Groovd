@@ -27,7 +27,7 @@
   <link rel="icon" type="image/png" href="assets/icon/groovd-logo.png">
 
   <!-- Stylesheet (versioned to ensure instant browser cache refresh) -->
-  <link rel="stylesheet" href="css/styles.css?v=5.2">
+  <link rel="stylesheet" href="css/styles.css?v=7.0">
 </head>
 <body>
 
@@ -75,7 +75,7 @@
     </div>
 
     <div class="splash-footer">
-      GROOVD // ARCHIVE v1.0
+      GROOVD // ARCHIVE v1.1
     </div>
   </div>
 
@@ -90,7 +90,7 @@
       <span>//</span>
       <span>ZERO SOFT SHADOWS</span>
       <span>//</span>
-      <span>OFFICIAL ANDROID V1.0.0 RELEASE</span>
+      <span>OFFICIAL ANDROID V1.1.0 RELEASE</span>
       <span>//</span>
       <span>DIRECT APK DOWNLOAD</span>
       <span>//</span>
@@ -102,7 +102,7 @@
       <span>//</span>
       <span>ZERO SOFT SHADOWS</span>
       <span>//</span>
-      <span>OFFICIAL ANDROID V1.0.0 RELEASE</span>
+      <span>OFFICIAL ANDROID V1.1.0 RELEASE</span>
       <span>//</span>
       <span>DIRECT APK DOWNLOAD</span>
       <span>//</span>
@@ -116,7 +116,7 @@
       <span>//</span>
       <span>ZERO SOFT SHADOWS</span>
       <span>//</span>
-      <span>OFFICIAL ANDROID V1.0.0 RELEASE</span>
+      <span>OFFICIAL ANDROID V1.1.0 RELEASE</span>
       <span>//</span>
       <span>DIRECT APK DOWNLOAD</span>
       <span>//</span>
@@ -128,7 +128,7 @@
       <span>//</span>
       <span>ZERO SOFT SHADOWS</span>
       <span>//</span>
-      <span>OFFICIAL ANDROID V1.0.0 RELEASE</span>
+      <span>OFFICIAL ANDROID V1.1.0 RELEASE</span>
       <span>//</span>
       <span>DIRECT APK DOWNLOAD</span>
       <span>//</span>
@@ -146,6 +146,7 @@
       <nav class="nav-links">
         <a href="#features">FEATURES</a>
         <a href="#rating-demo">RATING DIAL</a>
+        <a href="#ai-critic">GROOVD AI</a>
         <a href="#showcase">REAL ARCHIVE</a>
         <a href="#install-guide">INSTALL GUIDE</a>
         <a href="#specs">SPECS</a>
@@ -157,7 +158,7 @@
           <polyline points="7 10 12 15 17 10"></polyline>
           <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
-        GET APK <span class="nav-v-hide">v1.0.0</span>
+        GET APK <span class="nav-v-hide">v1.1.0</span>
       </a>
     </div>
 
@@ -347,7 +348,7 @@
 
         <!-- Minimalist Typographic Specs Strip -->
         <div class="hero-specs-strip">
-          <span class="spec-item"><span class="spec-bullet">▪</span> ~45 MB APK</span>
+          <span class="spec-item"><span class="spec-bullet">▪</span> ~68 MB APK</span>
           <span class="spec-sep" aria-hidden="true">//</span>
           <span class="spec-item"><span class="spec-bullet">▪</span> UNIVERSAL ARCH</span>
           <span class="spec-sep" aria-hidden="true">//</span>
@@ -517,6 +518,76 @@
     </div>
   </section>
 
+  <!-- GROOVD AI // Resident Music Critic Section -->
+  <section id="ai-critic" class="section ai-critic-section">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-label">[RESIDENT CRITIC]</span>
+        <h2 class="section-title">GROOVD AI CHATBOT</h2>
+        <p class="section-desc">
+          GROOVD AI gives you an uncompromising resident critic in your pocket—ready to interrogate your scores, inspect your turntable setup with multimodal vision, and push your taste past safe consensus.
+        </p>
+      </div>
+
+      <div class="ai-critic-wrapper">
+        <!-- Interactive Critic Console Window -->
+        <div class="critic-console-window">
+          <!-- Terminal Header -->
+          <div class="critic-terminal-header">
+            <div class="critic-terminal-left">
+              <div class="critic-badge-icon">+</div>
+              <div class="critic-terminal-titles">
+                <span class="critic-title-main">GROOVD AI // CRITIC INTERFACE</span>
+                <span class="critic-title-sub">AUTONOMOUS UNDERGROUND MUSIC CRITIC</span>
+              </div>
+            </div>
+            <div class="critic-terminal-status">STATUS: ONLINE</div>
+          </div>
+
+          <!-- Console Body -->
+          <div class="critic-console-body">
+            <!-- Multimodal Vision Card (Previewing Turntable/Vinyl Inspection) -->
+            <div class="critic-vision-box" id="critic-vision-box" style="display: none;">
+              <img src="assets/covers/kid_a.jpg" alt="Multimodal vinyl setup preview" class="critic-vision-thumb">
+              <div class="critic-vision-info">
+                <span class="critic-vision-tag">[MULTIMODAL VISION ATTACHMENT: GEAR_SETUP.RAW]</span>
+                <span class="critic-vision-desc">Audiophile turntable plinth, unisolated monitor proximity, counterweight alignment</span>
+              </div>
+            </div>
+
+            <!-- Speech Output Bubble -->
+            <div class="critic-speech-bubble">
+              <div class="critic-speaker-row">
+                <span class="critic-speaker-name">&gt; GROOVD AI</span>
+                <span id="critic-user-prompt-label">QUERY: WHY DOES DECIMAL SCORING MATTER?</span>
+              </div>
+              <div class="critic-text-output" id="critic-text-output"></div>
+
+              <!-- Embedded Album Recommendation Card -->
+              <a href="#features" class="critic-album-embed" id="critic-album-embed" style="opacity: 0; pointer-events: none;">
+                <img src="assets/covers/ok_computer.jpg" alt="Recommended Album" class="critic-album-art">
+                <div class="critic-album-meta">
+                  <span class="critic-album-title">OK COMPUTER</span>
+                  <span class="critic-album-artist">RADIOHEAD</span>
+                </div>
+                <span class="critic-album-badge">9.8 CANON</span>
+              </a>
+            </div>
+
+            <!-- Interactive Prompt Bar -->
+            <div class="critic-chip-bar">
+              <div class="critic-chip-label">// SELECT TOPIC TO EXPLORE:</div>
+              <button type="button" class="critic-chip-btn active" data-scenario="roast">WHY DECIMAL SCORING?</button>
+              <button type="button" class="critic-chip-btn" data-scenario="recommend">VS. STREAMING ALGORITHMS</button>
+              <button type="button" class="critic-chip-btn" data-scenario="gear">VINYL &amp; GEAR AUDIT [MULTIMODAL]</button>
+              <button type="button" class="critic-chip-btn" data-scenario="take">HOW IT IMPROVES REVIEWS</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Real In-App Screenshots Showcase Section -->
   <section id="showcase" class="section" style="background-color: #0E0E0E; border-top: 2px solid var(--border-dark); border-bottom: 2px solid var(--border-dark);">
     <div class="container">
@@ -677,9 +748,9 @@
             <span class="step-indicator">+</span>
           </div>
           <div class="step-body">
-            <p>Tap the <strong>DOWNLOAD APK</strong> button on this website or scan the QR code using your phone camera. Your browser (Chrome, Firefox, or Brave) will begin downloading <code>groovd-v1.0.0.apk</code>.</p>
+            <p>Tap the <strong>DOWNLOAD APK</strong> button on this website or scan the QR code using your phone camera. Your browser (Chrome, Firefox, or Brave) will begin downloading <code>groovd-v1.1.0.apk</code>.</p>
             <div class="step-alert-box">
-              // FILE: <strong>groovd-v1.0.0.apk</strong> • Verify the download completes in your notifications drawer.
+              // FILE: <strong>groovd-v1.1.0.apk</strong> • Verify the download completes in your notifications drawer.
             </div>
           </div>
         </div>
@@ -745,7 +816,7 @@
             </tr>
             <tr>
               <td>CURRENT VERSION</td>
-              <td>v1.0.0 (Build 1)</td>
+              <td>v1.1.0 STABLE (Build 2)</td>
             </tr>
             <tr>
               <td>OPERATING SYSTEM</td>
@@ -757,7 +828,7 @@
             </tr>
             <tr>
               <td>DOWNLOAD SIZE</td>
-              <td>~45 MB</td>
+              <td>~68 MB</td>
             </tr>
             <tr>
               <td>PERMISSIONS REQUIRED</td>
@@ -796,6 +867,7 @@
           <a href="#hero">TOP</a>
           <a href="#features">FEATURES</a>
           <a href="#rating-demo">RATING DIAL</a>
+          <a href="#ai-critic">GROOVD AI</a>
           <a href="#showcase">REAL ARCHIVE</a>
           <a href="#install-guide">INSTALL GUIDE</a>
           <a href="#specs">SPECS</a>
@@ -831,7 +903,7 @@
   <div class="sticky-download-bar" id="sticky-download-bar">
     <div class="sticky-meta">
       <span class="sticky-title">GROOVD FOR ANDROID</span>
-      <span class="sticky-sub">v1.0.0 // ~45 MB</span>
+      <span class="sticky-sub">v1.1.0 // ~68 MB</span>
     </div>
     <a href="download.html" class="btn-sticky-download">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -855,6 +927,6 @@
   <script src="js/vendor/SplitText.min.js"></script>
   <script src="js/qrcode.js?v=4.4"></script>
   <script src="js/animations.js?v=4.8"></script>
-  <script src="js/main.js?v=4.4"></script>
+  <script src="js/main.js?v=7.0"></script>
 </body>
 </html>

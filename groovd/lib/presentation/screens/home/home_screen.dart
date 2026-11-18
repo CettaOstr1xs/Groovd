@@ -6,8 +6,10 @@ import 'package:groovd/core/theme/app_typography.dart';
 import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/state/music_providers.dart';
 import 'package:groovd/state/review_providers.dart';
+import 'package:groovd/state/critic_recommendations_provider.dart';
 import 'package:groovd/presentation/widgets/album_art_card.dart';
 import 'package:groovd/presentation/widgets/brutalist_button.dart';
+import 'package:groovd/presentation/widgets/critic_recommendations_shelf.dart';
 import 'package:groovd/presentation/widgets/giant_score_badge.dart';
 import 'package:groovd/presentation/widgets/marquee_banner.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
@@ -34,6 +36,7 @@ class HomeScreen extends ConsumerWidget {
             ref.invalidate(trendingAlbumsProvider);
             ref.invalidate(hotTracksProvider);
             ref.invalidate(recentReviewsProvider);
+            ref.invalidate(criticRecommendationsProvider);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -192,6 +195,9 @@ class HomeScreen extends ConsumerWidget {
                 ),
 
                 const SizedBox(height: 28),
+
+                // AI Critic Recommended Albums (Auto-hidden if user rated < 5 albums/EPs)
+                const CriticRecommendationsShelf(),
 
                 // Hot Tracks Section
                 Padding(

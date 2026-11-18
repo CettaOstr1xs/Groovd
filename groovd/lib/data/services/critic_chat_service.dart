@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:groovd/core/constants/gemini_config.dart';
+import 'package:groovd/data/models/music_item.dart';
 import 'package:groovd/data/models/review.dart';
 import 'package:groovd/data/models/wishlist_item.dart';
 import 'package:groovd/state/critic_chat_provider.dart';
@@ -86,6 +87,79 @@ class CriticChatService {
         buffer.writeln('- ${w.musicItem.name} by ${w.musicItem.artist}');
       }
     }
+
+    return buffer.toString().trim();
+  }
+
+  /// Builds a structured taste grounding prompt instructing Gemini to recommend albums.
+  static String buildRecommendationGroundingPrompt({
+    required List<Review> reviews,
+    List<MusicItem> topAlbums = const [],
+    List<WishlistItem> wishlist = const [],
+  }) {
+    final buffer = StringBuffer();
+    buffer.writeln('=== GROOVD CRITIC TASTE DOSSIER ===');
+
+    // High rated and recent albums
+    final albumReviews = reviews.where((r) => r.itemType == 'album' || r.itemType == 'ep').toList();
+    if (albumReviews.isNotEmpty) {
+      buffer.writeln('User\'s Highest Rated Albums:');
+      // Sort by rating descending
+      final sortedByRating = List<Review>.from(albumReviews)
+        ..sort((a, b) => b.rating.compareTo(a.rating));
+      for (final r in sortedByRating.take(8)) {
+        final tagStr = r.tags.isNotEmpty ? ' [Tags: ${r.tags.join(', ')}]' : '';
+        buffer.writeln('- "${r.musicItemName}" by ${r.artistName} (Score: ${r.rating.toStringAsFixed(1)}/10)$tagStr');
+      }
+    } else if (topAlbums.isEmpty) {
+      buffer.writeln('User is initiating their personal canon. Recommend 7-8 quintessential underground essentials across diverse genres (art rock, shoegaze, trip hop, post-punk, electronic).');
+    }
+
+    if (topAlbums.isNotEmpty) {
+      buffer.writeln('\nPinned Critic\'s Canon Top Albums:');
+      for (final alb in topAlbums) {
+        buffer.writeln('- "${alb.name}" by ${alb.artist}');
+      }
+    }
+
+    if (wishlist.isNotEmpty) {
+      buffer.writeln('\nActive Wantlist:');
+      for (final w in wishlist.take(8)) {
+        buffer.writeln('- "${w.musicItem.name}" by ${w.musicItem.artist}');
+      }
+    }
+
+    // Exclusion list
+    final excludedTitles = <String>{};
+    for (final r in reviews) {
+      excludedTitles.add('"${r.musicItemName}" by ${r.artistName}');
+    }
+    for (final w in wishlist) {
+      excludedTitles.add('"${w.musicItem.name}" by ${w.musicItem.artist}');
+    }
+    for (final a in topAlbums) {
+      excludedTitles.add('"${a.name}" by ${a.artist}');
+    }
+
+    if (excludedTitles.isNotEmpty) {
+      buffer.writeln('\nDO NOT recommend any of the following already known/rated/queued releases:');
+      for (final item in excludedTitles.take(30)) {
+        buffer.writeln('- $item');
+      }
+    }
+
+    buffer.writeln('''
+
+INSTRUCTIONS:
+You are GROOVD AI, an uncompromising underground music critic. Recommend 7-8 exceptional, relevant albums (LPs or EPs) that expand the user's personal canon. STRICTLY NO individual tracks, songs, or standalone singles. Recommend ONLY complete albums or EPs.
+Provide output STRICTLY as a raw JSON array of objects. Each object must have these exact keys:
+- "title": Album title (string)
+- "artist": Artist name (string)
+- "reasoning": 1 sharp, punchy sentence explaining why this release fits their taste (string, brutalist zine tone, zero emojis)
+- "vibe_tag": An uppercase brutalist hashtag like #POST_PUNK_ESSENTIAL, #DARK_SHOEGAZE, #RAW_NOISE (string)
+
+Return JSON only. No markdown formatting, no code fences, no introductory or concluding text.
+''');
 
     return buffer.toString().trim();
   }

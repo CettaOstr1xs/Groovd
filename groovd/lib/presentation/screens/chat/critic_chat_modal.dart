@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -751,7 +750,7 @@ class _CriticChatModalState extends ConsumerState<CriticChatModal> with SingleTi
               ] else if (!msg.hasPlayedScramble) ...[
                 ScrambleText(
                   text: msg.text,
-                  duration: const Duration(milliseconds: 1000),
+                  duration: const Duration(milliseconds: 2000),
                   onComplete: () {
                     ref.read(criticChatProvider.notifier).markScramblePlayed(msg.id);
                   },
@@ -803,7 +802,7 @@ class _CriticChatModalState extends ConsumerState<CriticChatModal> with SingleTi
                                 child: Image.network(
                                   item.coverUrl,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
+                                  errorBuilder: (_, _, _) => Container(
                                     color: AppColors.pureBlack,
                                     child: const Icon(Icons.album, size: 20, color: AppColors.textMuted),
                                   ),
@@ -859,7 +858,7 @@ class _CriticChatModalState extends ConsumerState<CriticChatModal> with SingleTi
       return Image.file(
         file,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildMissingBubblePhoto(),
+        errorBuilder: (_, _, _) => _buildMissingBubblePhoto(),
       );
     }
     return _buildMissingBubblePhoto();
@@ -926,7 +925,7 @@ class _CriticChatModalState extends ConsumerState<CriticChatModal> with SingleTi
                           ? Image.file(
                               File(_attachedImagePath!),
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Center(
+                              errorBuilder: (_, _, _) => const Center(
                                 child: Icon(Icons.broken_image, color: AppColors.acidLime, size: 20),
                               ),
                             )
