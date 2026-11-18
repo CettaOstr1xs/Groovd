@@ -18,6 +18,7 @@ import 'package:groovd/presentation/widgets/giant_score_badge.dart';
 import 'package:groovd/presentation/widgets/rating_spike_sign.dart';
 import 'package:groovd/presentation/widgets/review_card.dart';
 import 'package:groovd/presentation/screens/review/instagram_story_modal.dart';
+import 'package:groovd/presentation/widgets/artwork_download_modal.dart';
 import 'package:groovd/state/music_providers.dart';
 import 'package:groovd/state/review_providers.dart';
 import 'package:groovd/state/user_lists_provider.dart';
@@ -303,6 +304,7 @@ class MusicDetailScreen extends ConsumerWidget {
               InstagramStoryModal.show(context, reviewToShare, musicItem: activeItem);
             },
           ),
+          _DownloadArtworkButton(item: activeItem),
           IconButton(
             icon: const Icon(
               Icons.playlist_add,
@@ -1616,5 +1618,34 @@ class _EnrichedGenreTagsSection extends ConsumerWidget {
     );
   }
 }
+
+class _DownloadArtworkButton extends StatelessWidget {
+  final MusicItem item;
+
+  const _DownloadArtworkButton({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(
+        Icons.download_outlined,
+        color: AppColors.acidLime,
+        size: 22,
+      ),
+      tooltip: 'Download Artwork',
+      onPressed: () {
+        ArtworkDownloadModal.show(
+          context,
+          imageUrl: item.coverUrl,
+          title: item.name,
+          artist: item.artist,
+          year: item.formattedYear,
+          typeLabel: item.fullTypeLabel,
+        );
+      },
+    );
+  }
+}
+
 
 

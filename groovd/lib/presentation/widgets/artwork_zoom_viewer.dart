@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:groovd/core/theme/app_colors.dart';
 import 'package:groovd/core/theme/app_typography.dart';
+import 'package:groovd/presentation/widgets/artwork_download_modal.dart';
 
 class ArtworkZoomViewer extends StatefulWidget {
   final String imageUrl;
@@ -73,6 +74,17 @@ class _ArtworkZoomViewerState extends State<ArtworkZoomViewer>
   Animation<Matrix4>? _animation;
   Offset? _doubleTapPosition;
   double _currentScale = 1.0;
+
+  void _downloadCoverArtwork() {
+    ArtworkDownloadModal.show(
+      context,
+      imageUrl: widget.imageUrl,
+      title: widget.title,
+      artist: widget.artist,
+      year: widget.year,
+      typeLabel: widget.typeLabel,
+    );
+  }
 
   @override
   void initState() {
@@ -428,84 +440,121 @@ class _ArtworkZoomViewerState extends State<ArtworkZoomViewer>
                     stops: const [0.0, 0.7, 1.0],
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (isZoomed) ...[
-                      // Zoom scale badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceElevated,
-                          borderRadius: BorderRadius.circular(2),
-                          border: Border.all(color: AppColors.cyberCyan, width: 1.2),
-                        ),
-                        child: Text(
-                          '${_currentScale.toStringAsFixed(1)}X ZOOM',
-                          style: AppTypography.monoBadge(
-                            color: AppColors.cyberCyan,
-                            fontSize: 10,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (isZoomed) ...[
+                        // Zoom scale badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(color: AppColors.cyberCyan, width: 1.2),
+                          ),
+                          child: Text(
+                            '${_currentScale.toStringAsFixed(1)}X ZOOM',
+                            style: AppTypography.monoBadge(
+                              color: AppColors.cyberCyan,
+                              fontSize: 10,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      // Reset Zoom Brutalist Button
-                      InkWell(
-                        onTap: _resetZoom,
-                        borderRadius: BorderRadius.circular(2),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        const SizedBox(width: 10),
+                        // Reset Zoom Brutalist Button
+                        InkWell(
+                          onTap: _resetZoom,
+                          borderRadius: BorderRadius.circular(2),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.acidLime,
+                              borderRadius: BorderRadius.circular(2),
+                              border: Border.all(color: AppColors.pureBlack, width: 1.2),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.restart_alt, color: AppColors.pureBlack, size: 15),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'RESET ZOOM',
+                                  style: AppTypography.monoBadge(
+                                    color: AppColors.pureBlack,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        // Gestures Hint Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                           decoration: BoxDecoration(
-                            color: AppColors.acidLime,
+                            color: AppColors.surfaceElevated.withValues(alpha: 0.90),
                             borderRadius: BorderRadius.circular(2),
-                            border: Border.all(color: AppColors.pureBlack, width: 1.2),
+                            border: Border.all(color: AppColors.border, width: 1.0),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.restart_alt, color: AppColors.pureBlack, size: 15),
+                              const Icon(
+                                Icons.zoom_in,
+                                color: AppColors.acidLime,
+                                size: 15,
+                              ),
                               const SizedBox(width: 6),
                               Text(
-                                'RESET ZOOM',
+                                'PINCH OR DOUBLE-TAP TO ZOOM',
                                 style: AppTypography.monoBadge(
-                                  color: AppColors.pureBlack,
-                                  fontSize: 10,
+                                  color: AppColors.textSecondary,
+                                  fontSize: 9.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(width: 8),
+                      // Tactile Save to Gallery Brutalist Button
+                      InkWell(
+                        onTap: _downloadCoverArtwork,
+                        borderRadius: BorderRadius.circular(2),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(color: AppColors.acidLime, width: 1.2),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: AppColors.pureBlack,
+                                offset: Offset(2, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.download, size: 13, color: AppColors.acidLime),
+                              const SizedBox(width: 5),
+                              Text(
+                                'SAVE TO GALLERY',
+                                style: AppTypography.monoBadge(
+                                  color: AppColors.acidLime,
+                                  fontSize: 9.5,
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    ] else ...[
-                      // Gestures Hint Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceElevated.withValues(alpha: 0.90),
-                          borderRadius: BorderRadius.circular(2),
-                          border: Border.all(color: AppColors.border, width: 1.0),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.zoom_in,
-                              color: AppColors.acidLime,
-                              size: 15,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'PINCH OR DOUBLE-TAP TO ZOOM',
-                              style: AppTypography.monoBadge(
-                                color: AppColors.textSecondary,
-                                fontSize: 9.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),

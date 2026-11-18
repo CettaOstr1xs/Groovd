@@ -2,6 +2,7 @@ package com.example.groovd
 
 import android.content.ActivityNotFoundException
 import android.content.ClipData
+import android.content.ContentValues
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Rect
@@ -13,6 +14,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
 import android.util.Log
 import android.view.Surface
 import androidx.core.content.FileProvider
@@ -41,6 +43,16 @@ class MainActivity : FlutterActivity() {
                     val explicitMime = call.argument<String>("mimeType")
                     val platform = call.argument<String>("platform") ?: "system"
                     shareMediaToTarget(filePath, explicitMime, platform, result)
+                }
+                "saveImageToGallery" -> {
+                    val bytes = call.argument<ByteArray>("bytes")
+                    val fileName = call.argument<String>("fileName") ?: "Groovd_${System.currentTimeMillis()}.jpg"
+                    val mimeType = call.argument<String>("mimeType") ?: "image/jpeg"
+                    if (bytes == null || bytes.isEmpty()) {
+                        result.error("INVALID_BYTES", "Image bytes are empty", null)
+                        return@setMethodCallHandler
+                    }
+                    saveImageToGallery(bytes, fileName, mimeType, result)
                 }
                 "encodeVideoFromFrames" -> {
                     val framePaths = call.argument<List<String>>("framePaths")
@@ -355,6 +367,58 @@ class MainActivity : FlutterActivity() {
             try {
                 inputSurface?.release()
             } catch (_: Exception) {}
+        }
+    }
+
+    private fun saveImageToGallery(bytes: ByteArray, fileName: String, mimeType: String, result: MethodChannel.Result) {
+        executor.execute {
+            var imageUri: Uri? = null
+            try {
+                val resolver = applicationContext.contentResolver
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                    put(MediaStore.Images.Media.MIME_TYPE, mimeType)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Groovd")
+                        put(MediaStore.Images.Media.IS_PENDING, 1)
+                    }
+                }
+
+                imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                if (imageUri == null) {
+                    Handler(Looper.getMainLooper()).post {
+                        result.error("INSERT_FAILED", "Failed to create new MediaStore entry", null)
+                    }
+                    return@execute
+                }
+
+                val outputStream = resolver.openOutputStream(imageUri)
+                    ?: throw java.io.IOException("Unable to open output stream for $imageUri")
+                outputStream.use { stream ->
+                    stream.write(bytes)
+                    stream.flush()
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    contentValues.clear()
+                    contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+                    resolver.update(imageUri, contentValues, null, null)
+                }
+
+                Handler(Looper.getMainLooper()).post {
+                    result.success(imageUri.toString())
+                }
+            } catch (e: Exception) {
+                Log.e("Groovd", "Failed to save image to gallery", e)
+                if (imageUri != null) {
+                    try {
+                        applicationContext.contentResolver.delete(imageUri, null, null)
+                    } catch (_: Exception) {}
+                }
+                Handler(Looper.getMainLooper()).post {
+                    result.error("SAVE_FAILED", e.localizedMessage, null)
+                }
+            }
         }
     }
 }

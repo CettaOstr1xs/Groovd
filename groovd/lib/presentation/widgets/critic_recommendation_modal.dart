@@ -175,33 +175,22 @@ class CriticRecommendationModal extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.surfaceCard,
-                                      border: Border.all(color: AppColors.border, width: 1.0),
-                                    ),
-                                    child: Text(
-                                      item.typeBadgeLabel,
-                                      style: AppTypography.monoBadge(
-                                        color: AppColors.acidLime,
-                                        fontSize: 8.5,
-                                      ),
-                                    ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceCard,
+                                  border: Border.all(color: AppColors.border, width: 1.0),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                                child: Text(
+                                  item.formattedYear.isNotEmpty
+                                      ? '${item.fullTypeLabel} // ${item.formattedYear}'.toUpperCase()
+                                      : item.fullTypeLabel.toUpperCase(),
+                                  style: AppTypography.monoBadge(
+                                    color: AppColors.acidLime,
+                                    fontSize: 8.5,
                                   ),
-                                  if (item.formattedYear.isNotEmpty) ...[
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      item.formattedYear,
-                                      style: AppTypography.monoLabel(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 9.5,
-                                      ),
-                                    ),
-                                  ],
-                                ],
+                                ),
                               ),
                             ],
                           ),

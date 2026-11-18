@@ -157,6 +157,7 @@ void main() {
     // Verify Option A Vinyl Slipcase & CRT elaboration modal elements
     expect(find.text('CRITIC DISPATCH // CANON RECOM'), findsOneWidget);
     expect(find.text('> GROOVD_AI // TASTE_DECODE_LOG'), findsOneWidget);
+    expect(find.text('LP // ALBUM // 1994'), findsOneWidget);
     expect(find.text('DECODE: 2.0S'), findsNothing);
     expect(find.byIcon(Icons.close), findsNothing);
     expect(find.text('#TRIP HOP'), findsOneWidget);
